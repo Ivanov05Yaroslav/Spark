@@ -1,2 +1,2 @@
-# Coursue
+# Spark
 Our Diplom Project
