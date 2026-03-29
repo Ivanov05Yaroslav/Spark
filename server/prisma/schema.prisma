@@ -1,0 +1,474 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ==========================================
+// 1. Управління користувачами та ролями
+// ==========================================
+
+model Role {
+  id        String     @id @default(uuid())
+  name      String     @unique
+  userRoles UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  userId String
+  roleId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model User {
+  id               String    @id @default(uuid())
+  schoolId         String?
+  email            String    @unique
+  password         String
+  firstName        String
+  middleName       String?
+  lastName         String
+  avatarUrl        String?
+  createdAt        DateTime  @default(now())
+  isEmailVerified  Boolean   @default(false)
+  isPasswordCustom Boolean   @default(false)
+  lastLoginAt      DateTime?
+  parentsCode      String?   @unique
+  themePreference  String?   @default("light")
+
+  // Зв'язки: Базові
+  school         School?    @relation("SchoolUsers", fields: [schoolId], references: [id])
+  directedSchool School?    @relation("SchoolDirector")
+  userRoles      UserRole[]
+
+  // Зв'язки: Батьки та діти (Самореференція)
+  parentRelations  StudentParent[] @relation("ParentRelation")
+  studentRelations StudentParent[] @relation("StudentRelation")
+
+  // Зв'язки: Навчальний процес
+  homeroomClasses Class[]          @relation("HomeroomTeacher")
+  studentClasses  ClassStudent[]
+  teacherSubjects TeacherSubject[]
+
+  createdCourses  Course[]        @relation("CourseCreator")
+  coTaughtCourses CourseTeacher[]
+  enrolledCourses CourseStudent[]
+
+  // Зв'язки: Контент та оцінки
+  announcements  Announcement[]
+  materials      Material[]
+  tasks          Task[]
+  tests          Test[]
+  submissions    Submission[]
+  comments       Comment[]
+  givenGrades    Gradebook[]    @relation("TeacherGrades")
+  receivedGrades Gradebook[]    @relation("StudentGrades")
+  attendance     Attendance[]
+
+  // Зв'язки: Комунікація
+  sentNotifications     Notification[] @relation("SentNotifications")
+  receivedNotifications Notification[] @relation("ReceivedNotifications")
+  madeComplaints        Complaint[]    @relation("ReporterRelation")
+  receivedComplaints    Complaint[]    @relation("ReportedRelation")
+  chats                 ChatMember[]
+  messages              Message[]
+
+  @@map("users")
+}
+
+model StudentParent {
+  studentId String
+  parentId  String
+
+  student User @relation("StudentRelation", fields: [studentId], references: [id], onDelete: Cascade)
+  parent  User @relation("ParentRelation", fields: [parentId], references: [id], onDelete: Cascade)
+
+  @@id([studentId, parentId])
+  @@map("student_parents")
+}
+
+// ==========================================
+// 2. Структура навчального закладу
+// ==========================================
+
+model School {
+  id             String  @id @default(uuid())
+  directorId     String? @unique
+  edrpou         String? @unique
+  region         String?
+  city           String?
+  name           String
+  isDiiaVerified Boolean @default(false)
+
+  director User?    @relation("SchoolDirector", fields: [directorId], references: [id])
+  users    User[]   @relation("SchoolUsers")
+  classes  Class[]
+  courses  Course[]
+
+  @@map("schools")
+}
+
+model Class {
+  id                String  @id @default(uuid())
+  schoolId          String
+  homeroomTeacherId String?
+  name              String
+
+  school          School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  homeroomTeacher User?          @relation("HomeroomTeacher", fields: [homeroomTeacherId], references: [id])
+  students        ClassStudent[]
+  courses         Course[]
+
+  @@map("classes")
+}
+
+model ClassStudent {
+  classId   String
+  studentId String
+
+  class   Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([classId, studentId])
+  @@map("class_students")
+}
+
+model Subject {
+  id   String @id @default(uuid())
+  name String @unique
+
+  teachers  TeacherSubject[]
+  nusGroups NusGroup[]
+  courses   Course[]
+
+  @@map("subjects")
+}
+
+model TeacherSubject {
+  teacherId String
+  subjectId String
+
+  teacher User    @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@id([teacherId, subjectId])
+  @@map("teacher_subjects")
+}
+
+model NusGroup {
+  id        String @id @default(uuid())
+  subjectId String
+  name      String
+
+  subject Subject     @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  tasks   Task[]
+  grades  Gradebook[]
+
+  @@map("nus_groups")
+}
+
+// ==========================================
+// 3. Навчальні курси
+// ==========================================
+
+model Course {
+  id           String  @id @default(uuid())
+  schoolId     String
+  subjectId    String
+  classId      String
+  creatorId    String
+  academicYear String
+  groupName    String?
+  isArchived   Boolean @default(false)
+
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  creator User    @relation("CourseCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  coTeachers CourseTeacher[]
+  students   CourseStudent[]
+
+  announcements Announcement[]
+  materials     Material[]
+  tasks         Task[]
+  tests         Test[]
+  gradebooks    Gradebook[]
+  attendance    Attendance[]
+
+  @@map("courses")
+}
+
+model CourseTeacher {
+  courseId  String
+  teacherId String
+
+  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  teacher User   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@id([courseId, teacherId])
+  @@map("course_teachers")
+}
+
+model CourseStudent {
+  courseId  String
+  studentId String
+
+  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([courseId, studentId])
+  @@map("course_students")
+}
+
+// ==========================================
+// 4. Навчальний процес та контент
+// ==========================================
+
+model Announcement {
+  id        String   @id @default(uuid())
+  courseId  String
+  creatorId String
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+
+  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  creator User   @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@map("announcements")
+}
+
+model Material {
+  id          String   @id @default(uuid())
+  courseId    String
+  creatorId   String
+  title       String
+  description String?
+  fileUrl     String?
+  linkUrl     String?
+  createdAt   DateTime @default(now())
+  isHidden    Boolean  @default(false)
+
+  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  creator User   @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@map("materials")
+}
+
+model Task {
+  id          String    @id @default(uuid())
+  courseId    String
+  creatorId   String
+  nusGroupId  String?
+  title       String
+  description String?
+  deadline    DateTime?
+  createdAt   DateTime  @default(now())
+  isHidden    Boolean   @default(false)
+  attachments String[]
+
+  course      Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  creator     User         @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  nusGroup    NusGroup?    @relation(fields: [nusGroupId], references: [id], onDelete: SetNull)
+  submissions Submission[]
+  gradebooks  Gradebook[]
+
+  @@map("tasks")
+}
+
+model Test {
+  id               String    @id @default(uuid())
+  courseId         String
+  creatorId        String
+  title            String
+  timeLimitMinutes Int?
+  deadline         DateTime?
+  maxAttempts      Int       @default(1)
+  isResultHidden   Boolean   @default(false)
+  isHidden         Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+
+  course      Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  creator     User         @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  questions   Question[]
+  submissions Submission[]
+  gradebooks  Gradebook[]
+
+  @@map("tests")
+}
+
+model Question {
+  id      String @id @default(uuid())
+  testId  String
+  type    String
+  content String
+  points  Float
+
+  test    Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
+  answers Answer[]
+
+  @@map("questions")
+}
+
+model Answer {
+  id         String  @id @default(uuid())
+  questionId String
+  content    String
+  isCorrect  Boolean @default(false)
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("answers")
+}
+
+model Submission {
+  id          String    @id @default(uuid())
+  taskId      String?
+  testId      String?
+  studentId   String
+  fileUrl     String?
+  linkUrl     String?
+  submittedAt DateTime  @default(now())
+  checkedAt   DateTime?
+  score       String?
+
+  task     Task?     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  test     Test?     @relation(fields: [testId], references: [id], onDelete: Cascade)
+  student  User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  comments Comment[]
+
+  @@map("submissions")
+}
+
+model Comment {
+  id           String   @id @default(uuid())
+  submissionId String
+  authorId     String
+  content      String
+  createdAt    DateTime @default(now())
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  author     User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@map("comments")
+}
+
+// ==========================================
+// 5. Оцінювання та облік
+// ==========================================
+
+model Gradebook {
+  id         String   @id @default(uuid())
+  studentId  String
+  teacherId  String
+  courseId   String
+  taskId     String?
+  testId     String?
+  nusGroupId String?
+  gradeType  String // "VERBAL", "LEVEL", "NUS", "TRADITIONAL"
+  date       DateTime @default(now())
+  score      Float?
+
+  student  User      @relation("StudentGrades", fields: [studentId], references: [id], onDelete: Cascade)
+  teacher  User      @relation("TeacherGrades", fields: [teacherId], references: [id], onDelete: Cascade)
+  course   Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  task     Task?     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  test     Test?     @relation(fields: [testId], references: [id], onDelete: Cascade)
+  nusGroup NusGroup? @relation(fields: [nusGroupId], references: [id], onDelete: SetNull)
+
+  @@map("gradebooks")
+}
+
+model Attendance {
+  id        String   @id @default(uuid())
+  studentId String
+  courseId  String
+  date      DateTime @default(now())
+  status    String
+
+  student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@map("attendance")
+}
+
+// ==========================================
+// 6. Комунікація та Чати
+// ==========================================
+
+model Notification {
+  id         String   @id @default(uuid())
+  senderId   String
+  receiverId String
+  title      String
+  content    String
+  type       String
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  sender   User @relation("SentNotifications", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("ReceivedNotifications", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model Complaint {
+  id             String   @id @default(uuid())
+  reporterId     String
+  reportedUserId String
+  reason         String
+  status         String   @default("PENDING") // "PENDING", "RESOLVED", "REJECTED"
+  createdAt      DateTime @default(now())
+
+  reporter     User @relation("ReporterRelation", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUser User @relation("ReportedRelation", fields: [reportedUserId], references: [id], onDelete: Cascade)
+
+  @@map("complaints")
+}
+
+model Chat {
+  id   String @id @default(uuid())
+  type String // "PRIVATE", "GROUP"
+
+  members  ChatMember[]
+  messages Message[]
+
+  @@map("chats")
+}
+
+model ChatMember {
+  chatId String
+  userId String
+
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([chatId, userId])
+  @@map("chat_members")
+}
+
+model Message {
+  id       String   @id @default(uuid())
+  chatId   String
+  senderId String
+  content  String
+  sentAt   DateTime @default(now())
+  isRead   Boolean  @default(false)
+
+  chat   Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender User @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
