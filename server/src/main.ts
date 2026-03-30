@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core'
-import { ValidationPipe } from '@nestjs/common'
+import { ValidationPipe, Logger } from '@nestjs/common'
 import cookieParser from 'cookie-parser'
 import { SwaggerModule } from '@nestjs/swagger'
 import { AppModule } from './app.module'
@@ -26,6 +26,9 @@ async function bootstrap() {
   SwaggerModule.setup(swaggerPath, app, document)
 
   await app.listen(PORT)
+
+  Logger.log(`Server: http://localhost:${PORT}`, 'Bootstrap')
+  Logger.log(`Swagger: http://localhost:${PORT}/${swaggerPath}`, 'Bootstrap')
 }
 
 bootstrap()
