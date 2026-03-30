@@ -6,7 +6,16 @@ import { UsersService } from '../users/users.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { DiiaIntegrationService } from '../../core/integrations/diia/diia.service';
 import { EmailService } from '../../core/integrations/email/email.service';
-import { RegisterUserDto, LoginUserDto, InitSchoolRegistrationDto, DiiaCallbackDto, SendSchoolEmailCodeDto, VerifySchoolEmailCodeDto } from './dto/auth.dto';
+import { RegisterUserDto, 
+  LoginUserDto, 
+  InitSchoolRegistrationDto, 
+  DiiaCallbackDto, 
+  SendSchoolEmailCodeDto, 
+  VerifySchoolEmailCodeDto, 
+  ForgotPasswordSendCodeDto, 
+  ForgotPasswordVerifyCodeDto, 
+  ForgotPasswordResetDto, 
+  ChangePasswordDto } from './dto/auth.dto';
 
 interface RegistrationSession {
 id: string;
@@ -19,10 +28,19 @@ id: string;
   otpCode?: string;
 }
 
+interface PasswordResetSession {
+  id: string;
+  email: string;
+  otpCode: string;
+  status: 'INIT' | 'VERIFIED';
+  expiresAt: number;
+}
+
 @Injectable()
 export class AuthService {
     private readonly logger = new Logger(AuthService.name);
     private sessions = new Map<string, RegistrationSession>();
+    private passwordResetSessions = new Map<string, PasswordResetSession>();
   
   constructor(
     private readonly usersService: UsersService,
@@ -48,6 +66,11 @@ export class AuthService {
     if (!passwordEquals) {
       throw new HttpException('Невірний email або пароль', HttpStatus.UNAUTHORIZED);
     }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
+    });
 
     return this.generateTokens(user);
   }
@@ -236,6 +259,7 @@ export class AuthService {
           lastName,
           middleName,
           isEmailVerified: true,
+          lastLoginAt: new Date(),
           schoolId: newSchool.id,
           directedSchool: { connect: { id: newSchool.id } },
           userRoles: {
@@ -251,5 +275,89 @@ export class AuthService {
     this.sessions.delete(dto.sessionId);
 
     return this.generateTokens(result);
+  }
+
+
+
+  async sendPasswordResetCode(dto: ForgotPasswordSendCodeDto) {
+    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    if (!user) {
+      throw new HttpException('Користувача з таким email не знайдено', HttpStatus.NOT_FOUND);
+    }
+
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const sessionId = randomUUID();
+
+    this.passwordResetSessions.set(sessionId, {
+      id: sessionId,
+      email: dto.email,
+      otpCode,
+      status: 'INIT',
+      expiresAt: Date.now() + 15 * 60 * 1000,
+    });
+
+    await this.emailService.sendPasswordResetCode(dto.email, otpCode);
+
+    return { 
+      sessionId, 
+      message: 'Код для відновлення пароля відправлено на вашу пошту' 
+    };
+  }
+
+  async verifyPasswordResetCode(dto: ForgotPasswordVerifyCodeDto) {
+    const session = this.passwordResetSessions.get(dto.sessionId);
+
+    if (!session) throw new HttpException('Сесію не знайдено або вона прострочена', HttpStatus.NOT_FOUND);
+    if (Date.now() > session.expiresAt) {
+      this.passwordResetSessions.delete(dto.sessionId);
+      throw new HttpException('Час очікування минув (15 хв)', HttpStatus.BAD_REQUEST);
+    }
+
+    if (session.otpCode !== dto.code) {
+      throw new HttpException('Невірний код підтвердження', HttpStatus.BAD_REQUEST);
+    }
+
+    session.status = 'VERIFIED';
+    this.passwordResetSessions.set(dto.sessionId, session);
+
+    return { message: 'Код підтверджено. Тепер ви можете ввести новий пароль.' };
+  }
+
+  async resetPassword(dto: ForgotPasswordResetDto) {
+    const session = this.passwordResetSessions.get(dto.sessionId);
+
+    if (!session || session.status !== 'VERIFIED') {
+      throw new HttpException('Сесію не знайдено або код не було підтверджено', HttpStatus.BAD_REQUEST);
+    }
+
+    const hashPassword = await bcrypt.hash(dto.newPassword, 10);
+
+    await this.prisma.user.update({
+      where: { email: session.email },
+      data: { password: hashPassword },
+    });
+
+    this.passwordResetSessions.delete(dto.sessionId);
+
+    return { message: 'Пароль успішно змінено. Тепер ви можете увійти в акаунт.' };
+  }
+
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new HttpException('Користувача не знайдено', HttpStatus.NOT_FOUND);
+
+    const isMatch = await bcrypt.compare(dto.oldPassword, user.password);
+    if (!isMatch) {
+      throw new HttpException('Невірний старий пароль', HttpStatus.BAD_REQUEST);
+    }
+
+    const hashPassword = await bcrypt.hash(dto.newPassword, 10);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password: hashPassword },
+    });
+
+    return { message: 'Пароль успішно змінено' };
   }
 }

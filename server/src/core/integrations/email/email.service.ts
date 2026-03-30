@@ -40,4 +40,27 @@ async sendVerificationCode(to: string, code: string) {
       throw new Error('Не вдалося відправити лист з кодом підтвердження');
     }
   }
+
+   async sendPasswordResetCode(to: string, code: string) {
+    try {
+      await this.transporter.sendMail({
+        from: `"School Platform" <${process.env.SMTP_USER}>`,
+        to,
+        subject: 'Відновлення пароля',
+        html: `
+          <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
+            <h2>Відновлення доступу</h2>
+            <p>Ми отримали запит на скидання пароля для вашого акаунта.</p>
+            <p>Ваш код підтвердження:</p>
+            <h1 style="color: #E24A4A; letter-spacing: 5px;">${code}</h1>
+            <p>Код дійсний протягом 15 хвилин. Нікому його не повідомляйте.</p>
+          </div>
+        `,
+      });
+      this.logger.log(`Email з кодом відновлення відправлено на ${to}`);
+    } catch (error) {
+      this.logger.error(`Помилка відправки email на ${to}`, error.message);
+      throw new Error('Не вдалося відправити лист для відновлення пароля');
+    }
+  }
 }
