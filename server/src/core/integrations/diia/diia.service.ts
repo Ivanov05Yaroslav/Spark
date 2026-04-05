@@ -12,7 +12,7 @@ export class DiiaIntegrationService {
   // Імітація розшифровки токена Дії
   async getUserDataFromToken(diiaToken: string): Promise<{ fullName: string; rnokpp: string }> {
     this.logger.log(`Декодування токена Дії: ${diiaToken}`);
-    
+
     if (diiaToken.includes('error')) {
       throw new Error('Дія.Підпис не накладено або скасовано користувачем');
     }

@@ -24,7 +24,7 @@ export class RolesService {
   async createRole(dto: CreateRoleDto) {
     const upperName = dto.name.toUpperCase();
     const existingRole = await this.prisma.role.findUnique({ where: { name: upperName } });
-    
+
     if (existingRole) {
       throw new HttpException('Роль з такою назвою вже існує', HttpStatus.BAD_REQUEST);
     }
@@ -54,7 +54,7 @@ export class RolesService {
 
   async updateRole(id: string, dto: UpdateRoleDto) {
     await this.getRoleById(id);
-    
+
     return this.prisma.role.update({
       where: { id },
       data: { name: dto.name.toUpperCase() },
@@ -63,9 +63,12 @@ export class RolesService {
 
   async deleteRole(id: string) {
     const role = await this.getRoleById(id);
-    
+
     if (role.name === 'SUPER_ADMIN') {
-      throw new HttpException('Видалення ролі SUPER_ADMIN заборонено системою', HttpStatus.FORBIDDEN);
+      throw new HttpException(
+        'Видалення ролі SUPER_ADMIN заборонено системою',
+        HttpStatus.FORBIDDEN,
+      );
     }
 
     return this.prisma.role.delete({ where: { id } });

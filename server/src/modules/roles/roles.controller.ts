@@ -1,17 +1,8 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Post,
-  Put,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { RolesService } from './roles.service';
-import { CreateRoleDto, UpdateRoleDto } from './dto/role.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { CreateRoleDto, UpdateRoleDto } from './dto/role.dto';
+import { RolesService } from './roles.service';
 
 @ApiTags('roles')
 @ApiBearerAuth()
@@ -21,8 +12,7 @@ export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
   @ApiOperation({
-    summary:
-      'Створити базові ролі (STUDENT, TEACHER, PARENT, MODERATOR, ADMIN)',
+    summary: 'Створити базові ролі (STUDENT, TEACHER, PARENT, MODERATOR, ADMIN)',
   })
   @Post('/init')
   async initRoles() {

@@ -1,48 +1,31 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import * as bcrypt from 'bcryptjs';
+import { AwsS3Service } from '../../core/integrations/aws/aws-s3.service';
+import { EmailService } from '../../core/integrations/email/email.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
+import { ClassesService } from '../classes/classes.service';
+import { RolesService } from '../roles/roles.service';
+import { SubjectsService } from '../subjects/subjects.service';
+import { AdminCreateUserDto } from './dto/admin-create-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
-
-  async findByEmail(email: string) {
-    return this.prisma.user.findUnique({
-      where: { email },
-      include: { userRoles: { include: { role: true } } },
-    });
-  }
-
-  async findById(id: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
-      include: { userRoles: { include: { role: true } } },
-    });
-
-    if (!user) {
-      throw new HttpException(
-        'Користувача з таким ID не знайдено',
-        HttpStatus.NOT_FOUND,
-      );
-    }
-    return user;
-  }
-
-  async getAllUsers() {
-    return this.prisma.user.findMany({
-      include: { userRoles: { include: { role: true } } },
-    });
-  }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly rolesService: RolesService,
+    private readonly classesService: ClassesService,
+    private readonly subjectsService: SubjectsService,
+    private readonly awsS3Service: AwsS3Service,
+    private readonly emailService: EmailService,
+  ) {}
 
   async create(data: any) {
     const existingUser = await this.prisma.user.findUnique({
       where: { email: data.email },
     });
     if (existingUser) {
-      throw new HttpException(
-        'Користувач з таким email вже існує',
-        HttpStatus.BAD_REQUEST,
-      );
+      throw new HttpException('Користувач з таким email вже існує', HttpStatus.BAD_REQUEST);
     }
 
     let defaultRole = await this.prisma.role.findUnique({
@@ -68,8 +51,83 @@ export class UsersService {
     });
   }
 
-  async updateProfile(userId: string, dto: UpdateProfileDto) {
-    await this.findById(userId);
+  async findByEmail(email: string) {
+    return this.prisma.user.findUnique({
+      where: { email },
+      include: { userRoles: { include: { role: true } } },
+    });
+  }
+
+  async findById(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: { userRoles: { include: { role: true } } },
+    });
+
+    if (!user) {
+      throw new HttpException('Користувача з таким ID не знайдено', HttpStatus.NOT_FOUND);
+    }
+    return user;
+  }
+
+  async getAllUsers() {
+    return this.prisma.user.findMany({
+      include: { userRoles: { include: { role: true } } },
+    });
+  }
+
+  async getSchoolTeachers(schoolId: string) {
+    return this.prisma.user.findMany({
+      where: {
+        schoolId,
+        userRoles: { some: { role: { name: 'TEACHER' } } },
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        avatarUrl: true,
+        teacherSubjects: { select: { subject: true } },
+      },
+      orderBy: { lastName: 'asc' },
+    });
+  }
+
+  async getSchoolTeachersBySubject(schoolId: string, subjectId: string) {
+    return this.prisma.user.findMany({
+      where: {
+        schoolId,
+        userRoles: { some: { role: { name: 'TEACHER' } } },
+        teacherSubjects: { some: { subjectId } },
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        avatarUrl: true,
+      },
+      orderBy: { lastName: 'asc' },
+    });
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto, file?: any) {
+    const user = await this.findById(userId);
+
+    let newAvatarUrl = user.avatarUrl;
+
+    if (file) {
+      const uploadedUrl = await this.awsS3Service.uploadFile(file, `users/avatars/${userId}`);
+
+      if (user.avatarUrl && user.avatarUrl.includes('amazonaws.com')) {
+        await this.awsS3Service.deleteFile(user.avatarUrl);
+      }
+
+      newAvatarUrl = uploadedUrl;
+    }
 
     const updatedUser = await this.prisma.user.update({
       where: { id: userId },
@@ -77,33 +135,23 @@ export class UsersService {
         firstName: dto.firstName,
         middleName: dto.middleName,
         lastName: dto.lastName,
-        avatarUrl: dto.avatarUrl,
-      },
-      include: {
-        userRoles: {
-          include: { role: true },
-        },
+        avatarUrl: newAvatarUrl,
       },
     });
 
-    const { password, ...userWithoutPassword } = updatedUser;
-
-    return userWithoutPassword;
+    const { password, ...result } = updatedUser;
+    return result;
   }
 
   async addRole(userId: string, roleName: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user)
-      throw new HttpException('Користувача не знайдено', HttpStatus.NOT_FOUND);
+    if (!user) throw new HttpException('Користувача не знайдено', HttpStatus.NOT_FOUND);
 
     const role = await this.prisma.role.findUnique({
       where: { name: roleName.toUpperCase() },
     });
     if (!role)
-      throw new HttpException(
-        `Роль '${roleName}' не знайдено у системі`,
-        HttpStatus.NOT_FOUND,
-      );
+      throw new HttpException(`Роль '${roleName}' не знайдено у системі`, HttpStatus.NOT_FOUND);
 
     const existingUserRole = await this.prisma.userRole.findUnique({
       where: {
@@ -112,10 +160,7 @@ export class UsersService {
     });
 
     if (existingUserRole) {
-      throw new HttpException(
-        'Користувач вже має цю роль',
-        HttpStatus.BAD_REQUEST,
-      );
+      throw new HttpException('Користувач вже має цю роль', HttpStatus.BAD_REQUEST);
     }
 
     await this.prisma.userRole.create({
@@ -130,17 +175,13 @@ export class UsersService {
 
   async removeRole(userId: string, roleName: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user)
-      throw new HttpException('Користувача не знайдено', HttpStatus.NOT_FOUND);
+    if (!user) throw new HttpException('Користувача не знайдено', HttpStatus.NOT_FOUND);
 
     const role = await this.prisma.role.findUnique({
       where: { name: roleName.toUpperCase() },
     });
     if (!role)
-      throw new HttpException(
-        `Роль '${roleName}' не знайдено у системі`,
-        HttpStatus.NOT_FOUND,
-      );
+      throw new HttpException(`Роль '${roleName}' не знайдено у системі`, HttpStatus.NOT_FOUND);
 
     const existingUserRole = await this.prisma.userRole.findUnique({
       where: {
@@ -172,5 +213,158 @@ export class UsersService {
     });
 
     return { message: `Роль ${role.name} успішно видалена у користувача` };
+  }
+
+  async createByAdmin(adminId: string, dto: AdminCreateUserDto) {
+    const admin = await this.prisma.user.findUnique({ where: { id: adminId } });
+
+    if (!admin) {
+      throw new HttpException('Адміністратора не знайдено', HttpStatus.NOT_FOUND);
+    }
+    if (!admin.schoolId) {
+      throw new HttpException("Адміністратор не прив'язаний до школи", HttpStatus.FORBIDDEN);
+    }
+
+    const exists = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+    if (exists)
+      throw new HttpException(`Користувач з email ${dto.email} вже існує`, HttpStatus.BAD_REQUEST);
+
+    const role = await this.rolesService.getRoleByName(dto.roleName);
+
+    const plainPassword = Math.random().toString(36).substring(2, 10) + 'A1!';
+    const hashedPassword = await bcrypt.hash(plainPassword, 10);
+
+    const newUser = await this.prisma.user.create({
+      data: {
+        email: dto.email,
+        password: hashedPassword,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        middleName: dto.middleName || '',
+        schoolId: admin.schoolId,
+        isEmailVerified: true,
+        isPasswordCustom: false,
+        userRoles: { create: { roleId: role.id } },
+      },
+    });
+
+    if (role.name === 'STUDENT' && dto.className) {
+      const classroom = await this.classesService.findOrCreateClass(admin.schoolId, dto.className);
+      await this.classesService.addStudent(classroom.id, newUser.id);
+    }
+
+    if (role.name === 'TEACHER') {
+      if (dto.subjectNames && dto.subjectNames.length > 0) {
+        for (const subjectName of dto.subjectNames) {
+          const subject = await this.subjectsService.findOrCreateByName(subjectName);
+          await this.subjectsService.assignToTeacher(newUser.id, subject.id);
+        }
+      }
+      if (dto.isHomeroomFor) {
+        const classroom = await this.classesService.findOrCreateClass(
+          admin.schoolId,
+          dto.isHomeroomFor,
+        );
+        await this.classesService.setHomeroomTeacher(classroom.id, newUser.id);
+      }
+    }
+
+    await this.emailService.sendWelcomeEmail(newUser.email, plainPassword);
+
+    const { password, ...result } = newUser;
+    return result;
+  }
+
+  async bulkImportByAdmin(adminId: string, users: AdminCreateUserDto[]) {
+    const results: {
+      successful: string[];
+      failed: { email: string; reason: string }[];
+    } = {
+      successful: [],
+      failed: [],
+    };
+
+    for (const userDto of users) {
+      try {
+        await this.createByAdmin(adminId, userDto);
+        results.successful.push(userDto.email);
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : 'Невідома помилка';
+        results.failed.push({ email: userDto.email, reason });
+      }
+    }
+
+    return {
+      message: `Імпорт завершено. Успішно: ${results.successful.length}, Помилок: ${results.failed.length}`,
+      details: results,
+    };
+  }
+
+  async syncUserRoles(adminId: string, targetUserId: string, roleNames: string[]) {
+    if (adminId === targetUserId) {
+      throw new HttpException(
+        'Ви не можете змінити ролі самому собі з панелі керування',
+        HttpStatus.FORBIDDEN,
+      );
+    }
+    await this.findById(targetUserId);
+
+    if (roleNames.length === 0) {
+      throw new HttpException('Користувач повинен мати хоча б одну роль', HttpStatus.BAD_REQUEST);
+    }
+
+    const newRoles: any[] = [];
+    for (const rName of roleNames) {
+      const role = await this.rolesService.getRoleByName(rName);
+      newRoles.push(role);
+    }
+
+    await this.prisma.userRole.deleteMany({
+      where: { userId: targetUserId },
+    });
+
+    await this.prisma.userRole.createMany({
+      data: newRoles.map((r) => ({
+        userId: targetUserId,
+        roleId: r.id,
+      })),
+    });
+
+    return { message: 'Список ролей користувача успішно оновлено' };
+  }
+
+  async deleteUser(adminId: string, targetUserId: string) {
+    if (adminId === targetUserId) {
+      throw new HttpException('Ви не можете видалити власний акаунт', HttpStatus.FORBIDDEN);
+    }
+
+    const targetUser = await this.findById(targetUserId);
+
+    const isTargetAdmin = targetUser.userRoles.some((ur) => ur.role.name === 'ADMIN');
+    if (isTargetAdmin) {
+      throw new HttpException('Не можна видалити іншого адміністратора', HttpStatus.FORBIDDEN);
+    }
+
+    await this.prisma.class.updateMany({
+      where: { homeroomTeacherId: targetUserId },
+      data: { homeroomTeacherId: null },
+    });
+
+    await this.prisma.school.updateMany({
+      where: { directorId: targetUserId },
+      data: { directorId: null },
+    });
+
+    if (targetUser.avatarUrl && targetUser.avatarUrl.includes('amazonaws.com')) {
+      await this.awsS3Service.deleteFile(targetUser.avatarUrl);
+    }
+
+    await this.prisma.user.delete({
+      where: { id: targetUserId },
+    });
+
+    return { message: 'Користувача успішно видалено з системи' };
   }
 }

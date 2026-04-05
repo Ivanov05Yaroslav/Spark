@@ -1,26 +1,18 @@
-import {
-  Body,
-  Controller,
-  HttpCode,
-  HttpStatus,
-  Post,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { AuthService } from './auth.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { AuthService } from './auth.service';
 import {
-  RegisterUserDto,
-  LoginUserDto,
-  InitSchoolRegistrationDto,
+  ChangePasswordDto,
   DiiaCallbackDto,
-  SendSchoolEmailCodeDto,
-  VerifySchoolEmailCodeDto,
+  ForgotPasswordResetDto,
   ForgotPasswordSendCodeDto,
   ForgotPasswordVerifyCodeDto,
-  ForgotPasswordResetDto,
-  ChangePasswordDto,
+  InitSchoolRegistrationDto,
+  LoginUserDto,
+  RegisterUserDto,
+  SendSchoolEmailCodeDto,
+  VerifySchoolEmailCodeDto,
 } from './dto/auth.dto';
 
 @ApiTags('auth')
@@ -50,8 +42,7 @@ export class AuthController {
   }
 
   @ApiOperation({
-    summary:
-      'Реєстрація школи Крок 1: Ініціалізація та генерація посилання на Дію',
+    summary: 'Реєстрація школи Крок 1: Ініціалізація та генерація посилання на Дію',
   })
   @Post('/school/init')
   @HttpCode(HttpStatus.OK)
@@ -60,8 +51,7 @@ export class AuthController {
   }
 
   @ApiOperation({
-    summary:
-      'Реєстрація школи Крок 2: Вебхук/Колбек від Дії для верифікації ПІБ',
+    summary: 'Реєстрація школи Крок 2: Вебхук/Колбек від Дії для верифікації ПІБ',
   })
   @Post('/school/diia-callback')
   @HttpCode(HttpStatus.OK)

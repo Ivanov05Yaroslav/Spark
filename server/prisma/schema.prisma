@@ -173,6 +173,7 @@ model NusGroup {
 
   subject Subject     @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   tasks   Task[]
+  tests   Test[]
   grades  Gradebook[]
 
   @@map("nus_groups")
@@ -292,6 +293,7 @@ model Test {
   id               String    @id @default(uuid())
   courseId         String
   creatorId        String
+  nusGroupId       String?
   title            String
   timeLimitMinutes Int?
   deadline         DateTime?
@@ -302,6 +304,7 @@ model Test {
 
   course      Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
   creator     User         @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  nusGroup    NusGroup?    @relation(fields: [nusGroupId], references: [id], onDelete: SetNull)
   questions   Question[]
   submissions Submission[]
   gradebooks  Gradebook[]
@@ -338,11 +341,10 @@ model Submission {
   taskId      String?
   testId      String?
   studentId   String
-  fileUrl     String?
-  linkUrl     String?
   submittedAt DateTime  @default(now())
   checkedAt   DateTime?
   score       String?
+  attachments String[]
 
   task     Task?     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   test     Test?     @relation(fields: [testId], references: [id], onDelete: Cascade)

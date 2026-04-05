@@ -18,10 +18,41 @@ export class EmailService {
     });
   }
 
-async sendVerificationCode(to: string, code: string) {
+    async sendWelcomeEmail(to: string, plainPassword: string) {
     try {
       await this.transporter.sendMail({
-        from: `"Spark" <${process.env.SMTP_USER}>`, 
+        from: `"Spark" <${process.env.SMTP_USER}>`,
+        to,
+        subject: 'Ваш акаунт створено',
+        html: `
+          <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px; border: 1px solid #eaeaea; border-radius: 10px; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #333;">Вітаємо на платформі!</h2>
+            <p>Адміністратор успішно створив для вас профіль навчального закладу.</p>
+            <p>Ваші дані для першого входу в систему:</p>
+            
+            <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; font-size: 16px;">
+              <p style="margin: 5px 0;"><strong>Email (Логін):</strong> ${to}</p>
+              <p style="margin: 5px 0;"><strong>Пароль:</strong> <span style="color: #4A90E2; font-family: monospace; font-size: 18px;">${plainPassword}</span></p>
+            </div>
+
+            <p style="color: #E24A4A; font-weight: bold;">
+              Увага: Після першого успішного входу в систему вам буде необхідно змінити цей пароль на новий з міркувань безпеки!
+            </p>
+          </div>
+        `,
+      });
+      this.logger.log(`Email з доступами відправлено новому користувачу: ${to}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Помилка відправки welcome-email на ${to}`, errorMessage);
+      throw new Error('Не вдалося відправити лист з даними для входу');
+    }
+  }
+
+  async sendVerificationCode(to: string, code: string) {
+    try {
+      await this.transporter.sendMail({
+        from: `"Spark" <${process.env.SMTP_USER}>`,
         to,
         subject: 'Код підтвердження реєстрації',
         html: `
@@ -35,16 +66,17 @@ async sendVerificationCode(to: string, code: string) {
         `,
       });
       this.logger.log(`Email з кодом відправлено на ${to}`);
-    } catch (error) {
-      this.logger.error(`Помилка відправки email на ${to}`, error.message);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Помилка відправки email на ${to}`, errorMessage);
       throw new Error('Не вдалося відправити лист з кодом підтвердження');
     }
   }
 
-   async sendPasswordResetCode(to: string, code: string) {
+  async sendPasswordResetCode(to: string, code: string) {
     try {
       await this.transporter.sendMail({
-        from: `"School Platform" <${process.env.SMTP_USER}>`,
+        from: `"Spark" <${process.env.SMTP_USER}>`,
         to,
         subject: 'Відновлення пароля',
         html: `
@@ -58,8 +90,9 @@ async sendVerificationCode(to: string, code: string) {
         `,
       });
       this.logger.log(`Email з кодом відновлення відправлено на ${to}`);
-    } catch (error) {
-      this.logger.error(`Помилка відправки email на ${to}`, error.message);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Помилка відправки email на ${to}`, errorMessage);
       throw new Error('Не вдалося відправити лист для відновлення пароля');
     }
   }

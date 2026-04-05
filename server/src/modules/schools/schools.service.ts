@@ -11,7 +11,7 @@ export class SchoolsService {
       distinct: ['region'],
       orderBy: { region: 'asc' },
     });
-    return regions.map(r => r.region).filter(Boolean);
+    return regions.map((r) => r.region).filter(Boolean);
   }
 
   async getCities(region: string) {
@@ -21,11 +21,11 @@ export class SchoolsService {
       distinct: ['city'],
       orderBy: { city: 'asc' },
     });
-    
+
     if (!cities.length) {
       throw new HttpException('Населені пункти для цієї області не знайдені', HttpStatus.NOT_FOUND);
     }
-    return cities.map(c => c.city).filter(Boolean);
+    return cities.map((c) => c.city).filter(Boolean);
   }
 
   async getSchoolsByCity(city: string) {
@@ -52,7 +52,7 @@ export class SchoolsService {
     if (!school) {
       throw new HttpException('Навчальний заклад з таким кодом не знайдено', HttpStatus.NOT_FOUND);
     }
-    
+
     return school;
   }
 }

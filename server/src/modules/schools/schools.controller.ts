@@ -1,15 +1,15 @@
 import { Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { SchoolsService } from './schools.service';
-import { GetCitiesDto, GetSchoolsListDto, SearchSchoolByEdeboDto } from './dto/school-search.dto';
 import { EdeboSyncService } from '../../core/integrations/edebo/edebo-sync.service';
+import { GetCitiesDto, GetSchoolsListDto, SearchSchoolByEdeboDto } from './dto/school-search.dto';
+import { SchoolsService } from './schools.service';
 
 @ApiTags('schools')
 @Controller('schools')
 export class SchoolsController {
   constructor(
     private readonly schoolsService: SchoolsService,
-    private readonly edeboSyncService: EdeboSyncService
+    private readonly edeboSyncService: EdeboSyncService,
   ) {}
 
   @ApiOperation({ summary: 'Отримати список областей України' })
