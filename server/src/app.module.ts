@@ -1,8 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { AwsModule } from './core/integrations/aws/aws.module';
 import { PrismaModule } from './core/prisma/prisma.module';
 import { AnnouncementsModule } from './modules/announcments/announcements.module';
@@ -41,7 +39,5 @@ import { UsersModule } from './modules/users/users.module';
     CommentsModule,
     NotificationsModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule {}
