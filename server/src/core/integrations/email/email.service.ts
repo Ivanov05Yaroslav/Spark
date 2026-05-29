@@ -10,12 +10,13 @@ export class EmailService {
     this.transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT),
-      secure: process.env.SMTP_PORT === '465', // true для 465, false для інших портів
+      secure: process.env.SMTP_PORT === '465',
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
-    });
+      family: 4, 
+    } as any);
   }
 
     async sendWelcomeEmail(to: string, plainPassword: string) {
