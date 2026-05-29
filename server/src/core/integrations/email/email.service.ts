@@ -22,7 +22,7 @@ export class EmailService {
     async sendWelcomeEmail(to: string, plainPassword: string) {
     try {
       await this.transporter.sendMail({
-        from: `"Spark" <${process.env.SMTP_USER}>`,
+        from: `"Spark" <${process.env.SMTP_FROM_EMAIL}>`,
         to,
         subject: 'Ваш акаунт створено',
         html: `
@@ -53,7 +53,7 @@ export class EmailService {
   async sendVerificationCode(to: string, code: string) {
     try {
       await this.transporter.sendMail({
-        from: `"Spark" <${process.env.SMTP_USER}>`,
+        from: `"Spark" <${process.env.SMTP_FROM_EMAIL}>`,
         to,
         subject: 'Код підтвердження реєстрації',
         html: `
@@ -77,7 +77,7 @@ export class EmailService {
   async sendPasswordResetCode(to: string, code: string) {
     try {
       await this.transporter.sendMail({
-        from: `"Spark" <${process.env.SMTP_USER}>`,
+        from: `"Spark" <${process.env.SMTP_FROM_EMAIL}>`,
         to,
         subject: 'Відновлення пароля',
         html: `
