@@ -68,34 +68,80 @@ export class AuthService {
   }
 
   async login(dto: LoginUserDto) {
-    const user = await this.usersService.findByEmail(dto.email);
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+      include: {
+        userRoles: {
+          include: { role: true },
+        },
+      },
+    });
+
     if (!user) {
-      throw new HttpException('Невірний email або пароль', HttpStatus.UNAUTHORIZED);
+      throw new UnauthorizedException('Невірний email або пароль');
     }
 
-    const passwordEquals = await bcrypt.compare(dto.password, user.password);
-    if (!passwordEquals) {
-      throw new HttpException('Невірний email або пароль', HttpStatus.UNAUTHORIZED);
+    const isPasswordValid = await bcrypt.compare(dto.password, user.password);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Невірний email або пароль');
     }
 
     await this.prisma.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
     });
+    
+    const tokens = await this.generateTokens(user);
 
-    return this.generateTokens(user);
+    return {
+      ...tokens,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        middleName: user.middleName,
+        avatarUrl: user.avatarUrl,
+        roles: user.userRoles.map((ur) => ur.role.name),
+      },
+    };
   }
 
   async refreshTokens(refreshToken: string) {
     try {
-      const payload = this.jwtService.verify(refreshToken, {
-        secret: process.env.JWT_REFRESH_SECRET || 'fallback_refresh_key',
+      const userData = this.jwtService.verify(refreshToken, {
+        secret: process.env.JWT_REFRESH_SECRET,
       });
 
-      const user = await this.usersService.findById(payload.id);
-      return this.generateTokens(user);
+      const user = await this.prisma.user.findUnique({
+        where: { id: userData.sub },
+        include: {
+          userRoles: {
+            include: { role: true },
+          },
+        },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('Користувача не знайдено');
+      }
+
+      const tokens = await this.generateTokens(user);
+
+      return {
+        ...tokens,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          middleName: user.middleName,
+          avatarUrl: user.avatarUrl,
+          roles: user.userRoles.map((ur) => ur.role.name),
+        },
+      };
     } catch (e) {
-      throw new UnauthorizedException('Недійсний refresh token');
+      throw new UnauthorizedException('Недійсний або прострочений refresh токен');
     }
   }
 
