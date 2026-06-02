@@ -5,12 +5,14 @@ import { AuthService } from './auth.service';
 import {
   ChangePasswordDto,
   DiiaCallbackDto,
+  ForgotPasswordResendCodeDto,
   ForgotPasswordResetDto,
   ForgotPasswordSendCodeDto,
   ForgotPasswordVerifyCodeDto,
   InitSchoolRegistrationDto,
   LoginUserDto,
   RegisterUserDto,
+  ResendSchoolEmailCodeDto,
   SendSchoolEmailCodeDto,
   VerifySchoolEmailCodeDto,
 } from './dto/auth.dto';
@@ -69,6 +71,15 @@ export class AuthController {
   }
 
   @ApiOperation({
+    summary: 'Реєстрація школи Крок 3.5: Повторна відправка коду на email',
+  })
+  @Post('/school/resend-email-code')
+  @HttpCode(HttpStatus.OK)
+  async resendSchoolEmailCode(@Body() dto: ResendSchoolEmailCodeDto) {
+    return this.authService.resendSchoolRegistrationEmailCode(dto.sessionId);
+  }
+
+  @ApiOperation({
     summary: 'Реєстрація школи Крок 4: Перевірка коду та завершення реєстрації',
   })
   @Post('/school/verify-email')
@@ -82,6 +93,13 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async forgotPasswordSendCode(@Body() dto: ForgotPasswordSendCodeDto) {
     return this.authService.sendPasswordResetCode(dto);
+  }
+
+  @ApiOperation({ summary: 'Скидання пароля Крок 1.5: Повторна відправка коду' })
+  @Post('/password/forgot/resend-code')
+  @HttpCode(HttpStatus.OK)
+  async resendPasswordResetCode(@Body() dto: ForgotPasswordResendCodeDto) {
+    return this.authService.resendPasswordResetCode(dto.sessionId);
   }
 
   @ApiOperation({ summary: 'Скидання пароля Крок 2: Перевірка коду з email' })

@@ -295,6 +295,38 @@ export class AuthService {
     return { message: 'Код підтвердження відправлено на вашу пошту' };
   }
 
+  async resendSchoolRegistrationEmailCode(sessionId: string) {
+    const session = this.sessions.get(sessionId);
+
+    if (!session || session.status !== 'EMAIL_SENT') {
+      throw new HttpException(
+        'Сесію реєстрації не знайдено або вона застаріла. Почніть спочатку.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    if (!session.email) {
+      throw new HttpException(
+        'Email ще не був вказаний для цієї сесії',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const newOtpCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    session.otpCode = newOtpCode;
+    session.expiresAt = Date.now() + 15 * 60 * 1000;
+
+    this.sessions.set(sessionId, session);
+
+    await this.emailService.sendVerificationCode(session.email, newOtpCode);
+
+    return {
+      message: 'Новий код підтвердження успішно відправлено на вашу пошту',
+      sessionId: sessionId,
+    };
+  }
+
   async verifySchoolRegistrationEmailCode(dto: VerifySchoolEmailCodeDto) {
     const session = this.sessions.get(dto.sessionId);
 
@@ -394,6 +426,31 @@ export class AuthService {
     return {
       sessionId,
       message: 'Код для відновлення пароля відправлено на вашу пошту',
+    };
+  }
+
+  async resendPasswordResetCode(sessionId: string) {
+    const session = this.passwordResetSessions.get(sessionId);
+
+    if (!session) {
+      throw new HttpException(
+        'Сесію реєстрації не знайдено або вона застаріла. Почніть спочатку.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    const newOtpCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    session.otpCode = newOtpCode;
+    session.expiresAt = Date.now() + 15 * 60 * 1000;
+    
+    this.passwordResetSessions.set(sessionId, session);
+
+    await this.emailService.sendPasswordResetCode(session.email, newOtpCode);
+
+    return {
+      message: 'Новий код для відновлення пароля відправлено на вашу пошту',
+      sessionId: sessionId,
     };
   }
 

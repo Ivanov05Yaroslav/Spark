@@ -71,6 +71,13 @@ export class SendSchoolEmailCodeDto {
   password!: string;
 }
 
+export class ResendSchoolEmailCodeDto {
+  @ApiProperty({ example: 'uuid-сесії', description: 'ID поточної сесії реєстрації' })
+  @IsUUID()
+  @IsNotEmpty()
+  sessionId!: string;
+}
+
 export class VerifySchoolEmailCodeDto {
   @ApiProperty({ example: 'uuid-сесії' })
   @IsUUID()
@@ -87,6 +94,13 @@ export class ForgotPasswordSendCodeDto {
   @ApiProperty({ example: 'director@school.com', description: 'Email для скидання пароля' })
   @IsEmail()
   email!: string;
+}
+
+export class ForgotPasswordResendCodeDto {
+  @ApiProperty({ example: 'uuid-сесії' })
+  @IsUUID()
+  @IsNotEmpty()
+  sessionId!: string;
 }
 
 export class ForgotPasswordVerifyCodeDto {
