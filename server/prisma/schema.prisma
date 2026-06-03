@@ -39,7 +39,7 @@ model User {
   firstName        String
   middleName       String?
   lastName         String
-  avatarUrl        String?
+  avatarUrl        String?   @default("https://spark-school-system-bucket.s3.eu-central-1.amazonaws.com/users/avatars/default-avatar.svg")
   createdAt        DateTime  @default(now())
   isEmailVerified  Boolean   @default(false)
   isPasswordCustom Boolean   @default(false)
