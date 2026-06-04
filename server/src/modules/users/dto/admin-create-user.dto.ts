@@ -1,10 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsEmail, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class AdminCreateUserDto {
   @ApiProperty({ example: 'student@school.com' })
   @IsEmail()
   email!: string;
+
+  @ApiProperty({ example: 'SecurePass123!' })
+  @IsString()
+  @MinLength(8, { message: 'Пароль має містити щонайменше 8 символів' })
+  password!: string;
 
   @ApiProperty({ example: 'Іван' })
   @IsString()
@@ -21,12 +26,17 @@ export class AdminCreateUserDto {
   @IsString()
   middleName?: string;
 
-  @ApiProperty({ example: 'STUDENT', description: 'STUDENT, TEACHER або MODERATOR' })
-  @IsString()
-  @IsNotEmpty()
-  roleName!: string;
+  @ApiProperty({ example: ['STUDENT'], description: 'Масив ролей (STUDENT, TEACHER, MODERATOR)' })
+  @IsArray()
+  @IsString({ each: true })
+  roles!: string[];
 
-  @ApiProperty({ example: '10-А', description: "Клас (Обов'язково для учнів)", required: false })
+  @ApiProperty({ example: 'uuid-школи', required: false })
+  @IsOptional()
+  @IsString()
+  schoolId?: string;
+
+  @ApiProperty({ example: '10-Б', description: "Клас (Обов'язково для учнів)", required: false })
   @IsOptional()
   @IsString()
   className?: string;
@@ -38,13 +48,13 @@ export class AdminCreateUserDto {
 
   @ApiProperty({
     example: ['Математика', 'Алгебра'],
-    description: 'Предмети вчителя',
+    description: 'Предмети (Обовʼязково для вчителів)',
     required: false,
   })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  subjectNames?: string[];
+  subjects?: string[];
 }
 
 export class BulkImportUsersDto {

@@ -18,10 +18,13 @@ import {
   ForgotPasswordResetDto,
   ForgotPasswordSendCodeDto,
   ForgotPasswordVerifyCodeDto,
+  InitParentRegistrationDto,
   InitSchoolRegistrationDto,
   LoginUserDto,
+  ParentRegistrationDetailsDto,
   RegisterUserDto,
   SendSchoolEmailCodeDto,
+  VerifyParentEmailDto,
   VerifySchoolEmailCodeDto,
 } from './dto/auth.dto';
 
@@ -44,12 +47,26 @@ interface PasswordResetSession {
   expiresAt: number;
 }
 
+interface ParentRegistrationSession {
+  id: string;
+  studentIds: string[];
+  schoolId: string | null;
+  status: 'INIT' | 'DETAILS_PROVIDED';
+  expiresAt: number;
+  email?: string;
+  passwordHash?: string;
+  firstName?: string;
+  lastName?: string;
+  middleName?: string;
+  otpCode?: string;
+}
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   private sessions = new Map<string, RegistrationSession>();
   private passwordResetSessions = new Map<string, PasswordResetSession>();
-
+  private parentRegistrationSessions = new Map<string, ParentRegistrationSession>();
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
@@ -63,6 +80,7 @@ export class AuthService {
     const user = await this.usersService.create({
       ...dto,
       password: hashPassword,
+      roles: dto['roles'] ?? ['USER'],
     });
     return this.generateTokens(user);
   }
@@ -400,6 +418,150 @@ export class AuthService {
     this.sessions.delete(dto.sessionId);
 
     return this.generateTokens(result);
+  }
+
+  async initParentRegistration(dto: InitParentRegistrationDto) {
+    const students = await this.prisma.user.findMany({
+      where: { parentsCode: { in: dto.childrenCodes } },
+    });
+
+    if (students.length !== dto.childrenCodes.length) {
+      throw new HttpException(
+        'Один або декілька кодів дітей є недійсними або не існують',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const sessionId = randomUUID();
+    
+    this.parentRegistrationSessions.set(sessionId, {
+      id: sessionId,
+      studentIds: students.map((s) => s.id),
+      schoolId: students[0].schoolId,
+      status: 'INIT',
+      expiresAt: Date.now() + 30 * 60 * 1000,
+    });
+
+    return {
+      sessionId,
+      message: 'Коди дітей успішно перевірено. Перейдіть до вводу особистих даних.',
+      foundChildrenCount: students.length,
+    };
+  }
+
+  async provideParentDetails(dto: ParentRegistrationDetailsDto) {
+    const session = this.parentRegistrationSessions.get(dto.sessionId);
+
+    if (!session || session.status !== 'INIT') {
+      throw new HttpException('Сесію не знайдено або вона застаріла', HttpStatus.NOT_FOUND);
+    }
+
+    const existingUser = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    if (existingUser) {
+      throw new HttpException('Цей email вже зареєстрований в системі', HttpStatus.BAD_REQUEST);
+    }
+
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    session.email = dto.email;
+    session.passwordHash = await bcrypt.hash(dto.password, 10);
+    session.firstName = dto.firstName;
+    session.lastName = dto.lastName;
+    session.middleName = dto.middleName;
+    session.otpCode = otpCode;
+    session.status = 'DETAILS_PROVIDED';
+    session.expiresAt = Date.now() + 15 * 60 * 1000;
+
+    this.parentRegistrationSessions.set(dto.sessionId, session);
+
+    await this.emailService.sendVerificationCode(dto.email, otpCode);
+
+    return {
+      sessionId: dto.sessionId,
+      message: 'Код підтвердження відправлено на вашу електронну пошту.',
+    };
+  }
+
+  async resendParentRegistrationCode(sessionId: string) {
+    const session = this.parentRegistrationSessions.get(sessionId);
+
+    if (!session || session.status !== 'DETAILS_PROVIDED' || !session.email) {
+      throw new HttpException('Сесію не знайдено або email не вказано', HttpStatus.NOT_FOUND);
+    }
+
+    const newOtpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    session.otpCode = newOtpCode;
+    session.expiresAt = Date.now() + 15 * 60 * 1000;
+
+    this.parentRegistrationSessions.set(sessionId, session);
+    await this.emailService.sendVerificationCode(session.email, newOtpCode);
+
+    return {
+      sessionId,
+      message: 'Новий код підтвердження успішно відправлено на вашу пошту',
+    };
+  }
+
+  async verifyParentEmailAndRegister(dto: VerifyParentEmailDto) {
+    const session = this.parentRegistrationSessions.get(dto.sessionId);
+
+    if (!session || session.status !== 'DETAILS_PROVIDED') {
+      throw new HttpException('Сесію не знайдено', HttpStatus.NOT_FOUND);
+    }
+
+    if (session.otpCode !== dto.code) {
+      throw new HttpException('Невірний код підтвердження', HttpStatus.BAD_REQUEST);
+    }
+
+    const parentRole = await this.prisma.role.findUnique({ where: { name: 'PARENT' } });
+    
+    if (!parentRole) {
+      throw new HttpException('Роль PARENT не знайдена в системі', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    const newParent = await this.prisma.user.create({
+      data: {
+        email: session.email!,
+        password: session.passwordHash!,
+        firstName: session.firstName!,
+        lastName: session.lastName!,
+        middleName: session.middleName,
+        schoolId: session.schoolId,
+        isEmailVerified: true,
+        isPasswordCustom: true,
+        userRoles: {
+          create: { roleId: parentRole.id },
+        },
+        parentRelations: {
+          create: session.studentIds.map((studentId) => ({
+            studentId: studentId,
+          })),
+        },
+      },
+      include: {
+        userRoles: { 
+          include: { role: true } 
+        }
+      }
+    });
+
+    this.parentRegistrationSessions.delete(dto.sessionId);
+
+    const tokens = await this.generateTokens(newParent);
+
+    return {
+      message: 'Реєстрація успішна',
+      ...tokens,
+      user: {
+        id: newParent.id,
+        email: newParent.email,
+        firstName: newParent.firstName,
+        lastName: newParent.lastName,
+        middleName: newParent.middleName,
+        avatarUrl: newParent.avatarUrl,
+        roles: newParent.userRoles.map((ur) => ur.role.name),
+      },
+    };
   }
 
   async sendPasswordResetCode(dto: ForgotPasswordSendCodeDto) {

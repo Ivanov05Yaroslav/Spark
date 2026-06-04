@@ -9,11 +9,15 @@ import {
   ForgotPasswordResetDto,
   ForgotPasswordSendCodeDto,
   ForgotPasswordVerifyCodeDto,
+  InitParentRegistrationDto,
   InitSchoolRegistrationDto,
   LoginUserDto,
+  ParentRegistrationDetailsDto,
   RegisterUserDto,
+  ResendParentEmailCodeDto,
   ResendSchoolEmailCodeDto,
   SendSchoolEmailCodeDto,
+  VerifyParentEmailDto,
   VerifySchoolEmailCodeDto,
 } from './dto/auth.dto';
 
@@ -86,6 +90,34 @@ export class AuthController {
   @HttpCode(HttpStatus.CREATED)
   async verifySchoolEmailCode(@Body() dto: VerifySchoolEmailCodeDto) {
     return this.authService.verifySchoolRegistrationEmailCode(dto);
+  }
+
+  @ApiOperation({ summary: 'Реєстрація батьків Етап 1: Введення кодів дітей' })
+  @Post('/parent/register/init')
+  @HttpCode(HttpStatus.OK)
+  async initParentRegistration(@Body() dto: InitParentRegistrationDto) {
+    return this.authService.initParentRegistration(dto);
+  }
+
+  @ApiOperation({ summary: 'Реєстрація батьків Етап 2: Введення особистих даних батьків' })
+  @Post('/parent/register/details')
+  @HttpCode(HttpStatus.OK)
+  async provideParentDetails(@Body() dto: ParentRegistrationDetailsDto) {
+    return this.authService.provideParentDetails(dto);
+  }
+
+  @ApiOperation({ summary: 'Реєстрація батьків Етап 3: Перевірка email та створення профілю' })
+  @Post('/parent/register/verify')
+  @HttpCode(HttpStatus.CREATED)
+  async verifyParentRegistration(@Body() dto: VerifyParentEmailDto) {
+    return this.authService.verifyParentEmailAndRegister(dto);
+  }
+
+  @ApiOperation({ summary: 'Реєстрація батьків Етап 3.5: Повторна відправка коду' })
+  @Post('/parent/register/resend-code')
+  @HttpCode(HttpStatus.OK)
+  async resendParentRegistrationCode(@Body() dto: ResendParentEmailCodeDto) {
+    return this.authService.resendParentRegistrationCode(dto.sessionId);
   }
 
   @ApiOperation({ summary: 'Скидання пароля Крок 1: Відправка коду на email' })

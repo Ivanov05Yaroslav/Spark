@@ -20,35 +20,66 @@ export class UsersService {
     private readonly emailService: EmailService,
   ) {}
 
-  async create(data: any) {
+  async create(dto: AdminCreateUserDto) {
     const existingUser = await this.prisma.user.findUnique({
-      where: { email: data.email },
+      where: { email: dto.email },
     });
     if (existingUser) {
-      throw new HttpException('Користувач з таким email вже існує', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Користувач з таким email вже існує',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
-    let defaultRole = await this.prisma.role.findUnique({
-      where: { name: 'USER' },
+    const roleRecords = await this.prisma.role.findMany({
+      where: { name: { in: dto.roles } },
     });
-    if (!defaultRole) {
-      defaultRole = await this.prisma.role.create({ data: { name: 'USER' } });
+
+    if (roleRecords.length !== dto.roles.length) {
+      throw new HttpException(
+        'Одну або декілька ролей не знайдено',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
-    return this.prisma.user.create({
+    let generatedParentsCode: string | null = null;
+    
+    if (dto.roles.includes('STUDENT')) {
+      let isUnique = false;
+      while (!isUnique) {
+        generatedParentsCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const existingCode = await this.prisma.user.findUnique({ 
+          where: { parentsCode: generatedParentsCode } 
+        });
+        if (!existingCode) {
+          isUnique = true;
+        }
+      }
+    }
+
+    const hashPassword = await bcrypt.hash(dto.password, 10);
+
+    const user = await this.prisma.user.create({
       data: {
-        email: data.email,
-        password: data.password,
-        firstName: data.firstName,
-        lastName: data.lastName,
+        email: dto.email,
+        password: hashPassword,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        middleName: dto.middleName,
+        schoolId: dto.schoolId, 
+        parentsCode: generatedParentsCode,
         userRoles: {
-          create: {
-            roleId: defaultRole.id,
-          },
+          create: roleRecords.map((r) => ({ roleId: r.id })),
         },
       },
-      include: { userRoles: { include: { role: true } } },
+      include: {
+        userRoles: {
+          include: { role: true }
+        }
+      }
     });
+
+    return user;
   }
 
   async findByEmail(email: string) {
@@ -231,7 +262,24 @@ export class UsersService {
     if (exists)
       throw new HttpException(`Користувач з email ${dto.email} вже існує`, HttpStatus.BAD_REQUEST);
 
-    const role = await this.rolesService.getRoleByName(dto.roleName);
+    const roleRecords = await this.prisma.role.findMany({
+      where: { name: { in: dto.roles } },
+    });
+    if (roleRecords.length === 0 || roleRecords.length !== dto.roles.length) {
+      throw new HttpException('Одну або декілька ролей не знайдено', HttpStatus.BAD_REQUEST);
+    }
+
+    let generatedParentsCode: string | null = null;
+    if (dto.roles.includes('STUDENT')) {
+      let isUnique = false;
+      while (!isUnique) {
+        generatedParentsCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const existingCode = await this.prisma.user.findUnique({ 
+          where: { parentsCode: generatedParentsCode } 
+        });
+        if (!existingCode) isUnique = true;
+      }
+    }
 
     const plainPassword = Math.random().toString(36).substring(2, 10) + 'A1!';
     const hashedPassword = await bcrypt.hash(plainPassword, 10);
@@ -244,20 +292,21 @@ export class UsersService {
         lastName: dto.lastName,
         middleName: dto.middleName || '',
         schoolId: admin.schoolId,
+        parentsCode: generatedParentsCode,
         isEmailVerified: true,
         isPasswordCustom: false,
-        userRoles: { create: { roleId: role.id } },
+        userRoles: { create: roleRecords.map((r) => ({ roleId: r.id })) },
       },
     });
 
-    if (role.name === 'STUDENT' && dto.className) {
+    if (dto.roles.includes('STUDENT') && dto.className) {
       const classroom = await this.classesService.findOrCreateClass(admin.schoolId, dto.className);
       await this.classesService.addStudent(classroom.id, newUser.id);
     }
 
-    if (role.name === 'TEACHER') {
-      if (dto.subjectNames && dto.subjectNames.length > 0) {
-        for (const subjectName of dto.subjectNames) {
+    if (dto.roles.includes('TEACHER')) {
+      if (dto.subjects && dto.subjects.length > 0) {
+        for (const subjectName of dto.subjects) {
           const subject = await this.subjectsService.findOrCreateByName(subjectName);
           await this.subjectsService.assignToTeacher(newUser.id, subject.id);
         }
