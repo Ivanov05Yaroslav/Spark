@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Post,
@@ -21,6 +23,7 @@ import { AdminCreateUserDto, BulkImportUsersDto } from './dto/admin-create-user.
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { SyncRolesDto } from './dto/user-role.dto';
 import { UsersService } from './users.service';
+import { AddChildDto } from './dto/manage-children.dto';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -117,5 +120,37 @@ export class UsersController {
   @Delete('/admin/:id')
   async deleteUser(@GetUser('id') adminId: string, @Param('id') targetUserId: string) {
     return this.usersService.deleteUser(adminId, targetUserId);
+  }
+
+  @ApiOperation({ summary: 'Отримати всіх дітей (Тільки для батьків)' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('PARENT')
+  @Get('/me/children')
+  async getMyChildren(@GetUser('id') parentId: string) {
+    return this.usersService.getMyChildren(parentId);
+  }
+
+  @ApiOperation({ summary: 'Додати дитину за кодом (Тільки для батьків)' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('PARENT')
+  @Post('/me/children')
+  @HttpCode(HttpStatus.OK)
+  async addChild(
+    @GetUser('id') parentId: string, 
+    @Body() dto: AddChildDto
+  ) {
+    return this.usersService.addChild(parentId, dto.parentsCode);
+  }
+
+  @ApiOperation({ summary: 'Видалити зв\'язок з дитиною (Тільки для батьків)' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('PARENT')
+  @Delete('/me/children/:studentId')
+  @HttpCode(HttpStatus.OK)
+  async removeChild(
+    @GetUser('id') parentId: string,
+    @Param('studentId') studentId: string,
+  ) {
+    return this.usersService.removeChild(parentId, studentId);
   }
 }

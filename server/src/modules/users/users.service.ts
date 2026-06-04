@@ -416,4 +416,100 @@ export class UsersService {
 
     return { message: 'Користувача успішно видалено з системи' };
   }
+
+async getMyChildren(parentId: string) {
+    const parent = await this.prisma.user.findUnique({
+      where: { id: parentId },
+      include: {
+        parentRelations: {
+          include: {
+            student: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                middleName: true,
+                avatarUrl: true,
+                email: true,
+                schoolId: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!parent) {
+      throw new HttpException('Батьківський профіль не знайдено', HttpStatus.NOT_FOUND);
+    }
+
+    return parent.parentRelations.map((relation) => relation.student);
+  }
+
+  async addChild(parentId: string, parentsCode: string) {
+    const student = await this.prisma.user.findUnique({
+      where: { parentsCode },
+    });
+
+    if (!student) {
+      throw new HttpException('Учня з таким кодом не знайдено', HttpStatus.NOT_FOUND);
+    }
+
+    const parent = await this.prisma.user.findUnique({
+      where: { id: parentId },
+      include: { parentRelations: true },
+    });
+
+    const isAlreadyAdded = parent?.parentRelations.some(
+      (rel) => rel.studentId === student.id
+    );
+
+    if (isAlreadyAdded) {
+      throw new HttpException('Цю дитину вже додано до вашого профілю', HttpStatus.BAD_REQUEST);
+    }
+
+    await this.prisma.user.update({
+      where: { id: parentId },
+      data: {
+        parentRelations: {
+          create: {
+            studentId: student.id,
+          },
+        },
+      },
+    });
+
+    return { 
+      message: 'Дитину успішно додано до вашого профілю', 
+      studentId: student.id 
+    };
+  }
+
+  async removeChild(parentId: string, studentId: string) {
+    const parent = await this.prisma.user.findUnique({
+      where: { id: parentId },
+      include: { parentRelations: true },
+    });
+
+    const hasRelation = parent?.parentRelations.some(
+      (rel) => rel.studentId === studentId
+    );
+
+    if (!hasRelation) {
+      throw new HttpException('Зв\'язок з цією дитиною не знайдено', HttpStatus.NOT_FOUND);
+    }
+
+    await this.prisma.user.update({
+      where: { id: parentId },
+      data: {
+        parentRelations: {
+          deleteMany: {
+            studentId: studentId,
+          },
+        },
+      },
+    });
+
+    return { message: 'Зв\'язок з дитиною успішно видалено' };
+  }
 }
