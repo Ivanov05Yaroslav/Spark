@@ -38,13 +38,11 @@ export class UsersController {
     return this.usersService.getAllUsers();
   }
 
-  @ApiOperation({ summary: 'Отримати власний профіль' })
+  @ApiOperation({ summary: 'Отримати власний профіль з детальною статистикою' })
   @UseGuards(JwtAuthGuard)
   @Get('/profile')
   async getProfile(@GetUser('id') userId: string) {
-    const user = await this.usersService.findById(userId);
-    const { password, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+    return this.usersService.getProfile(userId); 
   }
 
   @ApiOperation({ summary: 'Редагувати власний профіль (ПІБ та Аватар)' })
