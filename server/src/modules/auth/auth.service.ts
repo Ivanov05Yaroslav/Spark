@@ -108,7 +108,7 @@ export class AuthService {
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
     });
-    
+
     const tokens = await this.generateTokens(user);
 
     return {
@@ -324,10 +324,7 @@ export class AuthService {
     }
 
     if (!session.email) {
-      throw new HttpException(
-        'Email ще не був вказаний для цієї сесії',
-        HttpStatus.BAD_REQUEST,
-      );
+      throw new HttpException('Email ще не був вказаний для цієї сесії', HttpStatus.BAD_REQUEST);
     }
 
     const newOtpCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -386,11 +383,17 @@ export class AuthService {
     const result = await this.prisma.$transaction(async (prisma) => {
       const newSchool = await prisma.school.create({
         data: {
-          name: edeboSchool.fullName,
           edrpou: edeboSchool.edeboId,
+          fullName: edeboSchool.fullName,
+          shortName: edeboSchool.shortName,
           region: edeboSchool.region,
           city: edeboSchool.city,
-          isDiiaVerified: true,
+          address: edeboSchool.address,
+          phone: edeboSchool.phone,
+          email: edeboSchool.email,
+          website: edeboSchool.website,
+          directorFullName: edeboSchool.directorFullName,
+          isVerified: true,
         },
       });
 
@@ -433,7 +436,7 @@ export class AuthService {
     }
 
     const sessionId = randomUUID();
-    
+
     this.parentRegistrationSessions.set(sessionId, {
       id: sessionId,
       studentIds: students.map((s) => s.id),
@@ -514,9 +517,12 @@ export class AuthService {
     }
 
     const parentRole = await this.prisma.role.findUnique({ where: { name: 'PARENT' } });
-    
+
     if (!parentRole) {
-      throw new HttpException('Роль PARENT не знайдена в системі', HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Роль PARENT не знайдена в системі',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
 
     const newParent = await this.prisma.user.create({
@@ -539,10 +545,10 @@ export class AuthService {
         },
       },
       include: {
-        userRoles: { 
-          include: { role: true } 
-        }
-      }
+        userRoles: {
+          include: { role: true },
+        },
+      },
     });
 
     this.parentRegistrationSessions.delete(dto.sessionId);
@@ -605,7 +611,7 @@ export class AuthService {
 
     session.otpCode = newOtpCode;
     session.expiresAt = Date.now() + 15 * 60 * 1000;
-    
+
     this.passwordResetSessions.set(sessionId, session);
 
     await this.emailService.sendPasswordResetCode(session.email, newOtpCode);

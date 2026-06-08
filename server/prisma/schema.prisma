@@ -103,13 +103,21 @@ model StudentParent {
 // ==========================================
 
 model School {
-  id             String  @id @default(uuid())
-  directorId     String? @unique
-  edrpou         String? @unique
-  region         String?
-  city           String?
-  name           String
-  isDiiaVerified Boolean @default(false)
+  id         String  @id @default(uuid())
+  directorId String? @unique
+  edrpou     String? @unique
+
+  fullName         String
+  shortName        String?
+  region           String?
+  city             String?
+  address          String?
+  phone            String?
+  email            String?
+  website          String?
+  directorFullName String?
+
+  isVerified Boolean @default(false)
 
   director User?    @relation("SchoolDirector", fields: [directorId], references: [id])
   users    User[]   @relation("SchoolUsers")

@@ -25,10 +25,7 @@ export class UsersService {
       where: { email: dto.email },
     });
     if (existingUser) {
-      throw new HttpException(
-        'Користувач з таким email вже існує',
-        HttpStatus.BAD_REQUEST,
-      );
+      throw new HttpException('Користувач з таким email вже існує', HttpStatus.BAD_REQUEST);
     }
 
     const roleRecords = await this.prisma.role.findMany({
@@ -36,20 +33,17 @@ export class UsersService {
     });
 
     if (roleRecords.length !== dto.roles.length) {
-      throw new HttpException(
-        'Одну або декілька ролей не знайдено',
-        HttpStatus.BAD_REQUEST,
-      );
+      throw new HttpException('Одну або декілька ролей не знайдено', HttpStatus.BAD_REQUEST);
     }
 
     let generatedParentsCode: string | null = null;
-    
+
     if (dto.roles.includes('STUDENT')) {
       let isUnique = false;
       while (!isUnique) {
         generatedParentsCode = Math.floor(100000 + Math.random() * 900000).toString();
-        const existingCode = await this.prisma.user.findUnique({ 
-          where: { parentsCode: generatedParentsCode } 
+        const existingCode = await this.prisma.user.findUnique({
+          where: { parentsCode: generatedParentsCode },
         });
         if (!existingCode) {
           isUnique = true;
@@ -66,7 +60,7 @@ export class UsersService {
         firstName: dto.firstName,
         lastName: dto.lastName,
         middleName: dto.middleName,
-        schoolId: dto.schoolId, 
+        schoolId: dto.schoolId,
         parentsCode: generatedParentsCode,
         userRoles: {
           create: roleRecords.map((r) => ({ roleId: r.id })),
@@ -74,9 +68,9 @@ export class UsersService {
       },
       include: {
         userRoles: {
-          include: { role: true }
-        }
-      }
+          include: { role: true },
+        },
+      },
     });
 
     return user;
@@ -107,12 +101,12 @@ export class UsersService {
     });
   }
 
-async getProfile(userId: string) {
+  async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
         userRoles: { include: { role: true } },
-        school: true, 
+        school: true,
       },
     });
 
@@ -139,10 +133,10 @@ async getProfile(userId: string) {
             },
           },
           enrolledCourses: {
-            include: { 
+            include: {
               course: {
-                include: { subject: true }
-              } 
+                include: { subject: true },
+              },
             },
           },
         },
@@ -150,13 +144,14 @@ async getProfile(userId: string) {
 
       extraData = {
         parentsCode: user.parentsCode,
-        classes: studentData?.studentClasses.map(sc => ({
-          id: sc.class.id,
-          name: sc.class.name,
-          classmatesCount: Math.max(0, (sc.class._count?.students || 1) - 1)
-        })) || [],
+        classes:
+          studentData?.studentClasses.map((sc) => ({
+            id: sc.class.id,
+            name: sc.class.name,
+            classmatesCount: Math.max(0, (sc.class._count?.students || 1) - 1),
+          })) || [],
         coursesCount: studentData?.enrolledCourses.length || 0,
-        courses: studentData?.enrolledCourses.map(sc => sc.course.subject.name) || []
+        courses: studentData?.enrolledCourses.map((sc) => sc.course.subject.name) || [],
       };
     }
 
@@ -169,21 +164,23 @@ async getProfile(userId: string) {
               student: {
                 include: {
                   studentClasses: {
-                    include: { class: true }
-                  }
-                }
-              }
-            }
-          }
-        }
+                    include: { class: true },
+                  },
+                },
+              },
+            },
+          },
+        },
       });
 
       extraData = {
-        children: parentData?.parentRelations.map(rel => ({
-          id: rel.student.id,
-          fullName: `${rel.student.lastName} ${rel.student.firstName} ${rel.student.middleName || ''}`.trim(),
-          classes: rel.student.studentClasses.map(sc => sc.class.name)
-        })) || []
+        children:
+          parentData?.parentRelations.map((rel) => ({
+            id: rel.student.id,
+            fullName:
+              `${rel.student.lastName} ${rel.student.firstName} ${rel.student.middleName || ''}`.trim(),
+            classes: rel.student.studentClasses.map((sc) => sc.class.name),
+          })) || [],
       };
     }
 
@@ -193,14 +190,14 @@ async getProfile(userId: string) {
         include: {
           homeroomClasses: true,
           teacherSubjects: {
-            include: { subject: true }
-          }
-        }
+            include: { subject: true },
+          },
+        },
       });
 
       extraData = {
-        homeroomClasses: teacherData?.homeroomClasses.map(c => c.name) || [],
-        subjects: teacherData?.teacherSubjects.map(ts => ts.subject.name) || []
+        homeroomClasses: teacherData?.homeroomClasses.map((c) => c.name) || [],
+        subjects: teacherData?.teacherSubjects.map((ts) => ts.subject.name) || [],
       };
     }
 
@@ -211,13 +208,17 @@ async getProfile(userId: string) {
       lastName: user.lastName,
       middleName: user.middleName,
       avatarUrl: user.avatarUrl,
-      school: user.school ? {
-        id: user.school.id,
-        name: user.school.name,
-        city: user.school.city
-      } : null,
+      school: user.school
+        ? {
+            id: user.school.id,
+            name: user.school.shortName || user.school.fullName,
+            fullName: user.school.fullName,
+            city: user.school.city,
+            address: user.school.address,
+          }
+        : null,
       roles,
-      ...extraData
+      ...extraData,
     };
   }
 
@@ -388,8 +389,8 @@ async getProfile(userId: string) {
       let isUnique = false;
       while (!isUnique) {
         generatedParentsCode = Math.floor(100000 + Math.random() * 900000).toString();
-        const existingCode = await this.prisma.user.findUnique({ 
-          where: { parentsCode: generatedParentsCode } 
+        const existingCode = await this.prisma.user.findUnique({
+          where: { parentsCode: generatedParentsCode },
         });
         if (!existingCode) isUnique = true;
       }
@@ -531,7 +532,7 @@ async getProfile(userId: string) {
     return { message: 'Користувача успішно видалено з системи' };
   }
 
-async getMyChildren(parentId: string) {
+  async getMyChildren(parentId: string) {
     const parent = await this.prisma.user.findUnique({
       where: { id: parentId },
       include: {
@@ -574,9 +575,7 @@ async getMyChildren(parentId: string) {
       include: { parentRelations: true },
     });
 
-    const isAlreadyAdded = parent?.parentRelations.some(
-      (rel) => rel.studentId === student.id
-    );
+    const isAlreadyAdded = parent?.parentRelations.some((rel) => rel.studentId === student.id);
 
     if (isAlreadyAdded) {
       throw new HttpException('Цю дитину вже додано до вашого профілю', HttpStatus.BAD_REQUEST);
@@ -593,9 +592,9 @@ async getMyChildren(parentId: string) {
       },
     });
 
-    return { 
-      message: 'Дитину успішно додано до вашого профілю', 
-      studentId: student.id 
+    return {
+      message: 'Дитину успішно додано до вашого профілю',
+      studentId: student.id,
     };
   }
 
@@ -605,12 +604,10 @@ async getMyChildren(parentId: string) {
       include: { parentRelations: true },
     });
 
-    const hasRelation = parent?.parentRelations.some(
-      (rel) => rel.studentId === studentId
-    );
+    const hasRelation = parent?.parentRelations.some((rel) => rel.studentId === studentId);
 
     if (!hasRelation) {
-      throw new HttpException('Зв\'язок з цією дитиною не знайдено', HttpStatus.NOT_FOUND);
+      throw new HttpException("Зв'язок з цією дитиною не знайдено", HttpStatus.NOT_FOUND);
     }
 
     await this.prisma.user.update({
@@ -624,6 +621,6 @@ async getMyChildren(parentId: string) {
       },
     });
 
-    return { message: 'Зв\'язок з дитиною успішно видалено' };
+    return { message: "Зв'язок з дитиною успішно видалено" };
   }
 }
