@@ -524,3 +524,23 @@ model EdeboSchool {
   @@index([city])
   @@map("edebo_schools")
 }
+
+// ==========================================
+// 8. Заявки на реєстрацію (Модерація)
+// ==========================================
+
+model SchoolRegistrationRequest {
+  id               String   @id @default(uuid())
+  edeboId          String
+  email            String
+  passwordHash     String
+  firstName        String
+  lastName         String
+  middleName       String?
+  documents        String[] 
+  status           String   @default("PENDING")
+  rejectionReason  String?
+  createdAt        DateTime @default(now())
+
+  @@map("school_registration_requests")
+}

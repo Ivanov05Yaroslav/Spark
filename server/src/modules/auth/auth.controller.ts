@@ -1,10 +1,21 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Req, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  UploadedFiles,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import 'multer';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AuthService } from './auth.service';
 import {
   ChangePasswordDto,
-  DiiaCallbackDto,
   ForgotPasswordResendCodeDto,
   ForgotPasswordResetDto,
   ForgotPasswordSendCodeDto,
@@ -13,25 +24,18 @@ import {
   InitSchoolRegistrationDto,
   LoginUserDto,
   ParentRegistrationDetailsDto,
-  RegisterUserDto,
   ResendParentEmailCodeDto,
   ResendSchoolEmailCodeDto,
-  SendSchoolEmailCodeDto,
+  SchoolDirectorDetailsDto,
+  SubmitSchoolDocumentsDto,
   VerifyParentEmailDto,
-  VerifySchoolEmailCodeDto,
-} from './dto/auth.dto';
+  VerifySchoolEmailDto,
+} from './dto';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
-
-  @ApiOperation({ summary: 'Реєстрація користувача' })
-  @Post('/registration')
-  @HttpCode(HttpStatus.CREATED)
-  async register(@Body() dto: RegisterUserDto) {
-    return this.authService.register(dto);
-  }
 
   @ApiOperation({ summary: 'Логін користувача' })
   @Post('/login')
@@ -47,49 +51,48 @@ export class AuthController {
     return this.authService.refreshTokens(refreshToken);
   }
 
-  @ApiOperation({
-    summary: 'Реєстрація школи Крок 1: Ініціалізація та генерація посилання на Дію',
-  })
-  @Post('/school/init')
+  @ApiOperation({ summary: 'Реєстрація школи Крок 1: Ініціалізація за кодом ЄДЕБО' })
+  @Post('/school/register/init')
   @HttpCode(HttpStatus.OK)
   async initSchoolRegistration(@Body() dto: InitSchoolRegistrationDto) {
     return this.authService.initSchoolRegistration(dto);
   }
 
-  @ApiOperation({
-    summary: 'Реєстрація школи Крок 2: Вебхук/Колбек від Дії для верифікації ПІБ',
-  })
-  @Post('/school/diia-callback')
+  @ApiOperation({ summary: 'Реєстрація школи Крок 2: Введення даних директора' })
+  @Post('/school/register/details')
   @HttpCode(HttpStatus.OK)
-  async diiaCallback(@Body() dto: DiiaCallbackDto) {
-    return this.authService.processDiiaCallback(dto);
+  async provideSchoolDirectorDetails(@Body() dto: SchoolDirectorDetailsDto) {
+    return this.authService.provideSchoolDirectorDetails(dto);
   }
 
   @ApiOperation({
-    summary: 'Реєстрація школи Крок 3: Відправка 6-значного коду на email',
+    summary: 'Реєстрація школи Крок 2.5: Повторна відправка коду на email',
   })
-  @Post('/school/send-email-code')
-  @HttpCode(HttpStatus.OK)
-  async sendSchoolEmailCode(@Body() dto: SendSchoolEmailCodeDto) {
-    return this.authService.sendSchoolRegistrationEmailCode(dto);
-  }
-
-  @ApiOperation({
-    summary: 'Реєстрація школи Крок 3.5: Повторна відправка коду на email',
-  })
-  @Post('/school/resend-email-code')
+  @Post('/school/register/resend-email-code')
   @HttpCode(HttpStatus.OK)
   async resendSchoolEmailCode(@Body() dto: ResendSchoolEmailCodeDto) {
     return this.authService.resendSchoolRegistrationEmailCode(dto.sessionId);
   }
 
+  @ApiOperation({ summary: 'Реєстрація школи Крок 3: Підтвердження email' })
+  @Post('/school/register/verify-email')
+  @HttpCode(HttpStatus.OK)
+  async verifySchoolDirectorEmail(@Body() dto: VerifySchoolEmailDto) {
+    return this.authService.verifySchoolDirectorEmail(dto);
+  }
+
   @ApiOperation({
-    summary: 'Реєстрація школи Крок 4: Перевірка коду та завершення реєстрації',
+    summary: 'Реєстрація школи Крок 4-5: Завантаження документів та відправка заявки',
   })
-  @Post('/school/verify-email')
+  @ApiConsumes('multipart/form-data')
+  @Post('/school/register/submit')
   @HttpCode(HttpStatus.CREATED)
-  async verifySchoolEmailCode(@Body() dto: VerifySchoolEmailCodeDto) {
-    return this.authService.verifySchoolRegistrationEmailCode(dto);
+  @UseInterceptors(FilesInterceptor('files', 5, { limits: { fileSize: 10 * 1024 * 1024 } }))
+  async submitSchoolRegistrationDocuments(
+    @Body() dto: SubmitSchoolDocumentsDto,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    return this.authService.submitSchoolRegistrationDocuments(dto.sessionId, files);
   }
 
   @ApiOperation({ summary: 'Реєстрація батьків Етап 1: Введення кодів дітей' })
