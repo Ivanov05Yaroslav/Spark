@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, IsUUID, MinLength, IsOptional } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
 
 export class InitSchoolRegistrationDto {
   @ApiProperty({ example: '145819', description: 'Код закладу в ЄДЕБО' })
@@ -64,6 +64,10 @@ export class SubmitSchoolDocumentsDto {
   @IsNotEmpty()
   sessionId!: string;
 
-  @ApiProperty({ type: 'array', items: { type: 'string', format: 'binary' }, description: 'Скан-копії документів' })
+  @ApiProperty({
+    type: 'array',
+    items: { type: 'string', format: 'binary' },
+    description: 'Скан-копії документів',
+  })
   files?: any[];
 }

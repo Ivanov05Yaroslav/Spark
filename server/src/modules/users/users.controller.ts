@@ -20,10 +20,10 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { AdminCreateUserDto, BulkImportUsersDto } from './dto/admin-create-user.dto';
+import { AddChildDto } from './dto/manage-children.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { SyncRolesDto } from './dto/user-role.dto';
 import { UsersService } from './users.service';
-import { AddChildDto } from './dto/manage-children.dto';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -42,7 +42,7 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @Get('/profile')
   async getProfile(@GetUser('id') userId: string) {
-    return this.usersService.getProfile(userId); 
+    return this.usersService.getProfile(userId);
   }
 
   @ApiOperation({ summary: 'Редагувати власний профіль (ПІБ та Аватар)' })
@@ -133,22 +133,16 @@ export class UsersController {
   @Roles('PARENT')
   @Post('/me/children')
   @HttpCode(HttpStatus.OK)
-  async addChild(
-    @GetUser('id') parentId: string, 
-    @Body() dto: AddChildDto
-  ) {
+  async addChild(@GetUser('id') parentId: string, @Body() dto: AddChildDto) {
     return this.usersService.addChild(parentId, dto.parentsCode);
   }
 
-  @ApiOperation({ summary: 'Видалити зв\'язок з дитиною (Тільки для батьків)' })
+  @ApiOperation({ summary: "Видалити зв'язок з дитиною (Тільки для батьків)" })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('PARENT')
   @Delete('/me/children/:studentId')
   @HttpCode(HttpStatus.OK)
-  async removeChild(
-    @GetUser('id') parentId: string,
-    @Param('studentId') studentId: string,
-  ) {
+  async removeChild(@GetUser('id') parentId: string, @Param('studentId') studentId: string) {
     return this.usersService.removeChild(parentId, studentId);
   }
 }

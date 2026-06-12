@@ -1,10 +1,19 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, IsUUID, MinLength, IsArray, ArrayNotEmpty, IsOptional } from 'class-validator';
+import {
+  ArrayNotEmpty,
+  IsArray,
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MinLength,
+} from 'class-validator';
 
 export class InitParentRegistrationDto {
-  @ApiProperty({ 
-    example: ['123456', '654321'], 
-    description: 'Масив 6-значних кодів дітей' 
+  @ApiProperty({
+    example: ['123456', '654321'],
+    description: 'Масив 6-значних кодів дітей',
   })
   @IsArray()
   @ArrayNotEmpty({ message: 'Необхідно вказати хоча б один код дитини' })

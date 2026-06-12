@@ -118,23 +118,29 @@ export class TestsService {
   async addQuestionsBulk(teacherId: string, testId: string, dto: BulkCreateQuestionDto) {
     const test = await this.prisma.test.findUnique({ where: { id: testId } });
     if (!test) throw new HttpException('Тест не знайдено', HttpStatus.NOT_FOUND);
-    
+
     await this.verifyTeacherWriteAccess(test.courseId, teacherId);
 
     for (const [index, q] of dto.questions.entries()) {
       if (q.type === QuestionType.ONE_CHOICE) {
         if (q.answers.length !== 4) {
-          throw new HttpException(`Питання №${index + 1} ("${q.content}") має містити рівно 4 варіанти відповіді`, HttpStatus.BAD_REQUEST);
+          throw new HttpException(
+            `Питання №${index + 1} ("${q.content}") має містити рівно 4 варіанти відповіді`,
+            HttpStatus.BAD_REQUEST,
+          );
         }
-        const correctAnswersCount = q.answers.filter(a => a.isCorrect).length;
+        const correctAnswersCount = q.answers.filter((a) => a.isCorrect).length;
         if (correctAnswersCount !== 1) {
-          throw new HttpException(`Питання №${index + 1} ("${q.content}") має містити рівно 1 правильну відповідь`, HttpStatus.BAD_REQUEST);
+          throw new HttpException(
+            `Питання №${index + 1} ("${q.content}") має містити рівно 1 правильну відповідь`,
+            HttpStatus.BAD_REQUEST,
+          );
         }
       }
     }
 
     const createdQuestions = await this.prisma.$transaction(
-      dto.questions.map(q => 
+      dto.questions.map((q) =>
         this.prisma.question.create({
           data: {
             testId: testId,
@@ -142,20 +148,20 @@ export class TestsService {
             content: q.content,
             points: q.points,
             answers: {
-              create: q.answers.map(a => ({
+              create: q.answers.map((a) => ({
                 content: a.content,
-                isCorrect: a.isCorrect
-              }))
-            }
+                isCorrect: a.isCorrect,
+              })),
+            },
           },
-          include: { answers: true }
-        })
-      )
+          include: { answers: true },
+        }),
+      ),
     );
 
     return {
       message: `Успішно додано ${createdQuestions.length} питань до тесту`,
-      questions: createdQuestions
+      questions: createdQuestions,
     };
   }
 
