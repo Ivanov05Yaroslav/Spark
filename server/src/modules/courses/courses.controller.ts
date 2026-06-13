@@ -7,9 +7,13 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import 'multer';
 import { GetUser } from '../../common/decorators/get-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -29,6 +33,20 @@ import {
 export class CoursesController {
   constructor(private readonly coursesService: CoursesService) {}
 
+  @ApiOperation({ summary: 'Створити курс' })
+  @Roles('TEACHER')
+  @ApiConsumes('multipart/form-data', 'application/json')
+  @UseInterceptors(FileInterceptor('backgroundImage'))
+  @Post('/')
+  async createCourse(
+    @GetUser('id') teacherId: string,
+    @GetUser('schoolId') schoolId: string,
+    @Body() dto: CreateCourseDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.coursesService.createCourse(teacherId, schoolId, dto, file);
+  }
+
   @ApiOperation({ summary: 'Отримати всі свої курси (Для УЧНЯ)' })
   @Roles('STUDENT')
   @Get('/student')
@@ -43,26 +61,18 @@ export class CoursesController {
     return this.coursesService.getMyTeacherCourses(teacherId, query);
   }
 
-  @ApiOperation({ summary: 'Створити новий курс' })
-  @Roles('TEACHER')
-  @Post()
-  async createCourse(
-    @GetUser('id') teacherId: string,
-    @GetUser('schoolId') schoolId: string,
-    @Body() dto: CreateCourseDto,
-  ) {
-    return this.coursesService.createCourse(teacherId, schoolId, dto);
-  }
-
   @ApiOperation({ summary: 'Адміністрування: Редагувати курс / Архівувати' })
   @Roles('TEACHER')
+  @ApiConsumes('multipart/form-data', 'application/json')
+  @UseInterceptors(FileInterceptor('backgroundImage'))
   @Patch('/:id')
   async updateCourse(
     @GetUser('id') teacherId: string,
     @Param('id') courseId: string,
     @Body() dto: UpdateCourseDto,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.coursesService.updateCourse(teacherId, courseId, dto);
+    return this.coursesService.updateCourse(teacherId, courseId, dto, file);
   }
 
   @ApiOperation({ summary: 'Адміністрування: Видалити курс' })

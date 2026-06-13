@@ -1,10 +1,15 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import 'multer';
+import { AwsS3Service } from '../../core/integrations/aws/aws-s3.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { CreateCourseDto, GetCoursesQueryDto, UpdateCourseDto } from './dto/course.dto';
 
 @Injectable()
 export class CoursesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly awsS3Service: AwsS3Service,
+  ) {}
 
   private async ensureCourseCreator(courseId: string, teacherId: string) {
     const course = await this.prisma.course.findUnique({
@@ -20,7 +25,12 @@ export class CoursesService {
     return course;
   }
 
-  async createCourse(teacherId: string, schoolId: string, dto: CreateCourseDto) {
+  async createCourse(
+    teacherId: string,
+    schoolId: string,
+    dto: CreateCourseDto,
+    file?: Express.Multer.File,
+  ) {
     const teaches = await this.prisma.teacherSubject.findUnique({
       where: { teacherId_subjectId: { teacherId, subjectId: dto.subjectId } },
     });
@@ -61,6 +71,11 @@ export class CoursesService {
       filteredIds.forEach((id) => coTeachersData.push({ teacherId: id }));
     }
 
+    let backgroundUrl: string | null = null;
+    if (file) {
+      backgroundUrl = await this.awsS3Service.uploadFile(file, `courses/backgrounds/${schoolId}`);
+    }
+
     const course = await this.prisma.course.create({
       data: {
         schoolId,
@@ -69,7 +84,13 @@ export class CoursesService {
         classId: dto.classId,
         academicYear: dto.academicYear,
         groupName: dto.groupName,
-        coTeachers: { create: coTeachersData },
+        themeColor: dto.themeColor,
+        backgroundUrl: backgroundUrl,
+        coTeachers: dto.coTeacherIds && dto.coTeacherIds.length > 0
+          ? {
+              create: dto.coTeacherIds.map((id) => ({ teacherId: id })),
+            }
+          : undefined,
       },
       include: {
         subject: true,
@@ -103,12 +124,41 @@ export class CoursesService {
     return course;
   }
 
-  async updateCourse(teacherId: string, courseId: string, dto: UpdateCourseDto) {
-    await this.ensureCourseCreator(courseId, teacherId);
-    return this.prisma.course.update({
+  async updateCourse(
+    teacherId: string,
+    courseId: string,
+    dto: UpdateCourseDto,
+    file?: Express.Multer.File,
+  ) {
+    const course = await this.ensureCourseCreator(courseId, teacherId);
+
+    let backgroundUrl = course.backgroundUrl;
+    if (file) {
+      backgroundUrl = await this.awsS3Service.uploadFile(
+        file,
+        `courses/backgrounds/${course.schoolId}`,
+      );
+
+      if (course.backgroundUrl) {
+        await this.awsS3Service.deleteFile(course.backgroundUrl);
+      }
+    }
+
+    const updatedCourse = await this.prisma.course.update({
       where: { id: courseId },
-      data: dto,
+      data: {
+        groupName: dto.groupName !== undefined ? dto.groupName : undefined,
+        isArchived: dto.isArchived !== undefined ? dto.isArchived : undefined,
+        themeColor: dto.themeColor !== undefined ? dto.themeColor : undefined,
+        backgroundUrl: backgroundUrl,
+      },
+      include: {
+        subject: true,
+        class: true,
+      },
     });
+
+    return updatedCourse;
   }
 
   async deleteCourse(teacherId: string, courseId: string) {

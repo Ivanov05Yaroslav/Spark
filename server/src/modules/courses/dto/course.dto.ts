@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import { IsArray, IsBoolean, IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateCourseDto {
@@ -23,33 +24,71 @@ export class CreateCourseDto {
     required: false,
   })
   @IsOptional()
+  @Transform(({ value }) => (value && value.trim() !== '' ? value : undefined))
   @IsString()
   groupName?: string;
 
+  @ApiProperty({ example: '#702DFF', required: false, description: 'Колір теми курсу' })
+  @IsOptional()
+  @Transform(({ value }) => (value && value.trim() !== '' ? value : undefined))
+  @IsString()
+  themeColor?: string;
+
   @ApiProperty({
-    example: ['uuid-вчителя2'],
-    description: 'ID інших вчителів-співвикладачів',
+    type: 'string',
+    format: 'binary',
     required: false,
+    description: 'Фонове зображення курсу',
   })
   @IsOptional()
+  backgroundImage?: any;
+
+  @ApiProperty({ type: [String], required: false, description: 'ID інших вчителів-співвикладачів' })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (!value || value.trim() === '') return undefined;
+    if (Array.isArray(value)) return value;
+    return value.split(',').map((id: string) => id.trim());
+  })
   @IsArray()
   @IsString({ each: true })
   coTeacherIds?: string[];
 }
 
 export class UpdateCourseDto {
-  @ApiProperty({ required: false })
+  @ApiProperty({ example: '2026-2027', required: false, description: 'Навчальний рік' })
   @IsOptional()
   @IsString()
   academicYear?: string;
-
-  @ApiProperty({ required: false })
+  
+  @ApiProperty({ example: 'Група 2', required: false, description: 'Назва групи' })
   @IsOptional()
+  @Transform(({ value }) => (value && value.trim() !== '' ? value : undefined))
   @IsString()
   groupName?: string;
 
+  @ApiProperty({ example: '#33FF57', required: false, description: 'Колір теми курсу' })
+  @IsOptional()
+  @Transform(({ value }) => (value && value.trim() !== '' ? value : undefined))
+  @IsString()
+  themeColor?: string;
+
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    required: false,
+    description: 'Нове фонове зображення курсу',
+  })
+  @IsOptional()
+  backgroundImage?: any;
+
   @ApiProperty({ example: true, description: 'Перемістити в архів', required: false })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
   @IsBoolean()
   isArchived?: boolean;
 }

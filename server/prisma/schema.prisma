@@ -200,6 +200,8 @@ model Course {
   academicYear String
   groupName    String?
   isArchived   Boolean @default(false)
+  backgroundUrl String?
+  themeColor    String? @default("#702DFF") 
 
   school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
