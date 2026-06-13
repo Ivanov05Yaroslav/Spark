@@ -63,10 +63,38 @@ export class SchoolsService {
   }
 
   async getPendingSchoolRequests() {
-    return this.prisma.schoolRegistrationRequest.findMany({
+    const requests = await this.prisma.schoolRegistrationRequest.findMany({
       where: { status: 'PENDING' },
+      select: {
+        id: true,
+        edeboId: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        middleName: true,
+        passportDocs: true,
+        edrDocs: true,
+        appointmentOrderDocs: true,
+        employmentContractDocs: true,
+        status: true,
+        createdAt: true,
+      },
       orderBy: { createdAt: 'asc' },
     });
+
+    const secureRequests = await Promise.all(
+      requests.map(async (request) => {
+        return {
+          ...request,
+          passportDocs: await Promise.all(request.passportDocs.map(url => this.awsS3Service.generatePresignedUrl(url))),
+          edrDocs: await Promise.all(request.edrDocs.map(url => this.awsS3Service.generatePresignedUrl(url))),
+          appointmentOrderDocs: await Promise.all(request.appointmentOrderDocs.map(url => this.awsS3Service.generatePresignedUrl(url))),
+          employmentContractDocs: await Promise.all(request.employmentContractDocs.map(url => this.awsS3Service.generatePresignedUrl(url))),
+        };
+      })
+    );
+
+    return secureRequests;
   }
 
   async rejectSchoolRequest(requestId: string, reason: string) {
@@ -78,8 +106,15 @@ export class SchoolsService {
       throw new HttpException('Заявку не знайдено або вона вже оброблена', HttpStatus.BAD_REQUEST);
     }
 
-    if (request.documents && request.documents.length > 0) {
-      for (const docUrl of request.documents) {
+    const allDocs = [
+      ...request.passportDocs,
+      ...request.edrDocs,
+      ...request.appointmentOrderDocs,
+      ...request.employmentContractDocs,
+    ];
+
+    if (allDocs.length > 0) {
+      for (const docUrl of allDocs) {
         try {
           await this.awsS3Service.deleteFile(docUrl);
         } catch (error) {

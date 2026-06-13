@@ -9,7 +9,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import 'multer';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -87,10 +87,26 @@ export class AuthController {
   @ApiConsumes('multipart/form-data')
   @Post('/school/register/submit')
   @HttpCode(HttpStatus.CREATED)
-  @UseInterceptors(FilesInterceptor('files', 5, { limits: { fileSize: 10 * 1024 * 1024 } }))
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'passportDocs', maxCount: 5 },
+        { name: 'edrDocs', maxCount: 5 },
+        { name: 'appointmentOrderDocs', maxCount: 5 },
+        { name: 'employmentContractDocs', maxCount: 5 },
+      ],
+      { limits: { fileSize: 10 * 1024 * 1024 } },
+    ),
+  )
   async submitSchoolRegistrationDocuments(
     @Body() dto: SubmitSchoolDocumentsDto,
-    @UploadedFiles() files: Express.Multer.File[],
+    @UploadedFiles()
+    files: {
+      passportDocs?: any[];
+      edrDocs?: any[];
+      appointmentOrderDocs?: any[];
+      employmentContractDocs?: any[];
+    },
   ) {
     return this.authService.submitSchoolRegistrationDocuments(dto.sessionId, files);
   }

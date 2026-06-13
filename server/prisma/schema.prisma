@@ -530,17 +530,20 @@ model EdeboSchool {
 // ==========================================
 
 model SchoolRegistrationRequest {
-  id               String   @id @default(uuid())
-  edeboId          String
-  email            String
-  passwordHash     String
-  firstName        String
-  lastName         String
-  middleName       String?
-  documents        String[] 
-  status           String   @default("PENDING")
-  rejectionReason  String?
-  createdAt        DateTime @default(now())
+  id                     String   @id @default(uuid())
+  edeboId                String
+  email                  String
+  passwordHash           String
+  firstName              String
+  lastName               String
+  middleName             String?
+  passportDocs           String[] // Паспорт громадянина України
+  edrDocs                String[] // Витяг з ЄДР
+  appointmentOrderDocs   String[] // Наказ про призначення
+  employmentContractDocs String[] // Трудовий контракт
+  status                 String   @default("PENDING")
+  rejectionReason        String?
+  createdAt              DateTime @default(now())
 
   @@map("school_registration_requests")
 }

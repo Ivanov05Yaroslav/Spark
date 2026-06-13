@@ -303,7 +303,15 @@ export class AuthService {
   }
 
   // Крок 4-5: Завантаження файлів і створення заявки
-  async submitSchoolRegistrationDocuments(sessionId: string, files: Express.Multer.File[]) {
+  async submitSchoolRegistrationDocuments(
+    sessionId: string,
+    files: {
+      passportDocs?: any[];
+      edrDocs?: any[];
+      appointmentOrderDocs?: any[];
+      employmentContractDocs?: any[];
+    },
+  ) {
     const session = this.schoolRegistrationSessions.get(sessionId);
 
     if (!session || session.status !== 'EMAIL_VERIFIED') {
@@ -313,18 +321,27 @@ export class AuthService {
       );
     }
 
-    if (!files || files.length === 0) {
-      throw new HttpException('Необхідно завантажити хоча б один документ', HttpStatus.BAD_REQUEST);
+    if (!files || !files.passportDocs || files.passportDocs.length === 0) {
+      throw new HttpException(
+        "Паспорт громадянина України є обов'язковим документом",
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
-    // Завантажуємо файли в S3
-    const documentUrls: string[] = [];
-    for (const file of files) {
-      const url = await this.awsS3Service.uploadFile(file, `school-requests/${session.edeboId}`);
-      documentUrls.push(url);
-    }
+    const uploadCategory = async (fileArray?: any[]) => {
+      if (!fileArray || fileArray.length === 0) return [];
+      const urls: string[] = [];
+      for (const file of fileArray) {
+        urls.push(await this.awsS3Service.uploadFile(file, `school-requests/${session.edeboId}`));
+      }
+      return urls;
+    };
 
-    // Створюємо заявку в базі даних
+    const passportDocsUrls = await uploadCategory(files.passportDocs);
+    const edrDocsUrls = await uploadCategory(files.edrDocs);
+    const appointmentOrderDocsUrls = await uploadCategory(files.appointmentOrderDocs);
+    const employmentContractDocsUrls = await uploadCategory(files.employmentContractDocs);
+
     await this.prisma.schoolRegistrationRequest.create({
       data: {
         edeboId: session.edeboId,
@@ -333,16 +350,19 @@ export class AuthService {
         firstName: session.firstName!,
         lastName: session.lastName!,
         middleName: session.middleName,
-        documents: documentUrls,
+
+        passportDocs: passportDocsUrls,
+        edrDocs: edrDocsUrls,
+        appointmentOrderDocs: appointmentOrderDocsUrls,
+        employmentContractDocs: employmentContractDocsUrls,
       },
     });
 
-    // Очищаємо сесію
     this.schoolRegistrationSessions.delete(sessionId);
 
     return {
       message:
-        'Ваша заявка успішно надіслана на модерацію. Ви отримаєте повідомлення на email після перевірки адміністратором.',
+        'Ваша заявка успішно надіслана на модерацію. Ви отримаєте повідомлення на email після перевірки.',
     };
   }
 

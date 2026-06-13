@@ -67,7 +67,32 @@ export class SubmitSchoolDocumentsDto {
   @ApiProperty({
     type: 'array',
     items: { type: 'string', format: 'binary' },
-    description: 'Скан-копії документів',
+    description: "Паспорт громадянина України (Обов'язково, макс. 5)",
+    required: true,
   })
-  files?: any[];
+  passportDocs?: any[];
+
+  @ApiProperty({
+    type: 'array',
+    items: { type: 'string', format: 'binary' },
+    description: 'Витяг з ЄДР (макс. 5)',
+    required: false,
+  })
+  edrDocs?: any[];
+
+  @ApiProperty({
+    type: 'array',
+    items: { type: 'string', format: 'binary' },
+    description: 'Наказ про призначення (макс. 5)',
+    required: false,
+  })
+  appointmentOrderDocs?: any[];
+
+  @ApiProperty({
+    type: 'array',
+    items: { type: 'string', format: 'binary' },
+    description: 'Трудовий контракт (макс. 5)',
+    required: false,
+  })
+  employmentContractDocs?: any[];
 }

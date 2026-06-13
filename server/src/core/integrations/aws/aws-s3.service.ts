@@ -1,4 +1,5 @@
-import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, PutObjectCommand, GetObjectCommand, S3Client } from '@aws-sdk/client-s3'; // Додали GetObjectCommand
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import * as path from 'path';
@@ -57,6 +58,27 @@ export class AwsS3Service {
       this.logger.log(`Файл ${key} успішно видалено з S3`);
     } catch (error) {
       this.logger.error(`Помилка видалення файлу з AWS S3 (${fileUrl}):`, error);
+    }
+  }
+
+  async generatePresignedUrl(fileUrl: string, expiresInSeconds: number = 900): Promise<string> {
+    try {
+      if (!fileUrl || !fileUrl.includes('amazonaws.com')) return fileUrl;
+
+      const urlParts = fileUrl.split('.amazonaws.com/');
+      if (urlParts.length < 2) return fileUrl;
+      const key = urlParts[1];
+
+      const command = new GetObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+      });
+
+      const signedUrl = await getSignedUrl(this.s3Client as any, command, { expiresIn: expiresInSeconds });
+      return signedUrl;
+    } catch (error) {
+      this.logger.error(`Помилка генерації Presigned URL для ${fileUrl}:`, error);
+      return fileUrl; // У разі збою повертаємо оригінал як запасний варіант
     }
   }
 }
