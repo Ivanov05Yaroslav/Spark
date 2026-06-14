@@ -1,0 +1,28 @@
+.pageWrapper {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 95px;
+    background-color: #F8F9FA;
+    box-sizing: border-box;
+}
+
+.authCard {
+    background-color: #FFFFFF;
+    width: 100%;
+    max-width: 440px;
+    padding: 26px 20px;
+    border-radius: 20px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.01);
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+.logoRow {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 32px;
+}

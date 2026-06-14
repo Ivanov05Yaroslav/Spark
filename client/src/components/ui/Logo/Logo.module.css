@@ -1,0 +1,22 @@
+.logoContainer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    user-select: none;
+}
+
+.svgIcon {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+}
+
+.logoText {
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    font-weight: 800;
+    color: #702DFF;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    line-height: 1;
+}

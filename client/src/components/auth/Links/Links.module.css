@@ -1,0 +1,37 @@
+.container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 20px;
+}
+
+.leftSide {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.text {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    color: #5F5F5F;
+}
+
+.link {
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: #5F5F5F;
+    text-decoration: underline;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.link:hover {
+    color: #702DFF;
+}
