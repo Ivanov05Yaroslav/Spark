@@ -1,0 +1,29 @@
+.contentGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: start;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.leftColumn, .rightColumn {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.checkboxWrapper {
+    padding: 4px 0;
+}
+
+.themeSection {
+    margin-top: 16px;
+}
+
+@media (max-width: 768px) {
+    .contentGrid {
+        grid-template-columns: 1fr;
+        gap: 40px;
+    }
+}
