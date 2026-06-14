@@ -39,7 +39,7 @@ model User {
   firstName        String
   middleName       String?
   lastName         String
-  avatarUrl        String?
+  avatarUrl        String?   @default("https://spark-school-system-bucket.s3.eu-central-1.amazonaws.com/users/avatars/default-avatar.svg")
   createdAt        DateTime  @default(now())
   isEmailVerified  Boolean   @default(false)
   isPasswordCustom Boolean   @default(false)
@@ -103,13 +103,21 @@ model StudentParent {
 // ==========================================
 
 model School {
-  id             String  @id @default(uuid())
-  directorId     String? @unique
-  edrpou         String? @unique
-  region         String?
-  city           String?
-  name           String
-  isDiiaVerified Boolean @default(false)
+  id         String  @id @default(uuid())
+  directorId String? @unique
+  edrpou     String? @unique
+
+  fullName         String
+  shortName        String?
+  region           String?
+  city             String?
+  address          String?
+  phone            String?
+  email            String?
+  website          String?
+  directorFullName String?
+
+  isVerified Boolean @default(false)
 
   director User?    @relation("SchoolDirector", fields: [directorId], references: [id])
   users    User[]   @relation("SchoolUsers")
@@ -192,6 +200,8 @@ model Course {
   academicYear String
   groupName    String?
   isArchived   Boolean @default(false)
+  backgroundUrl String?
+  themeColor    String? @default("#702DFF") 
 
   school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
@@ -515,4 +525,27 @@ model EdeboSchool {
   @@index([region])
   @@index([city])
   @@map("edebo_schools")
+}
+
+// ==========================================
+// 8. Заявки на реєстрацію (Модерація)
+// ==========================================
+
+model SchoolRegistrationRequest {
+  id                     String   @id @default(uuid())
+  edeboId                String
+  email                  String
+  passwordHash           String
+  firstName              String
+  lastName               String
+  middleName             String?
+  passportDocs           String[] // Паспорт громадянина України
+  edrDocs                String[] // Витяг з ЄДР
+  appointmentOrderDocs   String[] // Наказ про призначення
+  employmentContractDocs String[] // Трудовий контракт
+  status                 String   @default("PENDING")
+  rejectionReason        String?
+  createdAt              DateTime @default(now())
+
+  @@map("school_registration_requests")
 }

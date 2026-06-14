@@ -124,4 +124,12 @@ export class SubjectsService {
       orderBy: { name: 'asc' },
     });
   }
+
+  async getMySubjects(teacherId: string) {
+    const teacherSubjects = await this.prisma.teacherSubject.findMany({
+      where: { teacherId },
+      include: { subject: true },
+    });
+    return teacherSubjects.map((ts) => ts.subject);
+  }
 }

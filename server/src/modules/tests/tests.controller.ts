@@ -75,9 +75,9 @@ export class TestsController {
   @Roles('TEACHER')
   @Post('/:id/questions/bulk')
   async addQuestionsBulk(
-    @GetUser('id') teacherId: string, 
-    @Param('id') testId: string, 
-    @Body() dto: BulkCreateQuestionDto
+    @GetUser('id') teacherId: string,
+    @Param('id') testId: string,
+    @Body() dto: BulkCreateQuestionDto,
   ) {
     return this.testsService.addQuestionsBulk(teacherId, testId, dto);
   }

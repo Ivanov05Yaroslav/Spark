@@ -9,6 +9,8 @@ import {
   BulkCreateClassDto,
   CreateClassDto,
 } from './dto/class.dto';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { RolesGuard } from '../../common/guards/roles.guard';
 
 @ApiTags('classes')
 @ApiBearerAuth()
@@ -57,5 +59,13 @@ export class ClassesController {
   @Delete('/:id/homeroom-teacher')
   async removeHomeroomTeacher(@Param('id') classId: string) {
     return this.classesService.removeHomeroomTeacher(classId);
+  }
+
+  @ApiOperation({ summary: 'Отримати список усіх учнів класу' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('TEACHER', 'ADMIN', 'SUPER_ADMIN')
+  @Get('/:id/students')
+  async getClassStudents(@Param('id') classId: string) {
+    return this.classesService.getClassStudents(classId);
   }
 }

@@ -76,4 +76,21 @@ export class ClassesService {
     });
     return { message: 'Класного керівника знято' };
   }
+
+  async getClassStudents(classId: string) {
+    const classStudents = await this.prisma.classStudent.findMany({
+      where: { classId },
+      include: {
+        student: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            middleName: true,
+          },
+        },
+      },
+    });
+    return classStudents.map((cs) => cs.student);
+  }
 }

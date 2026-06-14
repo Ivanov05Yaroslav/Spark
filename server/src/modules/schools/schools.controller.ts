@@ -1,6 +1,20 @@
-import { Controller, Get, Post, Query } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
 import { EdeboSyncService } from '../../core/integrations/edebo/edebo-sync.service';
+import { RejectSchoolRequestDto } from './dto/school-requests.dto';
 import { GetCitiesDto, GetSchoolsListDto, SearchSchoolByEdeboDto } from './dto/school-search.dto';
 import { SchoolsService } from './schools.service';
 
@@ -36,10 +50,43 @@ export class SchoolsController {
     return this.schoolsService.searchByEdeboId(query.edeboId);
   }
 
-  @ApiOperation({ summary: 'ТЕСТОВИЙ ЕНДПОІНТ: Примусово завантажити всі школи з ЄДЕБО в БД' })
-  @Post('force-sync')
-  async forceSync() {
-    this.edeboSyncService.syncSchoolsFromEdebo();
-    return { message: 'Синхронізацію запущено у фоновому режимі. Слідкуйте за логами сервера.' };
+  // ==========================================
+  // МОДЕРАЦІЯ ЗАЯВОК (ТІЛЬКИ ДЛЯ SUPER_ADMIN)
+  // ==========================================
+
+  @ApiOperation({ summary: 'Отримати список заявок на реєстрацію школи' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @Roles('SUPER_ADMIN') // Цю роль має тільки власник платформи
+  @Get('/requests/pending')
+  async getPendingSchoolRequests() {
+    return this.schoolsService.getPendingSchoolRequests();
   }
+
+  @ApiOperation({ summary: 'Схвалити заявку та створити школу' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @Roles('SUPER_ADMIN')
+  @Post('/requests/:id/approve')
+  @HttpCode(HttpStatus.OK)
+  async approveSchoolRequest(@Param('id') requestId: string) {
+    return this.schoolsService.approveSchoolRequest(requestId);
+  }
+
+  @ApiOperation({ summary: 'Відхилити заявку на реєстрацію школи' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @Roles('SUPER_ADMIN')
+  @Post('/requests/:id/reject')
+  @HttpCode(HttpStatus.OK)
+  async rejectSchoolRequest(@Param('id') requestId: string, @Body() dto: RejectSchoolRequestDto) {
+    return this.schoolsService.rejectSchoolRequest(requestId, dto.reason);
+  }
+
+  // @ApiOperation({ summary: 'ТЕСТОВИЙ ЕНДПОІНТ: Примусово завантажити всі школи з ЄДЕБО в БД' })
+  // @Post('force-sync')
+  // async forceSync() {
+  //   this.edeboSyncService.syncSchoolsFromEdebo();
+  //   return { message: 'Синхронізацію запущено у фоновому режимі. Слідкуйте за логами сервера.' };
+  // }
 }

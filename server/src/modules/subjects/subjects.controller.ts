@@ -3,6 +3,9 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AssignSubjectDto, CreateSubjectDto } from './dto/subject.dto';
 import { SubjectsService } from './subjects.service';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { GetUser } from '../../common/decorators/get-user.decorator';
+import { RolesGuard } from '../../common/guards/roles.guard';
 
 @ApiTags('subjects')
 @ApiBearerAuth()
@@ -57,5 +60,13 @@ export class SubjectsController {
   @Get('/:subjectId/nus-groups')
   async getNusGroups(@Param('subjectId') subjectId: string) {
     return this.subjectsService.getNusGroupsBySubject(subjectId);
+  }
+
+  @ApiOperation({ summary: 'Отримати предмети поточного вчителя' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('TEACHER')
+  @Get('/my')
+  async getMySubjects(@GetUser('id') teacherId: string) {
+    return this.subjectsService.getMySubjects(teacherId);
   }
 }

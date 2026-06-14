@@ -20,35 +20,60 @@ export class UsersService {
     private readonly emailService: EmailService,
   ) {}
 
-  async create(data: any) {
+  async create(dto: AdminCreateUserDto) {
     const existingUser = await this.prisma.user.findUnique({
-      where: { email: data.email },
+      where: { email: dto.email },
     });
     if (existingUser) {
       throw new HttpException('Користувач з таким email вже існує', HttpStatus.BAD_REQUEST);
     }
 
-    let defaultRole = await this.prisma.role.findUnique({
-      where: { name: 'USER' },
+    const roleRecords = await this.prisma.role.findMany({
+      where: { name: { in: dto.roles } },
     });
-    if (!defaultRole) {
-      defaultRole = await this.prisma.role.create({ data: { name: 'USER' } });
+
+    if (roleRecords.length !== dto.roles.length) {
+      throw new HttpException('Одну або декілька ролей не знайдено', HttpStatus.BAD_REQUEST);
     }
 
-    return this.prisma.user.create({
+    let generatedParentsCode: string | null = null;
+
+    if (dto.roles.includes('STUDENT')) {
+      let isUnique = false;
+      while (!isUnique) {
+        generatedParentsCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const existingCode = await this.prisma.user.findUnique({
+          where: { parentsCode: generatedParentsCode },
+        });
+        if (!existingCode) {
+          isUnique = true;
+        }
+      }
+    }
+
+    const hashPassword = await bcrypt.hash(dto.password, 10);
+
+    const user = await this.prisma.user.create({
       data: {
-        email: data.email,
-        password: data.password,
-        firstName: data.firstName,
-        lastName: data.lastName,
+        email: dto.email,
+        password: hashPassword,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        middleName: dto.middleName,
+        schoolId: dto.schoolId,
+        parentsCode: generatedParentsCode,
         userRoles: {
-          create: {
-            roleId: defaultRole.id,
-          },
+          create: roleRecords.map((r) => ({ roleId: r.id })),
         },
       },
-      include: { userRoles: { include: { role: true } } },
+      include: {
+        userRoles: {
+          include: { role: true },
+        },
+      },
     });
+
+    return user;
   }
 
   async findByEmail(email: string) {
@@ -76,6 +101,127 @@ export class UsersService {
     });
   }
 
+  async getProfile(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        userRoles: { include: { role: true } },
+        school: true,
+      },
+    });
+
+    if (!user) {
+      throw new HttpException('Користувач не знайдений', HttpStatus.NOT_FOUND);
+    }
+
+    const roles = user.userRoles.map((ur) => ur.role.name);
+    let extraData: any = {};
+
+    if (roles.includes('STUDENT')) {
+      const studentData = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          studentClasses: {
+            include: {
+              class: {
+                include: {
+                  _count: {
+                    select: { students: true },
+                  },
+                },
+              },
+            },
+          },
+          enrolledCourses: {
+            include: {
+              course: {
+                include: { subject: true },
+              },
+            },
+          },
+        },
+      });
+
+      extraData = {
+        parentsCode: user.parentsCode,
+        classes:
+          studentData?.studentClasses.map((sc) => ({
+            id: sc.class.id,
+            name: sc.class.name,
+            classmatesCount: Math.max(0, (sc.class._count?.students || 1) - 1),
+          })) || [],
+        coursesCount: studentData?.enrolledCourses.length || 0,
+        courses: studentData?.enrolledCourses.map((sc) => sc.course.subject.name) || [],
+      };
+    }
+
+    if (roles.includes('PARENT')) {
+      const parentData = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          parentRelations: {
+            include: {
+              student: {
+                include: {
+                  studentClasses: {
+                    include: { class: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      extraData = {
+        children:
+          parentData?.parentRelations.map((rel) => ({
+            id: rel.student.id,
+            fullName:
+              `${rel.student.lastName} ${rel.student.firstName} ${rel.student.middleName || ''}`.trim(),
+            classes: rel.student.studentClasses.map((sc) => sc.class.name),
+          })) || [],
+      };
+    }
+
+    if (roles.includes('TEACHER')) {
+      const teacherData = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          homeroomClasses: true,
+          teacherSubjects: {
+            include: { subject: true },
+          },
+        },
+      });
+
+      extraData = {
+        homeroomClasses: teacherData?.homeroomClasses.map((c) => c.name) || [],
+        subjects: teacherData?.teacherSubjects.map((ts) => ts.subject.name) || [],
+      };
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      middleName: user.middleName,
+      avatarUrl: user.avatarUrl,
+      school: user.school
+        ? {
+            id: user.school.id,
+            name: user.school.shortName || user.school.fullName,
+            fullName: user.school.fullName,
+            city: user.school.city,
+            address: user.school.address,
+          }
+        : null,
+      roles,
+      ...extraData,
+    };
+  }
+
   async getSchoolTeachers(schoolId: string) {
     return this.prisma.user.findMany({
       where: {
@@ -95,10 +241,11 @@ export class UsersService {
     });
   }
 
-  async getSchoolTeachersBySubject(schoolId: string, subjectId: string) {
+  async getTeachersBySubject(schoolId: string, subjectId: string, currentTeacherId: string) {
     return this.prisma.user.findMany({
       where: {
         schoolId,
+        id: { not: currentTeacherId },
         userRoles: { some: { role: { name: 'TEACHER' } } },
         teacherSubjects: { some: { subjectId } },
       },
@@ -231,7 +378,24 @@ export class UsersService {
     if (exists)
       throw new HttpException(`Користувач з email ${dto.email} вже існує`, HttpStatus.BAD_REQUEST);
 
-    const role = await this.rolesService.getRoleByName(dto.roleName);
+    const roleRecords = await this.prisma.role.findMany({
+      where: { name: { in: dto.roles } },
+    });
+    if (roleRecords.length === 0 || roleRecords.length !== dto.roles.length) {
+      throw new HttpException('Одну або декілька ролей не знайдено', HttpStatus.BAD_REQUEST);
+    }
+
+    let generatedParentsCode: string | null = null;
+    if (dto.roles.includes('STUDENT')) {
+      let isUnique = false;
+      while (!isUnique) {
+        generatedParentsCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const existingCode = await this.prisma.user.findUnique({
+          where: { parentsCode: generatedParentsCode },
+        });
+        if (!existingCode) isUnique = true;
+      }
+    }
 
     const plainPassword = Math.random().toString(36).substring(2, 10) + 'A1!';
     const hashedPassword = await bcrypt.hash(plainPassword, 10);
@@ -244,20 +408,21 @@ export class UsersService {
         lastName: dto.lastName,
         middleName: dto.middleName || '',
         schoolId: admin.schoolId,
+        parentsCode: generatedParentsCode,
         isEmailVerified: true,
         isPasswordCustom: false,
-        userRoles: { create: { roleId: role.id } },
+        userRoles: { create: roleRecords.map((r) => ({ roleId: r.id })) },
       },
     });
 
-    if (role.name === 'STUDENT' && dto.className) {
+    if (dto.roles.includes('STUDENT') && dto.className) {
       const classroom = await this.classesService.findOrCreateClass(admin.schoolId, dto.className);
       await this.classesService.addStudent(classroom.id, newUser.id);
     }
 
-    if (role.name === 'TEACHER') {
-      if (dto.subjectNames && dto.subjectNames.length > 0) {
-        for (const subjectName of dto.subjectNames) {
+    if (dto.roles.includes('TEACHER')) {
+      if (dto.subjects && dto.subjects.length > 0) {
+        for (const subjectName of dto.subjects) {
           const subject = await this.subjectsService.findOrCreateByName(subjectName);
           await this.subjectsService.assignToTeacher(newUser.id, subject.id);
         }
@@ -366,5 +531,97 @@ export class UsersService {
     });
 
     return { message: 'Користувача успішно видалено з системи' };
+  }
+
+  async getMyChildren(parentId: string) {
+    const parent = await this.prisma.user.findUnique({
+      where: { id: parentId },
+      include: {
+        parentRelations: {
+          include: {
+            student: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                middleName: true,
+                avatarUrl: true,
+                email: true,
+                schoolId: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!parent) {
+      throw new HttpException('Батьківський профіль не знайдено', HttpStatus.NOT_FOUND);
+    }
+
+    return parent.parentRelations.map((relation) => relation.student);
+  }
+
+  async addChild(parentId: string, parentsCode: string) {
+    const student = await this.prisma.user.findUnique({
+      where: { parentsCode },
+    });
+
+    if (!student) {
+      throw new HttpException('Учня з таким кодом не знайдено', HttpStatus.NOT_FOUND);
+    }
+
+    const parent = await this.prisma.user.findUnique({
+      where: { id: parentId },
+      include: { parentRelations: true },
+    });
+
+    const isAlreadyAdded = parent?.parentRelations.some((rel) => rel.studentId === student.id);
+
+    if (isAlreadyAdded) {
+      throw new HttpException('Цю дитину вже додано до вашого профілю', HttpStatus.BAD_REQUEST);
+    }
+
+    await this.prisma.user.update({
+      where: { id: parentId },
+      data: {
+        parentRelations: {
+          create: {
+            studentId: student.id,
+          },
+        },
+      },
+    });
+
+    return {
+      message: 'Дитину успішно додано до вашого профілю',
+      studentId: student.id,
+    };
+  }
+
+  async removeChild(parentId: string, studentId: string) {
+    const parent = await this.prisma.user.findUnique({
+      where: { id: parentId },
+      include: { parentRelations: true },
+    });
+
+    const hasRelation = parent?.parentRelations.some((rel) => rel.studentId === studentId);
+
+    if (!hasRelation) {
+      throw new HttpException("Зв'язок з цією дитиною не знайдено", HttpStatus.NOT_FOUND);
+    }
+
+    await this.prisma.user.update({
+      where: { id: parentId },
+      data: {
+        parentRelations: {
+          deleteMany: {
+            studentId: studentId,
+          },
+        },
+      },
+    });
+
+    return { message: "Зв'язок з дитиною успішно видалено" };
   }
 }

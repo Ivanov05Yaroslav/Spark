@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Post,
@@ -18,6 +20,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { AdminCreateUserDto, BulkImportUsersDto } from './dto/admin-create-user.dto';
+import { AddChildDto } from './dto/manage-children.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { SyncRolesDto } from './dto/user-role.dto';
 import { UsersService } from './users.service';
@@ -35,13 +38,11 @@ export class UsersController {
     return this.usersService.getAllUsers();
   }
 
-  @ApiOperation({ summary: 'Отримати власний профіль' })
+  @ApiOperation({ summary: 'Отримати власний профіль з детальною статистикою' })
   @UseGuards(JwtAuthGuard)
   @Get('/profile')
   async getProfile(@GetUser('id') userId: string) {
-    const user = await this.usersService.findById(userId);
-    const { password, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+    return this.usersService.getProfile(userId);
   }
 
   @ApiOperation({ summary: 'Редагувати власний профіль (ПІБ та Аватар)' })
@@ -67,13 +68,15 @@ export class UsersController {
   @ApiOperation({
     summary: 'Отримати вчителів своєї школи за конкретним предметом (для співвикладачів)',
   })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('TEACHER', 'ADMIN', 'SUPER_ADMIN')
   @Get('/teachers/by-subject/:subjectId')
-  async getSchoolTeachersBySubject(
+  async getTeachersBySubject(
     @GetUser('schoolId') schoolId: string,
+    @GetUser('id') currentTeacherId: string,
     @Param('subjectId') subjectId: string,
   ) {
-    return this.usersService.getSchoolTeachersBySubject(schoolId, subjectId);
+    return this.usersService.getTeachersBySubject(schoolId, subjectId, currentTeacherId);
   }
 
   @ApiOperation({ summary: 'Отримати користувача за ID' })
@@ -117,5 +120,31 @@ export class UsersController {
   @Delete('/admin/:id')
   async deleteUser(@GetUser('id') adminId: string, @Param('id') targetUserId: string) {
     return this.usersService.deleteUser(adminId, targetUserId);
+  }
+
+  @ApiOperation({ summary: 'Отримати всіх дітей (Тільки для батьків)' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('PARENT')
+  @Get('/me/children')
+  async getMyChildren(@GetUser('id') parentId: string) {
+    return this.usersService.getMyChildren(parentId);
+  }
+
+  @ApiOperation({ summary: 'Додати дитину за кодом (Тільки для батьків)' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('PARENT')
+  @Post('/me/children')
+  @HttpCode(HttpStatus.OK)
+  async addChild(@GetUser('id') parentId: string, @Body() dto: AddChildDto) {
+    return this.usersService.addChild(parentId, dto.parentsCode);
+  }
+
+  @ApiOperation({ summary: "Видалити зв'язок з дитиною (Тільки для батьків)" })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('PARENT')
+  @Delete('/me/children/:studentId')
+  @HttpCode(HttpStatus.OK)
+  async removeChild(@GetUser('id') parentId: string, @Param('studentId') studentId: string) {
+    return this.usersService.removeChild(parentId, studentId);
   }
 }

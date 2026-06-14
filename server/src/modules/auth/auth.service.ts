@@ -8,31 +8,35 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { randomUUID } from 'crypto';
-import { DiiaIntegrationService } from '../../core/integrations/diia/diia.service';
+import 'multer';
+import { AwsS3Service } from '../../core/integrations/aws/aws-s3.service';
 import { EmailService } from '../../core/integrations/email/email.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import {
   ChangePasswordDto,
-  DiiaCallbackDto,
   ForgotPasswordResetDto,
   ForgotPasswordSendCodeDto,
   ForgotPasswordVerifyCodeDto,
+  InitParentRegistrationDto,
   InitSchoolRegistrationDto,
   LoginUserDto,
-  RegisterUserDto,
-  SendSchoolEmailCodeDto,
-  VerifySchoolEmailCodeDto,
-} from './dto/auth.dto';
+  ParentRegistrationDetailsDto,
+  SchoolDirectorDetailsDto,
+  VerifyParentEmailDto,
+  VerifySchoolEmailDto,
+} from './dto';
 
-interface RegistrationSession {
+interface SchoolRegistrationSession {
   id: string;
   edeboId: string;
-  directorFullNameEdebo: string;
-  status: 'INIT' | 'DIIA_VERIFIED' | 'EMAIL_SENT';
+  status: 'INIT' | 'DETAILS_PROVIDED' | 'EMAIL_VERIFIED';
   expiresAt: number;
   email?: string;
   passwordHash?: string;
+  firstName?: string;
+  lastName?: string;
+  middleName?: string;
   otpCode?: string;
 }
 
@@ -44,38 +48,51 @@ interface PasswordResetSession {
   expiresAt: number;
 }
 
+interface ParentRegistrationSession {
+  id: string;
+  studentIds: string[];
+  schoolId: string | null;
+  status: 'INIT' | 'DETAILS_PROVIDED';
+  expiresAt: number;
+  email?: string;
+  passwordHash?: string;
+  firstName?: string;
+  lastName?: string;
+  middleName?: string;
+  otpCode?: string;
+}
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  private sessions = new Map<string, RegistrationSession>();
+  private schoolRegistrationSessions = new Map<string, SchoolRegistrationSession>();
   private passwordResetSessions = new Map<string, PasswordResetSession>();
-
+  private parentRegistrationSessions = new Map<string, ParentRegistrationSession>();
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
-    private readonly diiaService: DiiaIntegrationService,
+    private readonly awsS3Service: AwsS3Service,
     private readonly emailService: EmailService,
   ) {}
 
-  async register(dto: RegisterUserDto) {
-    const hashPassword = await bcrypt.hash(dto.password, 10);
-    const user = await this.usersService.create({
-      ...dto,
-      password: hashPassword,
-    });
-    return this.generateTokens(user);
-  }
-
   async login(dto: LoginUserDto) {
-    const user = await this.usersService.findByEmail(dto.email);
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+      include: {
+        userRoles: {
+          include: { role: true },
+        },
+      },
+    });
+
     if (!user) {
-      throw new HttpException('Невірний email або пароль', HttpStatus.UNAUTHORIZED);
+      throw new UnauthorizedException('Невірний email або пароль');
     }
 
-    const passwordEquals = await bcrypt.compare(dto.password, user.password);
-    if (!passwordEquals) {
-      throw new HttpException('Невірний email або пароль', HttpStatus.UNAUTHORIZED);
+    const isPasswordValid = await bcrypt.compare(dto.password, user.password);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Невірний email або пароль');
     }
 
     await this.prisma.user.update({
@@ -83,19 +100,57 @@ export class AuthService {
       data: { lastLoginAt: new Date() },
     });
 
-    return this.generateTokens(user);
+    const tokens = await this.generateTokens(user);
+
+    return {
+      ...tokens,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        middleName: user.middleName,
+        avatarUrl: user.avatarUrl,
+        roles: user.userRoles.map((ur) => ur.role.name),
+      },
+    };
   }
 
   async refreshTokens(refreshToken: string) {
     try {
-      const payload = this.jwtService.verify(refreshToken, {
-        secret: process.env.JWT_REFRESH_SECRET || 'fallback_refresh_key',
+      const userData = this.jwtService.verify(refreshToken, {
+        secret: process.env.JWT_REFRESH_SECRET,
       });
 
-      const user = await this.usersService.findById(payload.id);
-      return this.generateTokens(user);
+      const user = await this.prisma.user.findUnique({
+        where: { id: userData.sub },
+        include: {
+          userRoles: {
+            include: { role: true },
+          },
+        },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('Користувача не знайдено');
+      }
+
+      const tokens = await this.generateTokens(user);
+
+      return {
+        ...tokens,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          middleName: user.middleName,
+          avatarUrl: user.avatarUrl,
+          roles: user.userRoles.map((ur) => ur.role.name),
+        },
+      };
     } catch (e) {
-      throw new UnauthorizedException('Недійсний refresh token');
+      throw new UnauthorizedException('Недійсний або прострочений refresh токен');
     }
   }
 
@@ -125,203 +180,337 @@ export class AuthService {
     };
   }
 
+  // Крок 1: Вибір ЗЗСО
   async initSchoolRegistration(dto: InitSchoolRegistrationDto) {
     const edeboSchool = await this.prisma.edeboSchool.findUnique({
       where: { edeboId: dto.edeboId },
     });
-
     if (!edeboSchool) {
-      throw new HttpException('Школу не знайдено в локальному реєстрі ЄДЕБО', HttpStatus.NOT_FOUND);
+      throw new HttpException('Школу не знайдено в базі ЄДЕБО', HttpStatus.NOT_FOUND);
     }
 
-    if (!edeboSchool.directorFullName) {
-      throw new HttpException(
-        'У реєстрі відсутнє ПІБ директора. Реєстрація неможлива.',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const existingSchool = await this.prisma.school.findFirst({
-      where: { edrpou: edeboSchool.edeboId },
+    const existingSchool = await this.prisma.school.findUnique({
+      where: { edrpou: dto.edeboId },
     });
-
     if (existingSchool) {
+      throw new HttpException('Ця школа вже зареєстрована в системі', HttpStatus.BAD_REQUEST);
+    }
+
+    const existingRequest = await this.prisma.schoolRegistrationRequest.findFirst({
+      where: { edeboId: dto.edeboId, status: 'PENDING' },
+    });
+    if (existingRequest) {
       throw new HttpException(
-        'Цей навчальний заклад вже зареєстровано на платформі',
-        HttpStatus.CONFLICT,
+        'Заявка на реєстрацію цієї школи вже розглядається',
+        HttpStatus.BAD_REQUEST,
       );
     }
 
     const sessionId = randomUUID();
-    this.sessions.set(sessionId, {
+    this.schoolRegistrationSessions.set(sessionId, {
       id: sessionId,
       edeboId: dto.edeboId,
-      directorFullNameEdebo: edeboSchool.directorFullName,
       status: 'INIT',
-      expiresAt: Date.now() + 15 * 60 * 1000,
+      expiresAt: Date.now() + 30 * 60 * 1000, // 30 хв
     });
-
-    const diiaAuthUrl = this.diiaService.generateAuthUrl(sessionId);
 
     return {
       sessionId,
-      diiaAuthUrl,
-      message: 'Сесію створено. Перенаправте користувача на URL Дії.',
+      message: 'Школу знайдено. Перейдіть до вводу особистих даних.',
+      school: edeboSchool,
     };
   }
 
-  async processDiiaCallback(dto: DiiaCallbackDto) {
-    const session = this.sessions.get(dto.sessionId);
-
-    if (!session) {
-      throw new HttpException('Сесію не знайдено або вона прострочена', HttpStatus.NOT_FOUND);
-    }
-    if (Date.now() > session.expiresAt) {
-      this.sessions.delete(dto.sessionId);
-      throw new HttpException('Час очікування сесії минув (15 хв)', HttpStatus.BAD_REQUEST);
+  // Крок 2: Введення ПІБ, email та пароля
+  async provideSchoolDirectorDetails(dto: SchoolDirectorDetailsDto) {
+    const session = this.schoolRegistrationSessions.get(dto.sessionId);
+    if (!session || session.status !== 'INIT') {
+      throw new HttpException('Сесію не знайдено або вона застаріла', HttpStatus.NOT_FOUND);
     }
 
-    try {
-      const diiaData = await this.diiaService.getUserDataFromToken(dto.diiaToken);
-
-      const edeboNameNormalized = session.directorFullNameEdebo
-        .toLowerCase()
-        .replace(/[^а-яіїєґa-z]/g, '');
-      const diiaNameNormalized = diiaData.fullName.toLowerCase().replace(/[^а-яіїєґa-z]/g, '');
-
-      // ЄДЕБО: "директорковальовасвітланамихайлівна" містить Дію: "ковальовасвітланамихайлівна"
-      if (!edeboNameNormalized.includes(diiaNameNormalized)) {
-        this.logger.warn(
-          `Спроба реєстрації з невідповідним ПІБ. ЄДЕБО: ${session.directorFullNameEdebo}, Дія: ${diiaData.fullName}`,
-        );
-        throw new HttpException(
-          `Верифікація не пройдена. ПІБ у Дії (${diiaData.fullName}) не збігається з даними ЄДЕБО (${session.directorFullNameEdebo}).`,
-          HttpStatus.FORBIDDEN,
-        );
-      }
-
-      session.status = 'DIIA_VERIFIED';
-      this.sessions.set(dto.sessionId, session);
-
-      return {
-        success: true,
-        message: 'Особу директора успішно підтверджено. Перейдіть до підтвердження email.',
-        sessionId: session.id,
-      };
-    } catch (error: unknown) {
-      if (error instanceof HttpException) throw error;
-      if (error instanceof Error) {
-        throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
-      }
-      throw new HttpException('Невідома помилка під час верифікації', HttpStatus.BAD_REQUEST);
-    }
-  }
-
-  async sendSchoolRegistrationEmailCode(dto: SendSchoolEmailCodeDto) {
-    const session = this.sessions.get(dto.sessionId);
-
-    if (!session || (session.status !== 'DIIA_VERIFIED' && session.status !== 'EMAIL_SENT')) {
-      throw new HttpException(
-        'Невалідна сесія або ви не пройшли верифікацію Дії',
-        HttpStatus.FORBIDDEN,
-      );
-    }
-
-    const userExists = await this.prisma.user.findUnique({
-      where: { email: dto.email },
-    });
+    const userExists = await this.prisma.user.findUnique({ where: { email: dto.email } });
     if (userExists) {
-      throw new HttpException('Користувач з таким email вже існує', HttpStatus.CONFLICT);
+      throw new HttpException('Користувач з таким email вже існує', HttpStatus.BAD_REQUEST);
     }
 
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const passwordHash = await bcrypt.hash(dto.password, 10);
 
     session.email = dto.email;
-    session.passwordHash = passwordHash;
+    session.passwordHash = await bcrypt.hash(dto.password, 10);
+    session.firstName = dto.firstName;
+    session.lastName = dto.lastName;
+    session.middleName = dto.middleName;
     session.otpCode = otpCode;
-    session.status = 'EMAIL_SENT';
+    session.status = 'DETAILS_PROVIDED';
     session.expiresAt = Date.now() + 15 * 60 * 1000;
-    this.sessions.set(dto.sessionId, session);
 
+    this.schoolRegistrationSessions.set(dto.sessionId, session);
     await this.emailService.sendVerificationCode(dto.email, otpCode);
 
-    return { message: 'Код підтвердження відправлено на вашу пошту' };
+    return { sessionId: session.id, message: 'Код підтвердження відправлено на ваш email.' };
   }
 
-  async verifySchoolRegistrationEmailCode(dto: VerifySchoolEmailCodeDto) {
-    const session = this.sessions.get(dto.sessionId);
-
-    if (!session || session.status !== 'EMAIL_SENT') {
-      throw new HttpException(
-        'Сесію не знайдено або код ще не відправлено',
-        HttpStatus.BAD_REQUEST,
-      );
+  // Крок 3: Перевірка коду
+  async verifySchoolDirectorEmail(dto: VerifySchoolEmailDto) {
+    const session = this.schoolRegistrationSessions.get(dto.sessionId);
+    if (!session || session.status !== 'DETAILS_PROVIDED') {
+      throw new HttpException('Сесію не знайдено', HttpStatus.NOT_FOUND);
     }
 
     if (session.otpCode !== dto.code) {
       throw new HttpException('Невірний код підтвердження', HttpStatus.BAD_REQUEST);
     }
 
-    const edeboSchool = await this.prisma.edeboSchool.findUnique({
-      where: { edeboId: session.edeboId },
-    });
-    if (!edeboSchool)
+    session.status = 'EMAIL_VERIFIED';
+    session.expiresAt = Date.now() + 60 * 60 * 1000;
+    this.schoolRegistrationSessions.set(dto.sessionId, session);
+
+    return {
+      sessionId: session.id,
+      message: 'Email підтверджено. Тепер ви можете завантажити документи.',
+    };
+  }
+
+  // Крок 2.5: Повторна відправка коду на email¶
+
+  async resendSchoolRegistrationEmailCode(sessionId: string) {
+    const session = this.schoolRegistrationSessions.get(sessionId);
+
+    if (!session || session.status !== 'DETAILS_PROVIDED') {
       throw new HttpException(
-        'Помилка: школу не знайдено в базі',
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        'Сесію реєстрації не знайдено або вона застаріла. Почніть спочатку.',
+        HttpStatus.NOT_FOUND,
       );
-
-    const nameParts = session.directorFullNameEdebo
-      .replace(/(Директор|В\.о\.|Керівник)/gi, '')
-      .trim()
-      .split(' ');
-    const lastName = nameParts[0] || 'Невідомо';
-    const firstName = nameParts[1] || 'Невідомо';
-    const middleName = nameParts[2] || '';
-
-    let adminRole = await this.prisma.role.findUnique({
-      where: { name: 'ADMIN' },
-    });
-    if (!adminRole) {
-      adminRole = await this.prisma.role.create({ data: { name: 'ADMIN' } });
     }
 
-    const result = await this.prisma.$transaction(async (prisma) => {
-      const newSchool = await prisma.school.create({
-        data: {
-          name: edeboSchool.fullName,
-          edrpou: edeboSchool.edeboId,
-          region: edeboSchool.region,
-          city: edeboSchool.city,
-          isDiiaVerified: true,
-        },
-      });
+    if (!session.email) {
+      throw new HttpException('Email ще не був вказаний для цієї сесії', HttpStatus.BAD_REQUEST);
+    }
 
-      const newDirector = await prisma.user.create({
-        data: {
-          email: session.email!,
-          password: session.passwordHash!,
-          firstName,
-          lastName,
-          middleName,
-          isEmailVerified: true,
-          lastLoginAt: new Date(),
-          schoolId: newSchool.id,
-          directedSchool: { connect: { id: newSchool.id } },
-          userRoles: {
-            create: { roleId: adminRole.id },
-          },
-        },
-        include: { userRoles: { include: { role: true } }, school: true },
-      });
+    const newOtpCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-      return newDirector;
+    session.otpCode = newOtpCode;
+    session.expiresAt = Date.now() + 15 * 60 * 1000;
+
+    this.schoolRegistrationSessions.set(sessionId, session);
+
+    await this.emailService.sendVerificationCode(session.email, newOtpCode);
+
+    return {
+      message: 'Новий код підтвердження успішно відправлено на вашу пошту',
+      sessionId: sessionId,
+    };
+  }
+
+  // Крок 4-5: Завантаження файлів і створення заявки
+  async submitSchoolRegistrationDocuments(
+    sessionId: string,
+    files: {
+      passportDocs?: any[];
+      edrDocs?: any[];
+      appointmentOrderDocs?: any[];
+      employmentContractDocs?: any[];
+    },
+  ) {
+    const session = this.schoolRegistrationSessions.get(sessionId);
+
+    if (!session || session.status !== 'EMAIL_VERIFIED') {
+      throw new HttpException(
+        'Сесію не знайдено або email не підтверджено',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (!files || !files.passportDocs || files.passportDocs.length === 0) {
+      throw new HttpException(
+        "Паспорт громадянина України є обов'язковим документом",
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const uploadCategory = async (fileArray?: any[]) => {
+      if (!fileArray || fileArray.length === 0) return [];
+      const urls: string[] = [];
+      for (const file of fileArray) {
+        urls.push(await this.awsS3Service.uploadFile(file, `school-requests/${session.edeboId}`));
+      }
+      return urls;
+    };
+
+    const passportDocsUrls = await uploadCategory(files.passportDocs);
+    const edrDocsUrls = await uploadCategory(files.edrDocs);
+    const appointmentOrderDocsUrls = await uploadCategory(files.appointmentOrderDocs);
+    const employmentContractDocsUrls = await uploadCategory(files.employmentContractDocs);
+
+    await this.prisma.schoolRegistrationRequest.create({
+      data: {
+        edeboId: session.edeboId,
+        email: session.email!,
+        passwordHash: session.passwordHash!,
+        firstName: session.firstName!,
+        lastName: session.lastName!,
+        middleName: session.middleName,
+
+        passportDocs: passportDocsUrls,
+        edrDocs: edrDocsUrls,
+        appointmentOrderDocs: appointmentOrderDocsUrls,
+        employmentContractDocs: employmentContractDocsUrls,
+      },
     });
 
-    this.sessions.delete(dto.sessionId);
+    this.schoolRegistrationSessions.delete(sessionId);
 
-    return this.generateTokens(result);
+    return {
+      message:
+        'Ваша заявка успішно надіслана на модерацію. Ви отримаєте повідомлення на email після перевірки.',
+    };
+  }
+
+  async initParentRegistration(dto: InitParentRegistrationDto) {
+    const students = await this.prisma.user.findMany({
+      where: { parentsCode: { in: dto.childrenCodes } },
+    });
+
+    if (students.length !== dto.childrenCodes.length) {
+      throw new HttpException(
+        'Один або декілька кодів дітей є недійсними або не існують',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const sessionId = randomUUID();
+
+    this.parentRegistrationSessions.set(sessionId, {
+      id: sessionId,
+      studentIds: students.map((s) => s.id),
+      schoolId: students[0].schoolId,
+      status: 'INIT',
+      expiresAt: Date.now() + 30 * 60 * 1000,
+    });
+
+    return {
+      sessionId,
+      message: 'Коди дітей успішно перевірено. Перейдіть до вводу особистих даних.',
+      foundChildrenCount: students.length,
+    };
+  }
+
+  async provideParentDetails(dto: ParentRegistrationDetailsDto) {
+    const session = this.parentRegistrationSessions.get(dto.sessionId);
+
+    if (!session || session.status !== 'INIT') {
+      throw new HttpException('Сесію не знайдено або вона застаріла', HttpStatus.NOT_FOUND);
+    }
+
+    const existingUser = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    if (existingUser) {
+      throw new HttpException('Цей email вже зареєстрований в системі', HttpStatus.BAD_REQUEST);
+    }
+
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    session.email = dto.email;
+    session.passwordHash = await bcrypt.hash(dto.password, 10);
+    session.firstName = dto.firstName;
+    session.lastName = dto.lastName;
+    session.middleName = dto.middleName;
+    session.otpCode = otpCode;
+    session.status = 'DETAILS_PROVIDED';
+    session.expiresAt = Date.now() + 15 * 60 * 1000;
+
+    this.parentRegistrationSessions.set(dto.sessionId, session);
+
+    await this.emailService.sendVerificationCode(dto.email, otpCode);
+
+    return {
+      sessionId: dto.sessionId,
+      message: 'Код підтвердження відправлено на вашу електронну пошту.',
+    };
+  }
+
+  async resendParentRegistrationCode(sessionId: string) {
+    const session = this.parentRegistrationSessions.get(sessionId);
+
+    if (!session || session.status !== 'DETAILS_PROVIDED' || !session.email) {
+      throw new HttpException('Сесію не знайдено або email не вказано', HttpStatus.NOT_FOUND);
+    }
+
+    const newOtpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    session.otpCode = newOtpCode;
+    session.expiresAt = Date.now() + 15 * 60 * 1000;
+
+    this.parentRegistrationSessions.set(sessionId, session);
+    await this.emailService.sendVerificationCode(session.email, newOtpCode);
+
+    return {
+      sessionId,
+      message: 'Новий код підтвердження успішно відправлено на вашу пошту',
+    };
+  }
+
+  async verifyParentEmailAndRegister(dto: VerifyParentEmailDto) {
+    const session = this.parentRegistrationSessions.get(dto.sessionId);
+
+    if (!session || session.status !== 'DETAILS_PROVIDED') {
+      throw new HttpException('Сесію не знайдено', HttpStatus.NOT_FOUND);
+    }
+
+    if (session.otpCode !== dto.code) {
+      throw new HttpException('Невірний код підтвердження', HttpStatus.BAD_REQUEST);
+    }
+
+    const parentRole = await this.prisma.role.findUnique({ where: { name: 'PARENT' } });
+
+    if (!parentRole) {
+      throw new HttpException(
+        'Роль PARENT не знайдена в системі',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    const newParent = await this.prisma.user.create({
+      data: {
+        email: session.email!,
+        password: session.passwordHash!,
+        firstName: session.firstName!,
+        lastName: session.lastName!,
+        middleName: session.middleName,
+        schoolId: session.schoolId,
+        isEmailVerified: true,
+        isPasswordCustom: true,
+        userRoles: {
+          create: { roleId: parentRole.id },
+        },
+        parentRelations: {
+          create: session.studentIds.map((studentId) => ({
+            studentId: studentId,
+          })),
+        },
+      },
+      include: {
+        userRoles: {
+          include: { role: true },
+        },
+      },
+    });
+
+    this.parentRegistrationSessions.delete(dto.sessionId);
+
+    const tokens = await this.generateTokens(newParent);
+
+    return {
+      message: 'Реєстрація успішна',
+      ...tokens,
+      user: {
+        id: newParent.id,
+        email: newParent.email,
+        firstName: newParent.firstName,
+        lastName: newParent.lastName,
+        middleName: newParent.middleName,
+        avatarUrl: newParent.avatarUrl,
+        roles: newParent.userRoles.map((ur) => ur.role.name),
+      },
+    };
   }
 
   async sendPasswordResetCode(dto: ForgotPasswordSendCodeDto) {
@@ -348,6 +537,31 @@ export class AuthService {
     return {
       sessionId,
       message: 'Код для відновлення пароля відправлено на вашу пошту',
+    };
+  }
+
+  async resendPasswordResetCode(sessionId: string) {
+    const session = this.passwordResetSessions.get(sessionId);
+
+    if (!session) {
+      throw new HttpException(
+        'Сесію реєстрації не знайдено або вона застаріла. Почніть спочатку.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    const newOtpCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    session.otpCode = newOtpCode;
+    session.expiresAt = Date.now() + 15 * 60 * 1000;
+
+    this.passwordResetSessions.set(sessionId, session);
+
+    await this.emailService.sendPasswordResetCode(session.email, newOtpCode);
+
+    return {
+      message: 'Новий код для відновлення пароля відправлено на вашу пошту',
+      sessionId: sessionId,
     };
   }
 
