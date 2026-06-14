@@ -1,0 +1,61 @@
+.subtitle {
+    text-align: center;
+    color: var(--color-grey-text, #7E7E7E);
+    font-size: 14px;
+    margin-top: -10px;
+    line-height: 1.5;
+    margin-bottom: 24px;
+}
+
+.formGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+        "label select"
+        "dropL dropR";
+    gap: 8px 20px;
+    width: 100%;
+    margin-bottom: 24px;
+}
+
+.leftLabel {
+    grid-area: label;
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-black, #000);
+}
+
+.rightSelect {
+    grid-area: select;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.rightSelect > div {
+    width: 100%;
+}
+
+.leftDropzone {
+    grid-area: dropL;
+    width: 100%;
+}
+
+.rightDropzone {
+    grid-area: dropR;
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+    .formGrid {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "label"
+            "dropL"
+            "select"
+            "dropR";
+        gap: 16px;
+    }
+}
