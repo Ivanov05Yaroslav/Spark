@@ -4,8 +4,8 @@ import {
   Delete,
   Get,
   Param,
-  Patch,
   Post,
+  Put,
   Query,
   UploadedFile,
   UseGuards,
@@ -65,7 +65,7 @@ export class CoursesController {
   @Roles('TEACHER')
   @ApiConsumes('multipart/form-data', 'application/json')
   @UseInterceptors(FileInterceptor('backgroundImage'))
-  @Patch('/:id')
+  @Put('/:id')
   async updateCourse(
     @GetUser('id') teacherId: string,
     @Param('id') courseId: string,

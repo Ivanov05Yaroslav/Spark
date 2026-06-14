@@ -1,15 +1,23 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsArray, IsBoolean, IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 
 export class CreateCourseDto {
   @ApiProperty({ example: 'uuid-предмету' })
-  @IsString()
+  @IsUUID()
   @IsNotEmpty()
   subjectId!: string;
 
   @ApiProperty({ example: 'uuid-класу' })
-  @IsString()
+  @IsUUID()
   @IsNotEmpty()
   classId!: string;
 
@@ -19,18 +27,18 @@ export class CreateCourseDto {
   academicYear!: string;
 
   @ApiProperty({
-    example: 'Група 1 (Англійська)',
-    description: 'Опціональна назва для підгрупи',
+    example: 'Група 1',
+    description: 'Назва групи (Група 1 або Група 2), якщо курс ділиться',
     required: false,
   })
   @IsOptional()
-  @Transform(({ value }) => (value && value.trim() !== '' ? value : undefined))
+  @Transform(({ value }) => (value && value.trim() !== '' && value !== 'null' ? value : undefined))
   @IsString()
   groupName?: string;
 
   @ApiProperty({ example: '#702DFF', required: false, description: 'Колір теми курсу' })
   @IsOptional()
-  @Transform(({ value }) => (value && value.trim() !== '' ? value : undefined))
+  @Transform(({ value }) => (value && value.trim() !== '' && value !== 'null' ? value : undefined))
   @IsString()
   themeColor?: string;
 
@@ -46,13 +54,36 @@ export class CreateCourseDto {
   @ApiProperty({ type: [String], required: false, description: 'ID інших вчителів-співвикладачів' })
   @IsOptional()
   @Transform(({ value }) => {
-    if (!value || value.trim() === '') return undefined;
+    if (!value || value === 'null' || value === 'undefined' || value.trim() === '')
+      return undefined;
     if (Array.isArray(value)) return value;
-    return value.split(',').map((id: string) => id.trim());
+    return value
+      .split(',')
+      .map((id: string) => id.trim())
+      .filter(Boolean);
   })
   @IsArray()
   @IsString({ each: true })
   coTeacherIds?: string[];
+
+  @ApiProperty({
+    type: [String],
+    required: false,
+    description: 'ID вибраних учнів для формування підгрупи',
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (!value || value === 'null' || value === 'undefined' || value.trim() === '')
+      return undefined;
+    if (Array.isArray(value)) return value;
+    return value
+      .split(',')
+      .map((id: string) => id.trim())
+      .filter(Boolean);
+  })
+  @IsArray()
+  @IsString({ each: true })
+  studentIds?: string[];
 }
 
 export class UpdateCourseDto {
@@ -60,16 +91,16 @@ export class UpdateCourseDto {
   @IsOptional()
   @IsString()
   academicYear?: string;
-  
+
   @ApiProperty({ example: 'Група 2', required: false, description: 'Назва групи' })
   @IsOptional()
-  @Transform(({ value }) => (value && value.trim() !== '' ? value : undefined))
+  @Transform(({ value }) => (value && value.trim() !== '' && value !== 'null' ? value : undefined))
   @IsString()
   groupName?: string;
 
   @ApiProperty({ example: '#33FF57', required: false, description: 'Колір теми курсу' })
   @IsOptional()
-  @Transform(({ value }) => (value && value.trim() !== '' ? value : undefined))
+  @Transform(({ value }) => (value && value.trim() !== '' && value !== 'null' ? value : undefined))
   @IsString()
   themeColor?: string;
 
@@ -91,6 +122,40 @@ export class UpdateCourseDto {
   })
   @IsBoolean()
   isArchived?: boolean;
+
+  @ApiProperty({ type: [String], required: false, description: 'ID інших вчителів-співвикладачів' })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (!value || value === 'null' || value === 'undefined' || value.trim() === '')
+      return undefined;
+    if (Array.isArray(value)) return value;
+    return value
+      .split(',')
+      .map((id: string) => id.trim())
+      .filter(Boolean);
+  })
+  @IsArray()
+  @IsString({ each: true })
+  coTeacherIds?: string[];
+
+  @ApiProperty({
+    type: [String],
+    required: false,
+    description: 'ID вибраних учнів для формування підгрупи',
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (!value || value === 'null' || value === 'undefined' || value.trim() === '')
+      return undefined;
+    if (Array.isArray(value)) return value;
+    return value
+      .split(',')
+      .map((id: string) => id.trim())
+      .filter(Boolean);
+  })
+  @IsArray()
+  @IsString({ each: true })
+  studentIds?: string[];
 }
 
 export class CoTeacherDto {
