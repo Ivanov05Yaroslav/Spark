@@ -1,0 +1,20 @@
+.layoutContainer {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    box-sizing: border-box;
+    padding-bottom: 160px;
+}
+
+.content {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    padding: 40px 0;
+    box-sizing: border-box;
+}
+
+.formContainer {
+    width: 100%;
+    box-sizing: border-box;
+}
