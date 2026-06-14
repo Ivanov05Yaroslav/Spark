@@ -1,0 +1,15 @@
+.filtersContainer {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.searchWrapper {
+    flex: 1;
+}
+
+.selectWrapper {
+    flex-shrink: 0;
+}

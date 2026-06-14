@@ -1,0 +1,36 @@
+.button {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    height: 40px;
+    width: fit-content;
+    padding: 8px 12px;
+    background-color: #202020;
+    border: none;
+    border-radius: 200px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.button:hover {
+    background-color: #151515;
+}
+
+.button:active {
+    transform: scale(0.98);
+}
+
+.text {
+    color: #FFFFFF;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    user-select: none;
+}
+
+.icon {
+    width: 20px;
+    height: 20px;
+    display: block;
+    flex-shrink: 0;
+}

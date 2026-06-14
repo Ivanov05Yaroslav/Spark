@@ -1,0 +1,15 @@
+.pageContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    padding: 30px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.coursesGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+    width: 100%;
+}
