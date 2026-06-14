@@ -1,0 +1,72 @@
+.banner {
+    position: relative;
+    width: 100%;
+    background-color: #702DFF;
+    border-radius: 20px;
+    padding: 32px 24px;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    color: #FFFFFF;
+}
+
+.userInfo {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.textContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.name {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 22px;
+    font-weight: 500;
+    text-transform: uppercase;
+    line-height: 1.2;
+}
+
+.group {
+    font-family: 'Inter', sans-serif;
+    font-size: 18px;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+.editButton {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s ease;
+}
+
+.editButton:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.editIcon {
+    width: 20px;
+    height: 20px;
+    color: #FFFFFF;
+}

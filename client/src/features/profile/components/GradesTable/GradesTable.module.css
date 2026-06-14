@@ -1,0 +1,62 @@
+.card {
+    background-color: #FFFFFF;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.03);
+}
+
+.title {
+    font-size: 16px;
+    font-weight: 500;
+    color: #020202;
+    margin: 0 0 8px 0;
+}
+
+.tableContainer {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table thead tr {
+    border-bottom: 1px solid #EDEDED;
+}
+
+.table th {
+    text-align: left;
+    padding: 12px;
+    font-size: 12px;
+    color: #7E7E7E;
+    font-weight: 400;
+}
+
+.table td {
+    padding: 12px;
+    border-bottom: 1px solid #EDEDED;
+    font-size: 14px;
+    color: #020202;
+}
+
+.row:last-child td {
+    border-bottom: none;
+}
+
+.thLeft {
+    text-align: left;
+}
+
+.thRight {
+    text-align: left;
+}
+
+.tdSubject {
+    text-align: left;
+}
+
+.tdGrade, .tdAnnual {
+    text-align: left;
+}
