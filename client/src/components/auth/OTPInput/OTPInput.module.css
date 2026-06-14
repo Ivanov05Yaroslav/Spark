@@ -1,0 +1,24 @@
+.container {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+.input {
+    width: 48px;
+    height: 64px;
+    border: 1px solid #EAEAEA;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 24px;
+    font-weight: 500;
+    color: #202020;
+    background-color: #FFFFFF;
+    transition: all 0.2s ease;
+}
+
+.input:focus {
+    border-color: #702DFF;
+    outline: none;
+    /*box-shadow: 0 0 0 2px rgba(112, 45, 255, 0.1);*/
+}

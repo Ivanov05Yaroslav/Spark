@@ -1,0 +1,7 @@
+.subtitle {
+    text-align: center;
+    color: var(--color-grey-text, #7E7E7E);
+    font-size: 14px;
+    margin-top: -10px;
+    line-height: 1.5;
+}
