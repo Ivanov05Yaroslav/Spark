@@ -44,7 +44,7 @@ export class AdminCreateUserDto {
   @ApiProperty({ example: '5-Б', description: 'Клас, де вчитель є керівником', required: false })
   @IsOptional()
   @IsString()
-  isHomeroomFor?: string;
+  homeroomClassName?: string;
 
   @ApiProperty({
     example: ['Математика', 'Алгебра'],

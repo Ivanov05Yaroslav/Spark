@@ -119,7 +119,7 @@ export class UsersService {
             subject: true,
           },
         },
-        homeroomClasses: true,
+        homeroomClass: true,
         parentRelations: {
           include: {
             student: {
@@ -162,7 +162,23 @@ export class UsersService {
 
     if (roles.includes('STUDENT')) {
       const activeClass = user.studentClasses[0]?.class;
+
+      const coursesCount = await this.prisma.courseStudent.count({
+        where: { studentId: userId },
+      });
+
+      const classmatesCount = activeClass
+        ? await this.prisma.classStudent.count({
+            where: {
+              classId: activeClass.id,
+              studentId: { not: userId },
+            },
+          })
+        : 0;
+
       profile.class = activeClass ? { id: activeClass.id, name: activeClass.name } : null;
+      profile.coursesCount = coursesCount;
+      profile.classmatesCount = classmatesCount;
       profile.parentsCode = user.parentsCode;
     }
 
@@ -171,25 +187,44 @@ export class UsersService {
         id: ts.subject.id,
         name: ts.subject.name,
       }));
-      profile.homeroomClasses = user.homeroomClasses.map((c) => ({
-        id: c.id,
-        name: c.name,
-      }));
+      profile.homeroomClass = user.homeroomClass ? {
+        id: user.homeroomClass.id,
+        name: user.homeroomClass.name,
+      } : null;
     }
 
-    if (roles.includes('PARENT')) {
-      profile.children = user.parentRelations.map((relation) => {
-        const childClass = relation.student.studentClasses[0]?.class;
-        return {
-          id: relation.student.id,
-          email: relation.student.email,
-          firstName: relation.student.firstName,
-          lastName: relation.student.lastName,
-          middleName: relation.student.middleName,
-          avatarUrl: relation.student.avatarUrl,
-          class: childClass ? { id: childClass.id, name: childClass.name } : null,
-        };
-      });
+if (roles.includes('PARENT')) {
+      profile.children = await Promise.all(
+        user.parentRelations.map(async (relation) => {
+          const childId = relation.student.id;
+          const childClass = relation.student.studentClasses[0]?.class;
+
+          const childCoursesCount = await this.prisma.courseStudent.count({
+            where: { studentId: childId },
+          });
+
+          const childClassmatesCount = childClass
+            ? await this.prisma.classStudent.count({
+                where: {
+                  classId: childClass.id,
+                  studentId: { not: childId },
+                },
+              })
+            : 0;
+
+          return {
+            id: childId,
+            email: relation.student.email,
+            firstName: relation.student.firstName,
+            lastName: relation.student.lastName,
+            middleName: relation.student.middleName,
+            avatarUrl: relation.student.avatarUrl,
+            class: childClass ? { id: childClass.id, name: childClass.name } : null,
+            coursesCount: childCoursesCount,
+            classmatesCount: childClassmatesCount,
+          };
+        }),
+      );
     }
 
     return profile;
@@ -228,6 +263,19 @@ export class UsersService {
 
     const activeClass = child.studentClasses[0]?.class;
 
+    const coursesCount = await this.prisma.courseStudent.count({
+      where: { studentId: childId },
+    });
+
+    const classmatesCount = activeClass
+      ? await this.prisma.classStudent.count({
+          where: {
+            classId: activeClass.id,
+            studentId: { not: childId },
+          },
+        })
+      : 0;
+
     return {
       id: child.id,
       email: child.email,
@@ -241,6 +289,8 @@ export class UsersService {
         name: child.school.shortName || child.school.fullName,
       } : null,
       class: activeClass ? { id: activeClass.id, name: activeClass.name } : null,
+      coursesCount,
+      classmatesCount,
     };
   }
 
@@ -449,10 +499,10 @@ export class UsersService {
           await this.subjectsService.assignToTeacher(newUser.id, subject.id);
         }
       }
-      if (dto.isHomeroomFor) {
+      if (dto.homeroomClassName) {
         const classroom = await this.classesService.findOrCreateClass(
           admin.schoolId,
-          dto.isHomeroomFor,
+          dto.homeroomClassName,
         );
         await this.classesService.setHomeroomTeacher(classroom.id, newUser.id);
       }

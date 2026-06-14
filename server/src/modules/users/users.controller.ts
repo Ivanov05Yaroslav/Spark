@@ -38,14 +38,14 @@ export class UsersController {
     return this.usersService.getAllUsers();
   }
 
-  @ApiOperation({ summary: 'Отримати детальний профіль поточного користувача (Універсальний)' })
+  @ApiOperation({ summary: 'Отримати детальний профіль поточного користувача' })
   @UseGuards(JwtAuthGuard)
   @Get('/profile/me')
   async getMyProfile(@GetUser('id') userId: string) {
     return this.usersService.getMyProfile(userId);
   }
 
-  @ApiOperation({ summary: 'Батьки: Переглянути детальний профіль своєї дитини (Без parentsCode)' })
+  @ApiOperation({ summary: 'Батьки: Переглянути детальний профіль своєї дитини' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('PARENT', 'TEACHER', 'ADMIN', 'SUPER_ADMIN')
   @Get('/profile/children/:childId')
