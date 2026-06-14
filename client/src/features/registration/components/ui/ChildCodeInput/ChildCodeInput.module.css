@@ -1,0 +1,96 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.label {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: #4a5568;
+    text-align: left;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.otpFieldGroup {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+    justify-content: center;
+}
+
+.otpBox {
+    width: 100%;
+    max-width: 46px;
+    height: 65px;
+    flex-shrink: 1;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    text-align: center;
+    font-family: 'Inter', sans-serif;
+    font-size: 24px;
+    font-weight: 500;
+    color: #1a202c;
+    background-color: #ffffff;
+    outline: none;
+    transition: all 0.15s ease;
+    box-sizing: border-box;
+}
+
+.otpBox:focus {
+    border-color: #702DFF;
+    /*box-shadow: 0 0 0 2px rgba(112, 45, 255, 0.1);*/
+}
+
+.otpBox:disabled {
+    background-color: #f7fafc;
+    color: #a0aec0;
+    cursor: not-allowed;
+}
+
+.removeButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 65px;
+    /*border: 1px solid #fed7d7;*/
+    background-color: #fff5f5;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
+.removeButton:hover:not(:disabled) {
+    background-color: #fff0f0;
+    /*border-color: #f56565;*/
+}
+
+.removeButton:hover .trashIcon {
+    color: #e53e3e;
+}
+
+.removeButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.trashIcon {
+    width: 20px;
+    height: 20px;
+    color: #fc8181;
+    transition: color 0.15s ease;
+}
