@@ -25,56 +25,6 @@ export class CoursesService {
     return course;
   }
 
-  async getMySubjects(teacherId: string) {
-    const teacherSubjects = await this.prisma.teacherSubject.findMany({
-      where: { teacherId },
-      include: { subject: true },
-    });
-    return teacherSubjects.map((ts) => ts.subject);
-  }
-
-  async getSchoolClasses(schoolId: string) {
-    return this.prisma.class.findMany({
-      where: { schoolId },
-      orderBy: { name: 'asc' },
-    });
-  }
-
-  async getCoTeachersForSubject(schoolId: string, subjectId: string, currentTeacherId: string) {
-    return this.prisma.user.findMany({
-      where: {
-        schoolId,
-        id: { not: currentTeacherId },
-        userRoles: { some: { role: { name: 'TEACHER' } } },
-        teacherSubjects: { some: { subjectId } },
-      },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        middleName: true,
-        email: true,
-      },
-    });
-  }
-
-  async getClassStudents(classId: string) {
-    const classStudents = await this.prisma.classStudent.findMany({
-      where: { classId },
-      include: {
-        student: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            middleName: true,
-          },
-        },
-      },
-    });
-    return classStudents.map((cs) => cs.student);
-  }
-
   async createCourse(
     teacherId: string,
     schoolId: string,

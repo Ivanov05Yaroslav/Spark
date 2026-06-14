@@ -68,13 +68,15 @@ export class UsersController {
   @ApiOperation({
     summary: 'Отримати вчителів своєї школи за конкретним предметом (для співвикладачів)',
   })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('TEACHER', 'ADMIN', 'SUPER_ADMIN')
   @Get('/teachers/by-subject/:subjectId')
-  async getSchoolTeachersBySubject(
+  async getTeachersBySubject(
     @GetUser('schoolId') schoolId: string,
+    @GetUser('id') currentTeacherId: string,
     @Param('subjectId') subjectId: string,
   ) {
-    return this.usersService.getSchoolTeachersBySubject(schoolId, subjectId);
+    return this.usersService.getTeachersBySubject(schoolId, subjectId, currentTeacherId);
   }
 
   @ApiOperation({ summary: 'Отримати користувача за ID' })

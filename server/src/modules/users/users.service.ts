@@ -241,10 +241,11 @@ export class UsersService {
     });
   }
 
-  async getSchoolTeachersBySubject(schoolId: string, subjectId: string) {
+  async getTeachersBySubject(schoolId: string, subjectId: string, currentTeacherId: string) {
     return this.prisma.user.findMany({
       where: {
         schoolId,
+        id: { not: currentTeacherId },
         userRoles: { some: { role: { name: 'TEACHER' } } },
         teacherSubjects: { some: { subjectId } },
       },
