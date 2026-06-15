@@ -38,11 +38,22 @@ export class UsersController {
     return this.usersService.getAllUsers();
   }
 
-  @ApiOperation({ summary: 'Отримати власний профіль з детальною статистикою' })
+  @ApiOperation({ summary: 'Отримати детальний профіль поточного користувача' })
   @UseGuards(JwtAuthGuard)
-  @Get('/profile')
-  async getProfile(@GetUser('id') userId: string) {
-    return this.usersService.getProfile(userId);
+  @Get('/profile/me')
+  async getMyProfile(@GetUser('id') userId: string) {
+    return this.usersService.getMyProfile(userId);
+  }
+
+  @ApiOperation({ summary: 'Батьки: Переглянути детальний профіль своєї дитини' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('PARENT', 'TEACHER', 'ADMIN', 'SUPER_ADMIN')
+  @Get('/profile/children/:childId')
+  async getChildProfile(
+    @GetUser('id') parentId: string,
+    @Param('childId') childId: string,
+  ) {
+    return this.usersService.getChildProfileForParent(parentId, childId);
   }
 
   @ApiOperation({ summary: 'Редагувати власний профіль (ПІБ та Аватар)' })
@@ -122,17 +133,9 @@ export class UsersController {
     return this.usersService.deleteUser(adminId, targetUserId);
   }
 
-  @ApiOperation({ summary: 'Отримати всіх дітей (Тільки для батьків)' })
+  @ApiOperation({ summary: 'Додати дитину за кодом' })
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('PARENT')
-  @Get('/me/children')
-  async getMyChildren(@GetUser('id') parentId: string) {
-    return this.usersService.getMyChildren(parentId);
-  }
-
-  @ApiOperation({ summary: 'Додати дитину за кодом (Тільки для батьків)' })
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('PARENT')
+  @Roles('PARENT', 'TEACHER', 'ADMIN', 'SUPER_ADMIN')
   @Post('/me/children')
   @HttpCode(HttpStatus.OK)
   async addChild(@GetUser('id') parentId: string, @Body() dto: AddChildDto) {

@@ -57,7 +57,7 @@ model User {
   studentRelations StudentParent[] @relation("StudentRelation")
 
   // Зв'язки: Навчальний процес
-  homeroomClasses Class[]          @relation("HomeroomTeacher")
+  homeroomClass   Class?           @relation("HomeroomTeacher")
   studentClasses  ClassStudent[]
   teacherSubjects TeacherSubject[]
 
@@ -130,7 +130,7 @@ model School {
 model Class {
   id                String  @id @default(uuid())
   schoolId          String
-  homeroomTeacherId String?
+  homeroomTeacherId String? @unique
   name              String
 
   school          School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)

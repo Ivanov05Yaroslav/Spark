@@ -101,124 +101,196 @@ export class UsersService {
     });
   }
 
-  async getProfile(userId: string) {
+  async getMyProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
-        userRoles: { include: { role: true } },
+        userRoles: {
+          include: { role: true },
+        },
         school: true,
+        studentClasses: {
+          include: {
+            class: true,
+          },
+        },
+        teacherSubjects: {
+          include: {
+            subject: true,
+          },
+        },
+        homeroomClass: true,
+        parentRelations: {
+          include: {
+            student: {
+              include: {
+                studentClasses: {
+                  include: { class: true },
+                },
+              },
+            },
+          },
+        },
       },
     });
 
     if (!user) {
-      throw new HttpException('Користувач не знайдений', HttpStatus.NOT_FOUND);
+      throw new HttpException('Користувача не знайдено', HttpStatus.NOT_FOUND);
     }
 
     const roles = user.userRoles.map((ur) => ur.role.name);
-    let extraData: any = {};
 
-    if (roles.includes('STUDENT')) {
-      const studentData = await this.prisma.user.findUnique({
-        where: { id: userId },
-        include: {
-          studentClasses: {
-            include: {
-              class: {
-                include: {
-                  _count: {
-                    select: { students: true },
-                  },
-                },
-              },
-            },
-          },
-          enrolledCourses: {
-            include: {
-              course: {
-                include: { subject: true },
-              },
-            },
-          },
-        },
-      });
-
-      extraData = {
-        parentsCode: user.parentsCode,
-        classes:
-          studentData?.studentClasses.map((sc) => ({
-            id: sc.class.id,
-            name: sc.class.name,
-            classmatesCount: Math.max(0, (sc.class._count?.students || 1) - 1),
-          })) || [],
-        coursesCount: studentData?.enrolledCourses.length || 0,
-        courses: studentData?.enrolledCourses.map((sc) => sc.course.subject.name) || [],
-      };
-    }
-
-    if (roles.includes('PARENT')) {
-      const parentData = await this.prisma.user.findUnique({
-        where: { id: userId },
-        include: {
-          parentRelations: {
-            include: {
-              student: {
-                include: {
-                  studentClasses: {
-                    include: { class: true },
-                  },
-                },
-              },
-            },
-          },
-        },
-      });
-
-      extraData = {
-        children:
-          parentData?.parentRelations.map((rel) => ({
-            id: rel.student.id,
-            fullName:
-              `${rel.student.lastName} ${rel.student.firstName} ${rel.student.middleName || ''}`.trim(),
-            classes: rel.student.studentClasses.map((sc) => sc.class.name),
-          })) || [],
-      };
-    }
-
-    if (roles.includes('TEACHER')) {
-      const teacherData = await this.prisma.user.findUnique({
-        where: { id: userId },
-        include: {
-          homeroomClasses: true,
-          teacherSubjects: {
-            include: { subject: true },
-          },
-        },
-      });
-
-      extraData = {
-        homeroomClasses: teacherData?.homeroomClasses.map((c) => c.name) || [],
-        subjects: teacherData?.teacherSubjects.map((ts) => ts.subject.name) || [],
-      };
-    }
-
-    return {
+    const profile: any = {
       id: user.id,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
       middleName: user.middleName,
       avatarUrl: user.avatarUrl,
-      school: user.school
-        ? {
-            id: user.school.id,
-            name: user.school.shortName || user.school.fullName,
-            fullName: user.school.fullName,
-            city: user.school.city,
-            address: user.school.address,
-          }
-        : null,
       roles,
-      ...extraData,
+      createdAt: user.createdAt,
+      themePreference: user.themePreference,
+    };
+
+    if (user.school) {
+      profile.school = {
+        id: user.school.id,
+        name: user.school.shortName || user.school.fullName,
+        address: user.school.address,
+      };
+    }
+
+    if (roles.includes('STUDENT')) {
+      const activeClass = user.studentClasses[0]?.class;
+
+      const coursesCount = await this.prisma.courseStudent.count({
+        where: { studentId: userId },
+      });
+
+      const classmatesCount = activeClass
+        ? await this.prisma.classStudent.count({
+            where: {
+              classId: activeClass.id,
+              studentId: { not: userId },
+            },
+          })
+        : 0;
+
+      profile.class = activeClass ? { id: activeClass.id, name: activeClass.name } : null;
+      profile.coursesCount = coursesCount;
+      profile.classmatesCount = classmatesCount;
+      profile.parentsCode = user.parentsCode;
+    }
+
+    if (roles.includes('TEACHER')) {
+      profile.subjects = user.teacherSubjects.map((ts) => ({
+        id: ts.subject.id,
+        name: ts.subject.name,
+      }));
+      profile.homeroomClass = user.homeroomClass ? {
+        id: user.homeroomClass.id,
+        name: user.homeroomClass.name,
+      } : null;
+    }
+
+if (roles.includes('PARENT')) {
+      profile.children = await Promise.all(
+        user.parentRelations.map(async (relation) => {
+          const childId = relation.student.id;
+          const childClass = relation.student.studentClasses[0]?.class;
+
+          const childCoursesCount = await this.prisma.courseStudent.count({
+            where: { studentId: childId },
+          });
+
+          const childClassmatesCount = childClass
+            ? await this.prisma.classStudent.count({
+                where: {
+                  classId: childClass.id,
+                  studentId: { not: childId },
+                },
+              })
+            : 0;
+
+          return {
+            id: childId,
+            email: relation.student.email,
+            firstName: relation.student.firstName,
+            lastName: relation.student.lastName,
+            middleName: relation.student.middleName,
+            avatarUrl: relation.student.avatarUrl,
+            class: childClass ? { id: childClass.id, name: childClass.name } : null,
+            coursesCount: childCoursesCount,
+            classmatesCount: childClassmatesCount,
+          };
+        }),
+      );
+    }
+
+    return profile;
+  }
+
+  async getChildProfileForParent(parentId: string, childId: string) {
+    const relation = await this.prisma.studentParent.findUnique({
+      where: {
+        studentId_parentId: {
+          studentId: childId,
+          parentId: parentId,
+        },
+      },
+    });
+
+    if (!relation) {
+      throw new HttpException(
+        'Доступ заборонено: цей учень не пов\'язаний з вашим акаунтом',
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
+    const child = await this.prisma.user.findUnique({
+      where: { id: childId },
+      include: {
+        school: true,
+        studentClasses: {
+          include: { class: true },
+        },
+      },
+    });
+
+    if (!child) {
+      throw new HttpException('Учня не знайдено в системі', HttpStatus.NOT_FOUND);
+    }
+
+    const activeClass = child.studentClasses[0]?.class;
+
+    const coursesCount = await this.prisma.courseStudent.count({
+      where: { studentId: childId },
+    });
+
+    const classmatesCount = activeClass
+      ? await this.prisma.classStudent.count({
+          where: {
+            classId: activeClass.id,
+            studentId: { not: childId },
+          },
+        })
+      : 0;
+
+    return {
+      id: child.id,
+      email: child.email,
+      firstName: child.firstName,
+      lastName: child.lastName,
+      middleName: child.middleName,
+      avatarUrl: child.avatarUrl,
+      roles: ['STUDENT'],
+      school: child.school ? {
+        id: child.school.id,
+        name: child.school.shortName || child.school.fullName,
+      } : null,
+      class: activeClass ? { id: activeClass.id, name: activeClass.name } : null,
+      coursesCount,
+      classmatesCount,
     };
   }
 
@@ -427,10 +499,10 @@ export class UsersService {
           await this.subjectsService.assignToTeacher(newUser.id, subject.id);
         }
       }
-      if (dto.isHomeroomFor) {
+      if (dto.homeroomClassName) {
         const classroom = await this.classesService.findOrCreateClass(
           admin.schoolId,
-          dto.isHomeroomFor,
+          dto.homeroomClassName,
         );
         await this.classesService.setHomeroomTeacher(classroom.id, newUser.id);
       }
@@ -531,35 +603,6 @@ export class UsersService {
     });
 
     return { message: 'Користувача успішно видалено з системи' };
-  }
-
-  async getMyChildren(parentId: string) {
-    const parent = await this.prisma.user.findUnique({
-      where: { id: parentId },
-      include: {
-        parentRelations: {
-          include: {
-            student: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                middleName: true,
-                avatarUrl: true,
-                email: true,
-                schoolId: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!parent) {
-      throw new HttpException('Батьківський профіль не знайдено', HttpStatus.NOT_FOUND);
-    }
-
-    return parent.parentRelations.map((relation) => relation.student);
   }
 
   async addChild(parentId: string, parentsCode: string) {
