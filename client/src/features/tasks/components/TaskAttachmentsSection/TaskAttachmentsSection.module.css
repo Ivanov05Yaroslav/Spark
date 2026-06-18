@@ -1,0 +1,7 @@
+.iconButtonsGroup {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    margin-top: 4px;
+}
