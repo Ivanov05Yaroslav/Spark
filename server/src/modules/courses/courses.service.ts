@@ -82,10 +82,12 @@ export class CoursesService {
         subjectId: dto.subjectId,
         classId: dto.classId,
         creatorId: teacherId,
-        academicYear: dto.academicYear,
+        startDate: new Date(dto.startDate),
+        endDate: new Date(dto.endDate),
         groupName: dto.groupName || null,
         themeColor: dto.themeColor || '#702DFF',
         backgroundUrl: backgroundUrl,
+        isHidden: dto.isHidden !== undefined ? dto.isHidden : false,
 
         coTeachers:
           coTeacherIdsFiltered.length > 0
@@ -176,6 +178,8 @@ export class CoursesService {
     const updatedCourse = await this.prisma.course.update({
       where: { id: courseId },
       data: {
+        startDate: dto.startDate ? new Date(dto.startDate) : undefined,
+        endDate: dto.endDate ? new Date(dto.endDate) : undefined,
         groupName:
           dto.groupName !== undefined
             ? dto.groupName === 'null'
@@ -183,6 +187,7 @@ export class CoursesService {
               : dto.groupName
             : undefined,
         isArchived: dto.isArchived !== undefined ? dto.isArchived : undefined,
+        isHidden: dto.isHidden !== undefined ? dto.isHidden : undefined,
         themeColor: dto.themeColor !== undefined ? dto.themeColor : undefined,
         backgroundUrl: backgroundUrl,
         coTeachers: coTeachersUpdate,
@@ -245,84 +250,25 @@ export class CoursesService {
     return { message: 'Співвикладача видалено з курсу' };
   }
 
-  private getCurrentAcademicYear(): string {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
+  // private getCurrentAcademicYear(): string {
+  //   const now = new Date();
+  //   const year = now.getFullYear();
+  //   const month = now.getMonth() + 1;
 
-    if (month < 8) {
-      return `${year - 1}-${year}`;
-    }
-    return `${year}-${year + 1}`;
-  }
+  //   if (month < 8) {
+  //     return `${year - 1}-${year}`;
+  //   }
+  //   return `${year}-${year + 1}`;
+  // }
 
   async getMyStudentCourses(studentId: string, query: GetCoursesQueryDto) {
     const { search, filter, sortBy, sortOrder } = query;
-    const currentYear = this.getCurrentAcademicYear();
+    const now = new Date();
 
     const where: any = {
-      AND: [{ students: { some: { studentId } } }],
-    };
-
-    switch (filter) {
-      case 'ARCHIVED':
-        where.AND.push({ isArchived: true });
-        break;
-      case 'PAST':
-        where.AND.push({ isArchived: false, academicYear: { lt: currentYear } });
-        break;
-      case 'IN_PROGRESS':
-        where.AND.push({ isArchived: false, academicYear: currentYear });
-        break;
-      case 'ALL':
-      default:
-        where.AND.push({ isArchived: false, academicYear: { lte: currentYear } });
-        break;
-    }
-
-    if (search) {
-      where.AND.push({
-        OR: [
-          { subject: { name: { contains: search, mode: 'insensitive' } } },
-          { creator: { lastName: { contains: search, mode: 'insensitive' } } },
-        ],
-      });
-    }
-
-    let orderBy: any = {};
-    if (sortBy === 'NAME') {
-      orderBy = { subject: { name: sortOrder || 'asc' } };
-    } else {
-      orderBy = { academicYear: sortOrder || 'desc' };
-    }
-
-    return this.prisma.course.findMany({
-      where,
-      include: {
-        subject: true,
-        creator: {
-          select: { id: true, firstName: true, middleName: true, lastName: true, avatarUrl: true },
-        },
-        coTeachers: {
-          include: {
-            teacher: { select: { id: true, firstName: true, middleName: true, lastName: true } },
-          },
-        },
-      },
-      orderBy,
-    });
-  }
-
-  async getMyTeacherCourses(teacherId: string, query: GetCoursesQueryDto) {
-    const { search, filter, sortBy, sortOrder } = query;
-    const currentYear = this.getCurrentAcademicYear();
-
-    const where: any = {
-      AND: [
-        {
-          OR: [{ creatorId: teacherId }, { coTeachers: { some: { teacherId } } }],
-        },
-      ],
+      students: { some: { studentId } },
+      isHidden: false,
+      AND: [],
     };
 
     switch (filter) {
@@ -330,13 +276,17 @@ export class CoursesService {
         where.AND.push({ isArchived: true });
         break;
       case 'IN_PROGRESS':
-        where.AND.push({ isArchived: false, academicYear: currentYear });
+        where.AND.push({
+          isArchived: false,
+          startDate: { lte: now },
+          endDate: { gte: now },
+        });
         break;
       case 'PLANNED':
-        where.AND.push({ isArchived: false, academicYear: { gt: currentYear } });
+        where.AND.push({ isArchived: false, startDate: { gt: now } });
         break;
       case 'PAST':
-        where.AND.push({ isArchived: false, academicYear: { lt: currentYear } });
+        where.AND.push({ isArchived: false, endDate: { lt: now } });
         break;
       case 'ALL':
       default:
@@ -358,9 +308,75 @@ export class CoursesService {
     if (sortBy === 'NAME') {
       orderBy = { subject: { name: sortOrder || 'asc' } };
     } else {
-      orderBy = { academicYear: sortOrder || 'desc' };
+      orderBy = { startDate: sortOrder || 'desc' };
     }
 
+    return this.prisma.course.findMany({
+      where,
+      include: {
+        subject: true,
+        creator: {
+          select: { id: true, firstName: true, middleName: true, lastName: true, avatarUrl: true },
+        },
+        coTeachers: {
+          include: {
+            teacher: { select: { id: true, firstName: true, middleName: true, lastName: true } },
+          },
+        },
+      },
+      orderBy,
+    });
+  }
+
+async getMyTeacherCourses(teacherId: string, query: GetCoursesQueryDto) {
+    const { search, filter, sortBy, sortOrder } = query;
+    const now = new Date();
+
+    const where: any = {
+      OR: [{ creatorId: teacherId }, { coTeachers: { some: { teacherId } } }],
+      AND: [],
+    };
+
+    switch (filter) {
+      case 'ARCHIVED':
+        where.AND.push({ isArchived: true });
+        break;
+      case 'IN_PROGRESS':
+        where.AND.push({ 
+          isArchived: false, 
+          startDate: { lte: now },
+          endDate: { gte: now } 
+        });
+        break;
+      case 'PLANNED':
+        where.AND.push({ isArchived: false, startDate: { gt: now } });
+        break;
+      case 'PAST':
+        where.AND.push({ isArchived: false, endDate: { lt: now } });
+        break;
+      case 'ALL':
+      default:
+        where.AND.push({ isArchived: false });
+        break;
+    }
+
+    if (search) {
+      where.AND.push({
+        OR: [
+          { subject: { name: { contains: search, mode: 'insensitive' } } },
+          { class: { name: { contains: search, mode: 'insensitive' } } },
+          { groupName: { contains: search, mode: 'insensitive' } },
+        ],
+      });
+    }
+
+    let orderBy: any = {};
+    if (sortBy === 'NAME') {
+      orderBy = { subject: { name: sortOrder || 'asc' } };
+    } else {
+      orderBy = { startDate: sortOrder || 'desc' };
+    }
+    
     return this.prisma.course.findMany({
       where,
       include: {

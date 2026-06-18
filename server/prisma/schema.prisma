@@ -74,7 +74,7 @@ model User {
   comments       Comment[]
   givenGrades    Gradebook[]    @relation("TeacherGrades")
   receivedGrades Gradebook[]    @relation("StudentGrades")
-  attendance     Attendance[]
+  attendances    Attendance[]
 
   // Зв'язки: Комунікація
   sentNotifications     Notification[] @relation("SentNotifications")
@@ -192,16 +192,18 @@ model NusGroup {
 // ==========================================
 
 model Course {
-  id           String  @id @default(uuid())
-  schoolId     String
-  subjectId    String
-  classId      String
-  creatorId    String
-  academicYear String
-  groupName    String?
-  isArchived   Boolean @default(false)
+  id            String   @id @default(uuid())
+  schoolId      String
+  subjectId     String
+  classId       String
+  creatorId     String
+  startDate     DateTime @default(now())
+  endDate       DateTime @default(now())
+  groupName     String?
+  isArchived    Boolean  @default(false)
+  isHidden      Boolean  @default(false)
   backgroundUrl String?
-  themeColor    String? @default("#702DFF") 
+  themeColor    String?  @default("#702DFF")
 
   school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
@@ -216,7 +218,7 @@ model Course {
   tasks         Task[]
   tests         Test[]
   gradebooks    Gradebook[]
-  attendance    Attendance[]
+  attendances   Attendance[]
 
   @@map("courses")
 }
@@ -413,7 +415,7 @@ model Attendance {
   student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
   course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
-  @@map("attendance")
+  @@map("attendances")
 }
 
 // ==========================================
@@ -490,37 +492,37 @@ model Message {
 // ==========================================
 
 model EdeboSchool {
-  id                  String   @id @default(uuid())
-  edeboId             String   @unique  // Код в ЄДЕБО
-  fullName            String            // Повна назва
-  shortName           String?           // Скорочена назва
-  isChecked           String?           // ОУО підтвердив дані (так/ні)
-  status              String?           // Статус (напр., "працює")
-  institutionType     String?           // Тип закладу (гімназія, ліцей тощо)
-  financingType       String?           // Форма власності (Комунальна, Приватна)
-  koatuuId            String?           // Код КОАТУУ
-  region              String            // Регіон
-  koatuuName          String?           // Населений пункт (за КОАТУУ)
-  address             String?           // Місцезнаходження (юридична адреса)
-  katottgCode         String?           // Код КАТОТТГ
-  katottgName         String?           // Населений пункт (за КАТОТТГ)
-  parentInstitutionId String?           // Головний заклад (ID, якщо це філія)
-  governanceName      String?           // Найменування органу, до сфери управління якого належить
-  phone               String?           // Телефон
-  fax                 String?           // Факс
-  email               String?           // Електронна пошта
-  website             String?           // Веб-сайт
-  directorFullName    String?           // Керівник (Посада + ПІБ)
-  isSupport           String?           // Опорний / Філія (так/ні)
-  isVillage           String?           // Сільський (так/ні)
-  isMountain          String?           // Гірський (так/ні)
-  isInternat          String?           // Інтернат (так/ні)
-  approvedCount       String?           // Ліцензовані обсяги
+  id                  String  @id @default(uuid())
+  edeboId             String  @unique // Код в ЄДЕБО
+  fullName            String // Повна назва
+  shortName           String? // Скорочена назва
+  isChecked           String? // ОУО підтвердив дані (так/ні)
+  status              String? // Статус (напр., "працює")
+  institutionType     String? // Тип закладу (гімназія, ліцей тощо)
+  financingType       String? // Форма власності (Комунальна, Приватна)
+  koatuuId            String? // Код КОАТУУ
+  region              String // Регіон
+  koatuuName          String? // Населений пункт (за КОАТУУ)
+  address             String? // Місцезнаходження (юридична адреса)
+  katottgCode         String? // Код КАТОТТГ
+  katottgName         String? // Населений пункт (за КАТОТТГ)
+  parentInstitutionId String? // Головний заклад (ID, якщо це філія)
+  governanceName      String? // Найменування органу, до сфери управління якого належить
+  phone               String? // Телефон
+  fax                 String? // Факс
+  email               String? // Електронна пошта
+  website             String? // Веб-сайт
+  directorFullName    String? // Керівник (Посада + ПІБ)
+  isSupport           String? // Опорний / Філія (так/ні)
+  isVillage           String? // Сільський (так/ні)
+  isMountain          String? // Гірський (так/ні)
+  isInternat          String? // Інтернат (так/ні)
+  approvedCount       String? // Ліцензовані обсяги
 
   // Наше допоміжне поле для зручного і швидкого пошуку в дропдауні:
-  city                String            // Уніфікований населений пункт
+  city String // Уніфікований населений пункт
 
-  updatedAt           DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 
   @@index([region])
   @@index([city])

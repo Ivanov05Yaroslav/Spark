@@ -3,6 +3,7 @@ import { Transform } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
+  IsDateString,
   IsEnum,
   IsNotEmpty,
   IsOptional,
@@ -21,10 +22,15 @@ export class CreateCourseDto {
   @IsNotEmpty()
   classId!: string;
 
-  @ApiProperty({ example: '2026-2027', description: 'Навчальний рік' })
-  @IsString()
+  @ApiProperty({ example: '2026-09-01T00:00:00Z', description: 'Дата початку курсу (ISO)' })
+  @IsDateString()
   @IsNotEmpty()
-  academicYear!: string;
+  startDate!: string;
+
+  @ApiProperty({ example: '2027-05-31T23:59:59Z', description: 'Дата закінчення курсу (ISO)' })
+  @IsDateString()
+  @IsNotEmpty()
+  endDate!: string;
 
   @ApiProperty({
     example: 'Група 1',
@@ -50,6 +56,16 @@ export class CreateCourseDto {
   })
   @IsOptional()
   backgroundImage?: any;
+
+  @ApiProperty({ example: false, description: 'Приховати курс від учнів', required: false })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  isHidden?: boolean;
 
   @ApiProperty({ type: [String], required: false, description: 'ID інших вчителів-співвикладачів' })
   @IsOptional()
@@ -87,10 +103,23 @@ export class CreateCourseDto {
 }
 
 export class UpdateCourseDto {
-  @ApiProperty({ example: '2026-2027', required: false, description: 'Навчальний рік' })
+  @ApiProperty({
+    example: '2026-09-01T00:00:00Z',
+    description: 'Дата початку курсу',
+    required: false,
+  })
   @IsOptional()
-  @IsString()
-  academicYear?: string;
+  @IsDateString()
+  startDate?: string;
+
+  @ApiProperty({
+    example: '2027-05-31T23:59:59Z',
+    description: 'Дата закінчення курсу',
+    required: false,
+  })
+  @IsOptional()
+  @IsDateString()
+  endDate?: string;
 
   @ApiProperty({ example: 'Група 2', required: false, description: 'Назва групи' })
   @IsOptional()
@@ -112,6 +141,16 @@ export class UpdateCourseDto {
   })
   @IsOptional()
   backgroundImage?: any;
+
+  @ApiProperty({ example: true, description: 'Приховати курс від учнів', required: false })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  isHidden?: boolean;
 
   @ApiProperty({ example: true, description: 'Перемістити в архів', required: false })
   @IsOptional()
@@ -175,7 +214,7 @@ export enum CourseFilter {
 
 export enum CourseSortBy {
   NAME = 'NAME',
-  ACADEMIC_YEAR = 'ACADEMIC_YEAR',
+  START_DATE = 'START_DATE',
 }
 
 export class GetCoursesQueryDto {
@@ -189,10 +228,10 @@ export class GetCoursesQueryDto {
   @IsEnum(CourseFilter)
   filter?: CourseFilter = CourseFilter.ALL;
 
-  @ApiProperty({ required: false, enum: CourseSortBy, default: CourseSortBy.ACADEMIC_YEAR })
+  @ApiProperty({ required: false, enum: CourseSortBy, default: CourseSortBy.START_DATE })
   @IsOptional()
   @IsEnum(CourseSortBy)
-  sortBy?: CourseSortBy = CourseSortBy.ACADEMIC_YEAR;
+  sortBy?: CourseSortBy = CourseSortBy.START_DATE;
 
   @ApiProperty({ required: false, enum: ['asc', 'desc'], default: 'desc' })
   @IsOptional()
