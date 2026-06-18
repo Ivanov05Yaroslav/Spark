@@ -1,0 +1,1 @@
+export { CreateTaskPage} from '@/pages/tasks/CreateTaskPage/CreateTaskPage.tsx';

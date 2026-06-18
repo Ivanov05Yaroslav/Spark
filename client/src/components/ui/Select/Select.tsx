@@ -21,7 +21,7 @@ export const Select = ({
                            value,
                            onChange,
                            className = '',
-                           placeholder = 'Select...',
+                           placeholder = 'Оберіть',
                            disabled = false
                        }: SelectProps) => {
     const [isOpen, setIsOpen] = useState(false);

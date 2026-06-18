@@ -8,6 +8,10 @@ interface TwoColumnContentLayoutProps {
     children: React.ReactNode;
     sidebarContent: React.ReactNode;
     sidebarWidth?: string;
+    showHeaderButton?: boolean;
+    headerButtonText?: string;
+    onHeaderButtonClick?: () => void;
+    isHeaderButtonDisabled?: boolean;
 }
 
 export const TwoColumnContentLayout: React.FC<TwoColumnContentLayoutProps> = ({
@@ -16,10 +20,21 @@ export const TwoColumnContentLayout: React.FC<TwoColumnContentLayoutProps> = ({
                                                                                   children,
                                                                                   sidebarContent,
                                                                                   sidebarWidth = '320px',
+                                                                                  showHeaderButton = false,
+                                                                                  headerButtonText,
+                                                                                  onHeaderButtonClick,
+                                                                                  isHeaderButtonDisabled = false,
                                                                               }) => {
     return (
         <div className={styles.pageContainer}>
-            <PageHeader title={title} onBack={onBack} />
+            <PageHeader
+                title={title}
+                onBack={onBack}
+                showButton={showHeaderButton}
+                buttonText={headerButtonText}
+                onButtonClick={onHeaderButtonClick}
+                isButtonDisabled={isHeaderButtonDisabled}
+            />
 
             <div className={styles.layoutWrapper}>
                 <div

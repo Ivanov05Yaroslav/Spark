@@ -1,0 +1,44 @@
+.secondaryButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 140px;
+    height: 42px;
+    border: none;
+    background-color: rgba(112, 45, 255, 0.1);
+    border-radius: 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(112, 45, 255, 0.9);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
+.secondaryButton:hover:not(:disabled) {
+    background-color: rgba(112, 45, 255, 0.18);
+    color: #702DFF;
+}
+
+.secondaryButton:active:not(:disabled) {
+    background-color: rgba(112, 45, 255, 0.25);
+}
+
+.secondaryButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: #f7fafc;
+    color: #a0aec0;
+}
+
+.iconWrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    color: inherit;
+}

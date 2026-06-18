@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import UploadIcon from '@/assets/upload.svg?react';
-import DeleteIcon from '@/assets/delete.svg?react';
-import { toast } from '@/components/utils/Toast';
+import { toast } from '@/libs/configs/Toast.ts';
+import { FileCard } from '@/components/ui/FileCard/FileCard';
 import styles from './FileUpload.module.css';
 
 export interface FileUploadProps {
@@ -12,6 +12,7 @@ export interface FileUploadProps {
     values?: File[];
     maxFiles?: number;
     maxSizeMB?: number;
+    showList?: boolean;
 }
 
 export const FileUpload = ({
@@ -21,7 +22,8 @@ export const FileUpload = ({
                                className = '',
                                values = [],
                                maxFiles = 5,
-                               maxSizeMB = 10
+                               maxSizeMB = 10,
+                               showList = true
                            }: FileUploadProps) => {
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -80,8 +82,7 @@ export const FileUpload = ({
         }
     };
 
-    const handleRemoveFile = (e: React.MouseEvent, indexToRemove: number) => {
-        e.stopPropagation();
+    const handleRemoveFile = (indexToRemove: number) => {
         const updatedFiles = values.filter((_, index) => index !== indexToRemove);
         onFilesChange?.(updatedFiles);
     };
@@ -116,20 +117,14 @@ export const FileUpload = ({
                 </span>
             </div>
 
-            {values.length > 0 && (
+            {showList && values.length > 0 && (
                 <div className={styles.fileList}>
                     {values.map((file, index) => (
-                        <div key={`${file.name}-${index}`} className={styles.fileListItem}>
-                            <span className={styles.fileName}>{file.name}</span>
-                            <button
-                                type="button"
-                                className={styles.removeButton}
-                                onClick={(e) => handleRemoveFile(e, index)}
-                                aria-label="Видалити файл"
-                            >
-                                <DeleteIcon />
-                            </button>
-                        </div>
+                        <FileCard
+                            key={`${file.name}-${index}`}
+                            fileName={file.name}
+                            onRemove={() => handleRemoveFile(index)}
+                        />
                     ))}
                 </div>
             )}

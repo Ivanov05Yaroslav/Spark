@@ -1,0 +1,46 @@
+.container {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    outline: none;
+}
+
+.iconWrapper {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #EFE6FF;
+    color: #702DFF;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.container:hover .iconWrapper {
+    background-color: #E5D5FF;
+    transform: scale(1.05);
+}
+
+.iconWrapper :global(svg) {
+    width: 24px;
+    height: 24px;
+}
+
+.label {
+    font-size: 14px;
+    font-weight: 400;
+    color: #7E7E7E;
+    font-family: 'Inter', sans-serif;
+    transition: color 0.2s ease;
+}
+
+.container:hover .label {
+    color: #202020;
+}
