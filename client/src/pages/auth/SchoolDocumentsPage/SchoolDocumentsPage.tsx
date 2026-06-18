@@ -2,7 +2,7 @@ import React from 'react';
 import {
     SchoolDocumentsForm
 } from "@/features/auth/components/SchoolDocumentsForm/SchoolDocumentsForm.tsx";
-import styles from "@/features/registration/pages/school/SchoolDocumentsPage/SchoolDocumentsPage.module.css";
+import styles from "@/pages/auth/SchoolDocumentsPage/SchoolDocumentsPage.module.css";
 import {Logo} from "@/components/ui/Logo/Logo.tsx";
 
 export const SchoolDocumentsPage = () => {

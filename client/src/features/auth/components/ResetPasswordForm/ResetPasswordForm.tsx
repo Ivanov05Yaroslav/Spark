@@ -1,44 +1,20 @@
-import React, { useState } from 'react';
-import { toast } from '@/libs/configs/Toast.ts';
+import React from 'react';
 import { Input } from '@/components/ui/Input/Input';
-import { authService } from '@/api/auth.service.ts';
 import { FormLayout } from '@/components/auth/FormLayout/FormLayout';
+import { useResetPassword } from '@/features/auth/hooks/useResetPassword';
 
 export const ResetPasswordForm = () => {
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-
     const queryParams = new URLSearchParams(window.location.search);
     const sessionId = queryParams.get('sessionId') || '';
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (password !== confirmPassword) {
-            toast.error('Паролі не збігаються');
-            return;
-        }
-
-        setIsLoading(true);
-
-        try {
-            const data = await authService.resetPassword({
-                sessionId,
-                newPassword: password
-            });
-
-            toast.success(data.message);
-
-            setTimeout(() => {
-                window.location.href = '/login';
-            }, 1500);
-        } catch (err: any) {
-            toast.error(err.message || 'Помилка при зміні пароля');
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    const {
+        password,
+        setPassword,
+        confirmPassword,
+        setConfirmPassword,
+        handleSubmit,
+        isLoading
+    } = useResetPassword(sessionId);
 
     return (
         <FormLayout

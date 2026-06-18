@@ -6,14 +6,12 @@ import {
     EmailVerificationPage as AuthEmailVerificationPage,
     ForgotPasswordPage,
     LoginPage,
-    ResetPasswordPage
-} from "./pages/auth";
-import {
+    ResetPasswordPage,
     ParentEmailVerificationPage,
     HeadmasterEmailVerificationPage,
     ParentCodePage,
     ParentDetailsPage, SchoolDetailsPage, SchoolSelectionPage, SchoolDocumentsPage,
-} from "./pages/registration";
+} from "./pages/auth";
 import React from "react";
 import {ToastContainer} from "react-toastify";
 import {CreateCoursePage} from "@/pages/courses";

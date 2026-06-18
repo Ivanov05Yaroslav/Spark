@@ -1,64 +1,27 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { toast } from '@/libs/configs/Toast.ts';
 import { Input } from '@/components/ui/Input/Input.tsx';
 import { FullNameInput } from '@/components/auth/FullNameInput/FullNameInput.tsx';
 import { Links } from '@/components/auth/Links/Links.tsx';
-import { schoolService } from '@/api/school.service.ts';
 import { FormLayout } from '@/components/auth/FormLayout/FormLayout.tsx';
-import styles from "@/features/auth/components/SchoolDetailsForm/SchoolDetailsForm.module.css";
+import { useSchoolDetails } from '@/features/auth/hooks/useSchoolDetails';
+import styles from './SchoolDetailsForm.module.css';
 
 export const SchoolDetailsForm = () => {
-    const [firstName, setFirstName] = useState('');
-    const [middleName, setMiddleName] = useState('');
-    const [lastName, setLastName] = useState('');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-
     const sessionId = searchParams.get('sessionId') || '';
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (!sessionId) {
-            toast.error('Помилка: не знайдено сесію реєстрації. Будь ласка, почніть спочатку.');
-            return;
-        }
-
-        if (password !== confirmPassword) {
-            toast.error('Паролі не збігаються');
-            return;
-        }
-
-        setIsLoading(true);
-
-        try {
-            const data = await schoolService.registerSchoolDetails({
-                sessionId,
-                email,
-                password,
-                firstName,
-                lastName,
-                middleName
-            });
-
-            toast.success('Профіль створено! Підтвердіть вашу пошту');
-
-            setTimeout(() => {
-                const nextSessionId = data.sessionId || sessionId;
-                navigate(`/school/verify-email?email=${encodeURIComponent(email)}&sessionId=${nextSessionId}`);
-            }, 1000);
-        } catch (err: any) {
-            toast.error(err.message || 'Помилка при реєстрації');
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    const {
+        firstName, setFirstName,
+        middleName, setMiddleName,
+        lastName, setLastName,
+        email, setEmail,
+        password, setPassword,
+        confirmPassword, setConfirmPassword,
+        handleSubmit,
+        isLoading
+    } = useSchoolDetails(sessionId);
 
     return (
         <FormLayout
@@ -77,7 +40,6 @@ export const SchoolDetailsForm = () => {
                 />
             }
         >
-
             <p className={styles.subtitle}>
                 Будь ласка, введіть дані для створення акаунту директора.
             </p>

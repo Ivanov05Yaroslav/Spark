@@ -1,31 +1,16 @@
-import React, { useState } from 'react';
-import { toast } from '@/libs/configs/Toast.ts';
+import React from 'react';
 import { Input } from '@/components/ui/Input/Input';
 import { Links } from '@/components/auth/Links/Links';
-import { authService } from '@/api/auth.service.ts';
 import { FormLayout } from '@/components/auth/FormLayout/FormLayout';
+import { useForgotPassword } from '@/features/auth/hooks/useForgotPassword';
 
 export const ForgotPasswordForm = () => {
-    const [email, setEmail] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsLoading(true);
-
-        try {
-            const data = await authService.forgotPassword({ email });
-            toast.success(data.message || 'Код успішно відправлено!');
-
-            setTimeout(() => {
-                window.location.href = `/verify-email?email=${encodeURIComponent(email)}&sessionId=${data.sessionId}`;
-            }, 1000);
-        } catch (err: any) {
-            toast.error(err.message || 'Помилка відновлення доступу');
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    const {
+        email,
+        setEmail,
+        handleSubmit,
+        isLoading
+    } = useForgotPassword();
 
     return (
         <FormLayout
@@ -40,7 +25,7 @@ export const ForgotPasswordForm = () => {
                 <Links
                     leftText="Пам'ятаєте свій пароль?"
                     leftLinkText="Увійти"
-                    onLeftLinkClick={() => window.location.href = '/login'}
+                    onLeftLinkClick={() => (window.location.href = '/login')}
                 />
             }
         >

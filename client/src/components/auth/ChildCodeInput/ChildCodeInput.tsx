@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import TrashIcon from '../../../assets/delete.svg?react'; // Переконайся, що шлях правильний
+import TrashIcon from '../../../assets/delete.svg?react';
 import styles from './ChildCodeInput.module.css';
 
 interface OTPParentInputProps {
