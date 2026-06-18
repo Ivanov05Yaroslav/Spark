@@ -1,0 +1,2 @@
+export { CreateAnnouncementPage } from '@/pages/announcements/CreateAnnouncementPage/CreateAnnouncementPage';
+export { EditAnnouncementPage } from '@/pages/announcements/EditAnnouncementPage/EditAnnouncementPage';

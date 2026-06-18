@@ -1,4 +1,4 @@
-import { Dot } from '../Dot/Dot';
+import { Dot } from '@/components/notifications/Dot/Dot';
 import { Avatar } from '../../../../components/ui/Avatar/Avatar';
 import styles from './NotificationItem.module.css';
 

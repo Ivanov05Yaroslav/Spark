@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { User } from '../features/auth/auth.types.ts';
+import { User } from '../types/auth.types.ts';
 
 interface AppState {
     user: User | null;

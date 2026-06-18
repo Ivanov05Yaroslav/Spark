@@ -7,16 +7,22 @@
 }
 
 .mainContent {
-  display: flex;
-  flex-direction: column;
+  display: block;
   flex: 1;
   margin-left: 94px;
-  padding: 32px 80px;
   height: 100vh;
   overflow-y: auto;
   overflow-x: hidden;
-  box-sizing: border-box;
+  background-color: transparent;
   transition: margin-left 0.3s ease;
+}
+
+.pageWrapper {
+  padding: 32px 80px;
+  min-height: min-content;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
 .shifted {

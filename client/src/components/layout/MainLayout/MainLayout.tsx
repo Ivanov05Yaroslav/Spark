@@ -2,7 +2,7 @@ import {useState} from "react";
 import styles from "../../../App.module.css";
 import Sidebar from "../Sidebar/Sidebar.tsx";
 import {Outlet} from "react-router-dom";
-import { NotificationsDrawer } from "../../../features/notifications";
+import { NotificationsDrawer } from "../../../pages/notifications";
 
 const MainLayout = () => {
     const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
@@ -17,7 +17,9 @@ const MainLayout = () => {
             />
 
             <main className={`${styles.mainContent} ${isSidebarExpanded ? styles.shifted : ''}`}>
-                <Outlet />
+                <div className={styles.pageWrapper}>
+                    <Outlet/>
+                </div>
             </main>
 
             <NotificationsDrawer

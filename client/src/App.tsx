@@ -1,23 +1,24 @@
 import {BrowserRouter, Route, Routes} from "react-router-dom";
 import MainLayout from "./components/layout/MainLayout/MainLayout.tsx";
-import {CoursesPage, EditCoursePage} from "./features/courses";
-import {ProfilePage} from "./features/profile";
+import {CoursesPage, EditCoursePage} from "./pages/courses";
+import {ProfilePage} from "./pages/profile";
 import {
     EmailVerificationPage as AuthEmailVerificationPage,
     ForgotPasswordPage,
     LoginPage,
     ResetPasswordPage
-} from "./features/auth";
+} from "./pages/auth";
 import {
     ParentEmailVerificationPage,
     HeadmasterEmailVerificationPage,
     ParentCodePage,
     ParentDetailsPage, SchoolDetailsPage, SchoolSelectionPage, SchoolDocumentsPage,
-} from "./features/registration";
+} from "./pages/registration";
 import React from "react";
 import {ToastContainer} from "react-toastify";
-import {CreateCoursePage} from "@/features/courses";
-import {CreateAnnouncementPage, EditAnnouncementPage} from "@/features/announcements";
+import {CreateCoursePage} from "@/pages/courses";
+// import {CreateAnnouncementPage, EditAnnouncementPage} from "@/features/announcements";
+import {CreateTaskPage} from "@/pages/tasks";
 
 function App() {
 
@@ -57,8 +58,20 @@ function App() {
                     <Route path="/courses/create" element={<CreateCoursePage />} />
                     <Route path="/courses/:courseId/edit" element={<EditCoursePage />} />
 
-                    <Route path="/announcements/create" element={<CreateAnnouncementPage />} />
-                    <Route path="/announcements/:announcementId/edit" element={<EditAnnouncementPage />} />
+                    <Route path="/courses/:courseId/tasks/create" element={<CreateTaskPage />} />
+                    {/*/courses/:courseId/tasks — список всех тасок курса*/}
+
+                    {/*/courses/:courseId/tasks/:taskId — просмотр конкретной таски*/}
+
+                    {/*/courses/:courseId/tasks/:taskId/edit — редактирование таски*/}
+
+                    {/*/courses/:courseId/tasks/create — создание новой*/}
+
+                    {/*<Route path="/announcements/create" element={<CreateAnnouncementPage />} />*/}
+                    {/*<Route path="/announcements/:announcementId/edit" element={<EditAnnouncementPage />} />*/}
+
+
+
 
 
                     {/*<Route path="/chats" element={<Chats />} />*/}
