@@ -25,7 +25,7 @@ export class RolesGuard implements CanActivate {
     const hasRole = requiredRoles.some((role) => user.roles.includes(role));
 
     if (!hasRole) {
-      throw new ForbiddenException('Ця дія дозволена тільки для адміністраторів або модераторів.');
+      throw new ForbiddenException('Недостатньо прав доступу.');
     }
 
     return true;

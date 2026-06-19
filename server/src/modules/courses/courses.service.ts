@@ -14,15 +14,119 @@ export class CoursesService {
   private async ensureCourseCreator(courseId: string, teacherId: string) {
     const course = await this.prisma.course.findUnique({
       where: { id: courseId },
+      include: { school: true },
     });
     if (!course) throw new HttpException('Курс не знайдено', HttpStatus.NOT_FOUND);
-    if (course.creatorId !== teacherId) {
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: teacherId },
+      include: { userRoles: { include: { role: true } } },
+    });
+    const isAdmin = user?.userRoles.some((r) => ['ADMIN', 'SUPER_ADMIN'].includes(r.role.name));
+
+    if (course.creatorId !== teacherId && !isAdmin) {
       throw new HttpException(
-        'Тільки творець курсу (головний викладач) може виконувати цю дію',
+        'Тільки творець курсу або адміністратор може виконувати цю дію',
         HttpStatus.FORBIDDEN,
       );
     }
     return course;
+  }
+
+  private get courseListInclude() {
+    return {
+      subject: { select: { id: true, name: true } },
+      class: { select: { id: true, name: true } },
+      creator: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          middleName: true,
+          avatarUrl: true,
+        },
+      },
+      coTeachers: {
+        include: {
+          teacher: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              middleName: true,
+              avatarUrl: true,
+            },
+          },
+        },
+      },
+      _count: { select: { students: true } },
+    };
+  }
+
+  private formatCourseList(courses: any[]) {
+    return courses.map((course) => ({
+      ...course,
+      coTeachers: course.coTeachers.map((ct: any) => ct.teacher),
+    }));
+  }
+
+  async getCourseById(courseId: string) {
+    const course = await this.prisma.course.findUnique({
+      where: { id: courseId },
+      include: {
+        subject: { select: { id: true, name: true } },
+        class: { select: { id: true, name: true } },
+        creator: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            middleName: true,
+            avatarUrl: true,
+            email: true,
+          },
+        },
+        coTeachers: {
+          include: {
+            teacher: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                middleName: true,
+                avatarUrl: true,
+                email: true,
+              },
+            },
+          },
+        },
+        students: {
+          include: {
+            student: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                middleName: true,
+                avatarUrl: true,
+              },
+            },
+          },
+          orderBy: { student: { lastName: 'asc' } },
+        },
+        _count: { select: { students: true } },
+      },
+    });
+
+    if (!course) {
+      throw new HttpException('Курс не знайдено', HttpStatus.NOT_FOUND);
+    }
+
+    return {
+      ...course,
+      coTeachers: course.coTeachers.map((ct) => ct.teacher),
+      students: course.students.map((cs) => cs.student),
+    };
   }
 
   async createCourse(
@@ -88,34 +192,18 @@ export class CoursesService {
         themeColor: dto.themeColor || '#702DFF',
         backgroundUrl: backgroundUrl,
         isHidden: dto.isHidden !== undefined ? dto.isHidden : false,
-
         coTeachers:
           coTeacherIdsFiltered.length > 0
-            ? {
-                create: coTeacherIdsFiltered.map((id) => ({ teacherId: id })),
-              }
+            ? { create: coTeacherIdsFiltered.map((id) => ({ teacherId: id })) }
             : undefined,
-
         students:
           enrolledStudentIds.length > 0
-            ? {
-                create: enrolledStudentIds.map((id) => ({ studentId: id })),
-              }
+            ? { create: enrolledStudentIds.map((id) => ({ studentId: id })) }
             : undefined,
-      },
-      include: {
-        subject: true,
-        class: true,
-        coTeachers: true,
-        students: true,
       },
     });
 
-    return {
-      ...course,
-      coTeachers: course.coTeachers.map((ct) => ct.teacherId),
-      students: course.students.map((s) => s.studentId),
-    };
+    return this.getCourseById(course.id);
   }
 
   async updateCourse(
@@ -144,20 +232,16 @@ export class CoursesService {
     let coTeachersUpdate: any = undefined;
     if (dto.coTeacherIds !== undefined) {
       await this.prisma.courseTeacher.deleteMany({ where: { courseId } });
-      const filteredCoTeachers = dto.coTeacherIds.filter((id) => id !== teacherId);
+      const filteredCoTeachers = dto.coTeacherIds.filter((id) => id !== course.creatorId);
       if (filteredCoTeachers.length > 0) {
-        coTeachersUpdate = {
-          create: filteredCoTeachers.map((id) => ({ teacherId: id })),
-        };
+        coTeachersUpdate = { create: filteredCoTeachers.map((id) => ({ teacherId: id })) };
       }
     }
 
     let studentsUpdate: any = undefined;
     if (dto.studentIds !== undefined || dto.groupName === null) {
       await this.prisma.courseStudent.deleteMany({ where: { courseId } });
-
       let targetStudentIds: string[] = [];
-
       if (dto.groupName || (course.groupName && dto.groupName !== null)) {
         targetStudentIds = dto.studentIds || [];
       } else {
@@ -167,15 +251,12 @@ export class CoursesService {
         });
         targetStudentIds = allClassStudents.map((s) => s.studentId);
       }
-
       if (targetStudentIds.length > 0) {
-        studentsUpdate = {
-          create: targetStudentIds.map((id) => ({ studentId: id })),
-        };
+        studentsUpdate = { create: targetStudentIds.map((id) => ({ studentId: id })) };
       }
     }
 
-    const updatedCourse = await this.prisma.course.update({
+    await this.prisma.course.update({
       where: { id: courseId },
       data: {
         startDate: dto.startDate ? new Date(dto.startDate) : undefined,
@@ -193,61 +274,49 @@ export class CoursesService {
         coTeachers: coTeachersUpdate,
         students: studentsUpdate,
       },
-      include: {
-        subject: true,
-        class: true,
-        coTeachers: true,
-        students: true,
-      },
     });
 
-    return {
-      ...updatedCourse,
-      coTeachers: updatedCourse.coTeachers.map((ct) => ct.teacherId),
-      students: updatedCourse.students.map((s) => s.studentId),
-    };
+    return this.getCourseById(courseId);
   }
 
-  async deleteCourse(teacherId: string, courseId: string) {
-    await this.ensureCourseCreator(courseId, teacherId);
+  async deleteCourse(userId: string, courseId: string) {
+    const course = await this.ensureCourseCreator(courseId, userId);
+
+    if (course.backgroundUrl) {
+      try {
+        await this.awsS3Service.deleteFile(course.backgroundUrl);
+      } catch (e) {
+        console.error('Помилка видалення фону курсу:', e);
+      }
+    }
+
     await this.prisma.course.delete({ where: { id: courseId } });
-    return {
-      message: "Курс та всі пов'язані з ним матеріали успішно видалено",
-    };
+    return { message: 'Курс успішно видалено' };
   }
 
-  async addCoTeacher(creatorId: string, courseId: string, coTeacherId: string) {
-    const course = await this.ensureCourseCreator(courseId, creatorId);
-
-    if (creatorId === coTeacherId)
-      throw new HttpException('Ви вже є головним творцем курсу', HttpStatus.BAD_REQUEST);
-
-    const teaches = await this.prisma.teacherSubject.findUnique({
-      where: { teacherId_subjectId: { teacherId: coTeacherId, subjectId: course.subjectId } },
+  async addCoTeacher(teacherId: string, courseId: string, targetTeacherId: string) {
+    await this.ensureCourseCreator(courseId, teacherId);
+    if (teacherId === targetTeacherId) {
+      throw new HttpException('Ви не можете додати себе як співвикладача', HttpStatus.BAD_REQUEST);
+    }
+    const existing = await this.prisma.courseTeacher.findUnique({
+      where: { courseId_teacherId: { courseId, teacherId: targetTeacherId } },
     });
-    if (!teaches)
-      throw new HttpException(
-        'Цей вчитель не викладає предмет даного курсу',
-        HttpStatus.BAD_REQUEST,
-      );
-
-    const exists = await this.prisma.courseTeacher.findUnique({
-      where: { courseId_teacherId: { courseId, teacherId: coTeacherId } },
-    });
-    if (exists) throw new HttpException('Цей вчитель вже є співвикладачем', HttpStatus.BAD_REQUEST);
-
+    if (existing) {
+      throw new HttpException('Цей вчитель вже є співвикладачем', HttpStatus.BAD_REQUEST);
+    }
     await this.prisma.courseTeacher.create({
-      data: { courseId, teacherId: coTeacherId },
+      data: { courseId, teacherId: targetTeacherId },
     });
-    return { message: 'Співвикладача успішно додано' };
+    return this.getCourseById(courseId);
   }
 
-  async removeCoTeacher(creatorId: string, courseId: string, coTeacherId: string) {
-    await this.ensureCourseCreator(courseId, creatorId);
+  async removeCoTeacher(teacherId: string, courseId: string, targetTeacherId: string) {
+    await this.ensureCourseCreator(courseId, teacherId);
     await this.prisma.courseTeacher.delete({
-      where: { courseId_teacherId: { courseId, teacherId: coTeacherId } },
+      where: { courseId_teacherId: { courseId, teacherId: targetTeacherId } },
     });
-    return { message: 'Співвикладача видалено з курсу' };
+    return this.getCourseById(courseId);
   }
 
   // private getCurrentAcademicYear(): string {
@@ -311,24 +380,16 @@ export class CoursesService {
       orderBy = { startDate: sortOrder || 'desc' };
     }
 
-    return this.prisma.course.findMany({
+    const courses = await this.prisma.course.findMany({
       where,
-      include: {
-        subject: true,
-        creator: {
-          select: { id: true, firstName: true, middleName: true, lastName: true, avatarUrl: true },
-        },
-        coTeachers: {
-          include: {
-            teacher: { select: { id: true, firstName: true, middleName: true, lastName: true } },
-          },
-        },
-      },
       orderBy,
+      include: this.courseListInclude,
     });
+
+    return this.formatCourseList(courses);
   }
 
-async getMyTeacherCourses(teacherId: string, query: GetCoursesQueryDto) {
+  async getMyTeacherCourses(teacherId: string, query: GetCoursesQueryDto) {
     const { search, filter, sortBy, sortOrder } = query;
     const now = new Date();
 
@@ -342,10 +403,10 @@ async getMyTeacherCourses(teacherId: string, query: GetCoursesQueryDto) {
         where.AND.push({ isArchived: true });
         break;
       case 'IN_PROGRESS':
-        where.AND.push({ 
-          isArchived: false, 
+        where.AND.push({
+          isArchived: false,
           startDate: { lte: now },
-          endDate: { gte: now } 
+          endDate: { gte: now },
         });
         break;
       case 'PLANNED':
@@ -376,17 +437,70 @@ async getMyTeacherCourses(teacherId: string, query: GetCoursesQueryDto) {
     } else {
       orderBy = { startDate: sortOrder || 'desc' };
     }
-    
-    return this.prisma.course.findMany({
+
+    const courses = await this.prisma.course.findMany({
       where,
-      include: {
-        subject: true,
-        class: {
-          include: { homeroomTeacher: { select: { id: true, firstName: true, lastName: true } } },
-        },
-        _count: { select: { students: true } },
-      },
       orderBy,
+      include: this.courseListInclude,
     });
+
+    return this.formatCourseList(courses);
+  }
+
+  async getAllSchoolCourses(schoolId: string, query: GetCoursesQueryDto) {
+    const { search, filter, sortBy, sortOrder } = query;
+    const now = new Date();
+
+    const where: any = {
+      schoolId,
+      AND: [],
+    };
+
+    switch (filter) {
+      case 'ARCHIVED':
+        where.AND.push({ isArchived: true });
+        break;
+      case 'IN_PROGRESS':
+        where.AND.push({
+          isArchived: false,
+          startDate: { lte: now },
+          endDate: { gte: now },
+        });
+        break;
+      case 'PLANNED':
+        where.AND.push({ isArchived: false, startDate: { gt: now } });
+        break;
+      case 'PAST':
+        where.AND.push({ isArchived: false, endDate: { lt: now } });
+        break;
+      case 'ALL':
+      default:
+        break;
+    }
+
+    if (search) {
+      where.AND.push({
+        OR: [
+          { subject: { name: { contains: search, mode: 'insensitive' } } },
+          { class: { name: { contains: search, mode: 'insensitive' } } },
+          { groupName: { contains: search, mode: 'insensitive' } },
+        ],
+      });
+    }
+
+    let orderBy: any = {};
+    if (sortBy === 'NAME') {
+      orderBy = { subject: { name: sortOrder || 'asc' } };
+    } else {
+      orderBy = { startDate: sortOrder || 'desc' };
+    }
+
+    const courses = await this.prisma.course.findMany({
+      where,
+      orderBy,
+      include: this.courseListInclude,
+    });
+
+    return this.formatCourseList(courses);
   }
 }

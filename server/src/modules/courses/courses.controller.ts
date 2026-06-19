@@ -54,11 +54,25 @@ export class CoursesController {
     return this.coursesService.getMyStudentCourses(studentId, query);
   }
 
-  @ApiOperation({ summary: 'Отримати всі свої курси (де я творець або співвикладач)' })
+  @ApiOperation({ summary: 'Отримати всі свої курси (Для ВЧИТЕЛЯ)' })
   @Roles('TEACHER')
-  @Get('/my')
-  async getMyCourses(@GetUser('id') teacherId: string, @Query() query: GetCoursesQueryDto) {
+  @Get('/teacher')
+  async getMyTeacherCourses(@GetUser('id') teacherId: string, @Query() query: GetCoursesQueryDto) {
     return this.coursesService.getMyTeacherCourses(teacherId, query);
+  }
+
+  @ApiOperation({ summary: 'Отримати всі курси школи (Для АДМІНІВ/ЗАВУЧІВ)' })
+  @Roles('ADMIN', 'SUPER_ADMIN', 'TEACHER')
+  @Get('/school')
+  async getAllSchoolCourses(@GetUser('schoolId') schoolId: string, @Query() query: GetCoursesQueryDto) {
+    return this.coursesService.getAllSchoolCourses(schoolId, query);
+  }
+
+  @ApiOperation({ summary: 'Отримати повну інформацію про конкретний курс за ID' })
+  @Roles('STUDENT', 'TEACHER', 'PARENT', 'ADMIN', 'SUPER_ADMIN')
+  @Get('/:id')
+  async getCourseById(@Param('id') courseId: string) {
+    return this.coursesService.getCourseById(courseId);
   }
 
   @ApiOperation({ summary: 'Адміністрування: Редагувати курс / Архівувати' })
@@ -76,10 +90,10 @@ export class CoursesController {
   }
 
   @ApiOperation({ summary: 'Адміністрування: Видалити курс' })
-  @Roles('TEACHER')
+  @Roles('TEACHER', 'ADMIN', 'SUPER_ADMIN')
   @Delete('/:id')
-  async deleteCourse(@GetUser('id') teacherId: string, @Param('id') courseId: string) {
-    return this.coursesService.deleteCourse(teacherId, courseId);
+  async deleteCourse(@GetUser('id') userId: string, @Param('id') courseId: string) {
+    return this.coursesService.deleteCourse(userId, courseId);
   }
 
   @ApiOperation({ summary: 'Співвикладачі: Додати' })
@@ -93,7 +107,7 @@ export class CoursesController {
     return this.coursesService.addCoTeacher(teacherId, courseId, dto.teacherId);
   }
 
-  @ApiOperation({ summary: 'Співвикладачі: Забрати' })
+  @ApiOperation({ summary: 'Співвикладачі: Видалити' })
   @Roles('TEACHER')
   @Delete('/:id/co-teachers/:coTeacherId')
   async removeCoTeacher(
