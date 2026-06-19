@@ -342,7 +342,9 @@ export class CoursesService {
 
     switch (filter) {
       case 'ARCHIVED':
-        where.AND.push({ isArchived: true });
+        where.AND.push({
+          OR: [{ isArchived: true }, { endDate: { lt: now } }],
+        });
         break;
       case 'IN_PROGRESS':
         where.AND.push({
@@ -352,14 +354,20 @@ export class CoursesService {
         });
         break;
       case 'PLANNED':
-        where.AND.push({ isArchived: false, startDate: { gt: now } });
+        where.AND.push({
+          isArchived: false,
+          startDate: { gt: now },
+        });
         break;
-      case 'PAST':
-        where.AND.push({ isArchived: false, endDate: { lt: now } });
-        break;
+      // case 'PAST':
+      //   where.AND.push({ isArchived: false, endDate: { lt: now } });
+      //   break;
       case 'ALL':
       default:
-        where.AND.push({ isArchived: false });
+        where.AND.push({
+          isArchived: false,
+          endDate: { gte: now },
+        });
         break;
     }
 
@@ -400,7 +408,9 @@ export class CoursesService {
 
     switch (filter) {
       case 'ARCHIVED':
-        where.AND.push({ isArchived: true });
+        where.AND.push({
+          OR: [{ isArchived: true }, { endDate: { lt: now } }],
+        });
         break;
       case 'IN_PROGRESS':
         where.AND.push({
@@ -410,14 +420,20 @@ export class CoursesService {
         });
         break;
       case 'PLANNED':
-        where.AND.push({ isArchived: false, startDate: { gt: now } });
+        where.AND.push({
+          isArchived: false,
+          startDate: { gt: now },
+        });
         break;
-      case 'PAST':
-        where.AND.push({ isArchived: false, endDate: { lt: now } });
-        break;
+      // case 'PAST':
+      //   where.AND.push({ isArchived: false, endDate: { lt: now } });
+      //   break;
       case 'ALL':
       default:
-        where.AND.push({ isArchived: false });
+        where.AND.push({
+          isArchived: false,
+          endDate: { gte: now },
+        });
         break;
     }
 
@@ -458,7 +474,12 @@ export class CoursesService {
 
     switch (filter) {
       case 'ARCHIVED':
-        where.AND.push({ isArchived: true });
+        where.AND.push({
+          OR: [
+            { isArchived: true },
+            { endDate: { lt: now } },
+          ],
+        });
         break;
       case 'IN_PROGRESS':
         where.AND.push({
@@ -468,14 +489,17 @@ export class CoursesService {
         });
         break;
       case 'PLANNED':
-        where.AND.push({ isArchived: false, startDate: { gt: now } });
+        where.AND.push({ 
+          isArchived: false, 
+          startDate: { gt: now } 
+        });
         break;
-      case 'PAST':
-        where.AND.push({ isArchived: false, endDate: { lt: now } });
-        break;
+      // case 'PAST':
+      //   where.AND.push({ isArchived: false, endDate: { lt: now } });
+      //   break;
       case 'ALL':
       default:
-        break;
+        break; 
     }
 
     if (search) {

@@ -208,7 +208,7 @@ export enum CourseFilter {
   ALL = 'ALL',
   IN_PROGRESS = 'IN_PROGRESS',
   PLANNED = 'PLANNED',
-  PAST = 'PAST',
+  // PAST = 'PAST',
   ARCHIVED = 'ARCHIVED',
 }
 
