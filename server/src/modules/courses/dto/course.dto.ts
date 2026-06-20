@@ -82,7 +82,7 @@ export class CreateCourseDto {
   @IsOptional()
   @Transform(({ value }) => {
     if (value === undefined) return undefined;
-    if (value === 'null' || value.trim() === '') return []; // Явно возвращаем пустой массив для очистки
+    if (value === 'null' || value.trim() === '') return [];
     if (Array.isArray(value)) return value;
     return value
       .split(',')

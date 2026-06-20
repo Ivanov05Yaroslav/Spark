@@ -83,6 +83,7 @@ export class AuthService {
         userRoles: {
           include: { role: true },
         },
+        parentRelations: true,
       },
     });
 
@@ -112,6 +113,8 @@ export class AuthService {
         middleName: user.middleName,
         avatarUrl: user.avatarUrl,
         roles: user.userRoles.map((ur) => ur.role.name),
+        schoolId: user.schoolId,
+        childrenIds: user.parentRelations?.map((rel) => rel.studentId) || [],
       },
     };
   }
@@ -123,11 +126,12 @@ export class AuthService {
       });
 
       const user = await this.prisma.user.findUnique({
-        where: { id: userData.sub },
+        where: { id: userData.sub || userData.id },
         include: {
           userRoles: {
             include: { role: true },
           },
+          parentRelations: true,
         },
       });
 
@@ -147,6 +151,8 @@ export class AuthService {
           middleName: user.middleName,
           avatarUrl: user.avatarUrl,
           roles: user.userRoles.map((ur) => ur.role.name),
+          schoolId: user.schoolId,
+          childrenIds: user.parentRelations?.map((rel) => rel.studentId) || [],
         },
       };
     } catch (e) {
@@ -156,11 +162,13 @@ export class AuthService {
 
   private async generateTokens(user: any) {
     const roles = user.userRoles?.map((ur) => ur.role.name) || [];
+    const childrenIds = user.parentRelations?.map((rel: any) => rel.studentId) || [];
     const payload = {
       id: user.id,
       email: user.email,
       roles,
       schoolId: user.schoolId,
+      childrenIds,
     };
 
     const accessToken = this.jwtService.sign(payload, {
@@ -176,7 +184,7 @@ export class AuthService {
     return {
       accessToken,
       refreshToken,
-      user: { id: user.id, email: user.email, roles, schoolId: user.schoolId },
+      user: { id: user.id, email: user.email, roles, schoolId: user.schoolId, childrenIds },
     };
   }
 
@@ -491,6 +499,7 @@ export class AuthService {
         userRoles: {
           include: { role: true },
         },
+        parentRelations: true,
       },
     });
 
@@ -509,6 +518,8 @@ export class AuthService {
         middleName: newParent.middleName,
         avatarUrl: newParent.avatarUrl,
         roles: newParent.userRoles.map((ur) => ur.role.name),
+        schoolId: newParent.schoolId,
+        childrenIds: newParent.parentRelations?.map((rel) => rel.studentId) || [],
       },
     };
   }

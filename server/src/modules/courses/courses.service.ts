@@ -428,12 +428,10 @@ await this.prisma.course.update({
         break;
       case 'ALL':
       default:
-        if (!isAdminContext) {
-          where.AND.push({
-            isArchived: false,
-            endDate: { gte: now },
-          });
-        }
+        where.AND.push({
+          isArchived: false,
+          endDate: { gte: now },
+        });
         break;
     }
 
