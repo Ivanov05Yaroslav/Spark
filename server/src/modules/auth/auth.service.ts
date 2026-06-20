@@ -164,7 +164,7 @@ export class AuthService {
     };
 
     const accessToken = this.jwtService.sign(payload, {
-      expiresIn: '15m',
+      expiresIn: '1d',
       secret: process.env.JWT_ACCESS_SECRET || 'fallback_secret_key',
     });
 
