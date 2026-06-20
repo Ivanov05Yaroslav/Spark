@@ -1,22 +1,11 @@
 import React from 'react';
 import styles from './ThemeColorPicker.module.css';
+import { DEFAULT_THEME_COLORS } from '@/libs/constants/courses.constants';
 
 export interface ThemeColor {
     value: string;
     base: string;
 }
-
-export const DEFAULT_THEME_COLORS: ThemeColor[] = [
-    { value: 'purple', base: '#B88BFF' },
-    { value: 'pink', base: '#D6709E' },
-    { value: 'green', base: '#70A97A' },
-    { value: 'peach', base: '#E38859' },
-    { value: 'blue', base: '#7C93FF' },
-    { value: 'gray', base: '#9A9A9A' },
-    { value: 'red', base: '#E06D6D' },
-    { value: 'yellow', base: '#E5C247' },
-    { value: 'teal', base: '#5EB496' },
-];
 
 interface ThemeColorPickerProps {
     label?: string;
@@ -31,13 +20,18 @@ export const ThemeColorPicker = ({
                                      selectedColor,
                                      onChange
                                  }: ThemeColorPickerProps) => {
+
+    const normalizedSelected = selectedColor?.trim().toLowerCase() || '';
+
     return (
         <div className={styles.container}>
             {label && <span className={styles.label}>{label}</span>}
 
             <div className={styles.swatchList} role="radiogroup" aria-label={label}>
                 {colors.map((color) => {
-                    const isSelected = selectedColor === color.value;
+                    const isSelected =
+                        normalizedSelected === color.value.toLowerCase() ||
+                        normalizedSelected === color.base.toLowerCase();
 
                     return (
                         <button

@@ -25,8 +25,8 @@
     transition: border-color 0.2s ease;
 }
 
-.trigger:hover {
-    border-color: #D1D5DB;
+.triggerDisabled:hover {
+    border-color: #E5E7EB !important;
 }
 
 .trigger span {
@@ -112,10 +112,10 @@
 }
 
 .triggerDisabled {
-    background-color: #F5F5F5;
-    color: #A0A0A0;
+    background-color: #F3F4F6 !important;
+    border-color: #E5E7EB !important;
     cursor: not-allowed;
-    border-color: #EAEAEA;
+    opacity: 0.7;
 }
 
 .triggerDisabled .arrow {

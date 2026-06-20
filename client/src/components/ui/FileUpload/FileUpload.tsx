@@ -13,6 +13,8 @@ export interface FileUploadProps {
     maxFiles?: number;
     maxSizeMB?: number;
     showList?: boolean;
+    existingUrl?: string | null;
+    onRemoveExisting?: () => void;
 }
 
 export const FileUpload = ({
@@ -23,7 +25,9 @@ export const FileUpload = ({
                                values = [],
                                maxFiles = 5,
                                maxSizeMB = 10,
-                               showList = true
+                               showList = true,
+                               existingUrl,
+                               onRemoveExisting
                            }: FileUploadProps) => {
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -117,12 +121,21 @@ export const FileUpload = ({
                 </span>
             </div>
 
-            {showList && values.length > 0 && (
+            {showList && (
                 <div className={styles.fileList}>
+                    {values.length === 0 && existingUrl && (
+                        <FileCard
+                            fileName="Поточне фонове зображення"
+                            previewUrl={existingUrl}
+                            onRemove={onRemoveExisting}
+                        />
+                    )}
+
                     {values.map((file, index) => (
                         <FileCard
                             key={`${file.name}-${index}`}
                             fileName={file.name}
+                            previewUrl={URL.createObjectURL(file)}
                             onRemove={() => handleRemoveFile(index)}
                         />
                     ))}

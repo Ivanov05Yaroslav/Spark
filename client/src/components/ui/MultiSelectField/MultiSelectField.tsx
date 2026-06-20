@@ -24,7 +24,7 @@ export const MultiSelectField = ({
                                      options,
                                      value,
                                      onChange,
-                                     placeholder = 'Select options',
+                                     placeholder = 'Оберіть',
                                      disabled = false,
                                      error,
                                      id
@@ -100,7 +100,7 @@ export const MultiSelectField = ({
             {isOpen && (
                 <div className={styles.dropdown}>
                     {options.length === 0 ? (
-                        <div className={styles.empty}>No options available</div>
+                        <div className={styles.empty}>Немає варіантів</div>
                     ) : (
                         options.map((option) => {
                             const isSelected = value.includes(option.value);

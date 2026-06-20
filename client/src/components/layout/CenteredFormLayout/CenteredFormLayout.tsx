@@ -8,6 +8,7 @@ interface CenteredFormLayoutProps {
     showButton?: boolean;
     buttonText?: string;
     onButtonClick?: () => void;
+    isButtonDisabled?: boolean;
     children: ReactNode;
     maxWidth?: string;
 }
@@ -18,6 +19,7 @@ export const CenteredFormLayout = ({
                                        showButton = false,
                                        buttonText,
                                        onButtonClick,
+                                       isButtonDisabled = false,
                                        children,
                                        maxWidth = '680px'
                                    }: CenteredFormLayoutProps) => {
@@ -29,6 +31,7 @@ export const CenteredFormLayout = ({
                 showButton={showButton}
                 buttonText={buttonText}
                 onButtonClick={onButtonClick}
+                isButtonDisabled={isButtonDisabled}
             />
 
             <div className={styles.content}>

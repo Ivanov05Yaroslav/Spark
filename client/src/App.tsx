@@ -54,9 +54,9 @@ function App() {
                 <Route path="/" element={<MainLayout />}>
                     <Route path="/courses" element={<CoursesPage />} />
                     <Route path="/courses/create" element={<CreateCoursePage />} />
-                    <Route path="/courses/:courseId/edit" element={<EditCoursePage />} />
+                    <Route path="/courses/:id/edit" element={<EditCoursePage />} />
 
-                    <Route path="/courses/:courseId/tasks/create" element={<CreateTaskPage />} />
+                    <Route path="/courses/:id/tasks/create" element={<CreateTaskPage />} />
                     {/*/courses/:courseId/tasks — список всех тасок курса*/}
 
                     {/*/courses/:courseId/tasks/:taskId — просмотр конкретной таски*/}

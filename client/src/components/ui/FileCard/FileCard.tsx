@@ -4,12 +4,14 @@ import styles from './FileCard.module.css';
 
 interface FileCardProps {
     fileName: string;
+    previewUrl?: string;
     onRemove?: () => void;
     className?: string;
 }
 
 export const FileCard: React.FC<FileCardProps> = ({
                                                       fileName,
+                                                      previewUrl,
                                                       onRemove,
                                                       className = ''
                                                   }) => {
@@ -18,11 +20,20 @@ export const FileCard: React.FC<FileCardProps> = ({
         onRemove?.();
     };
 
+    const isLink = fileName.startsWith('http://') || fileName.startsWith('https://');
+
     return (
         <div className={`${styles.card} ${className}`}>
-            <span className={styles.fileName} title={fileName}>
-                {fileName}
-            </span>
+
+            <div className={styles.fileInfo}>
+                {previewUrl && !isLink && (
+                    <img src={previewUrl} alt="preview" className={styles.previewImage} />
+                )}
+                <span className={styles.fileName} title={fileName}>
+                    {fileName}
+                </span>
+            </div>
+
             {onRemove && (
                 <button
                     type="button"
