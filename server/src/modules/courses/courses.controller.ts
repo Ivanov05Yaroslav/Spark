@@ -47,25 +47,15 @@ export class CoursesController {
     return this.coursesService.createCourse(teacherId, schoolId, dto, file);
   }
 
-  @ApiOperation({ summary: 'Отримати всі свої курси (Для УЧНЯ)' })
-  @Roles('STUDENT')
-  @Get('/student')
-  async getMyStudentCourses(@GetUser('id') studentId: string, @Query() query: GetCoursesQueryDto) {
-    return this.coursesService.getMyStudentCourses(studentId, query);
-  }
-
-  @ApiOperation({ summary: 'Отримати всі свої курси (Для ВЧИТЕЛЯ)' })
-  @Roles('TEACHER')
-  @Get('/teacher')
-  async getMyTeacherCourses(@GetUser('id') teacherId: string, @Query() query: GetCoursesQueryDto) {
-    return this.coursesService.getMyTeacherCourses(teacherId, query);
-  }
-
-  @ApiOperation({ summary: 'Отримати всі курси школи (Для АДМІНІВ/ЗАВУЧІВ)' })
-  @Roles('ADMIN', 'SUPER_ADMIN', 'TEACHER')
-  @Get('/school')
-  async getAllSchoolCourses(@GetUser('schoolId') schoolId: string, @Query() query: GetCoursesQueryDto) {
-    return this.coursesService.getAllSchoolCourses(schoolId, query);
+  @ApiOperation({ summary: 'Отримати курси (Універсальний список залежно від ролі)' })
+  @Roles('STUDENT', 'TEACHER', 'PARENT', 'ADMIN', 'SUPER_ADMIN')
+  @Get('/')
+  async getCourses(
+    @GetUser('id') userId: string,
+    @GetUser('schoolId') schoolId: string,
+    @Query() query: GetCoursesQueryDto,
+  ) {
+    return this.coursesService.getCourses(userId, schoolId, query);
   }
 
   @ApiOperation({ summary: 'Отримати повну інформацію про конкретний курс за ID' })
@@ -113,8 +103,8 @@ export class CoursesController {
   async removeCoTeacher(
     @GetUser('id') teacherId: string,
     @Param('id') courseId: string,
-    @Param('coTeacherId') coTeacherId: string,
+    @Param('coTeacherId') targetTeacherId: string,
   ) {
-    return this.coursesService.removeCoTeacher(teacherId, courseId, coTeacherId);
+    return this.coursesService.removeCoTeacher(teacherId, courseId, targetTeacherId);
   }
 }

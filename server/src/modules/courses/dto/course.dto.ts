@@ -37,16 +37,27 @@ export class CreateCourseDto {
     description: 'Назва групи (Група 1 або Група 2), якщо курс ділиться',
     required: false,
   })
+  @ApiProperty({
+    example: 'Група 1',
+    description: 'Назва групи, якщо курс ділиться',
+    required: false,
+  })
   @IsOptional()
-  @Transform(({ value }) => (value && value.trim() !== '' && value !== 'null' ? value : undefined))
-  @IsString()
-  groupName?: string;
+  @Transform(({ value }) => {
+    if (value === undefined) return undefined;
+    if (value === 'null' || value.trim() === '') return null;
+    return value;
+  })
+  groupName?: string | null;
 
   @ApiProperty({ example: '#702DFF', required: false, description: 'Колір теми курсу' })
   @IsOptional()
-  @Transform(({ value }) => (value && value.trim() !== '' && value !== 'null' ? value : undefined))
-  @IsString()
-  themeColor?: string;
+  @Transform(({ value }) => {
+    if (value === undefined) return undefined;
+    if (value === 'null' || value.trim() === '') return null;
+    return value;
+  })
+  themeColor?: string | null;
 
   @ApiProperty({
     type: 'string',
@@ -70,8 +81,8 @@ export class CreateCourseDto {
   @ApiProperty({ type: [String], required: false, description: 'ID інших вчителів-співвикладачів' })
   @IsOptional()
   @Transform(({ value }) => {
-    if (!value || value === 'null' || value === 'undefined' || value.trim() === '')
-      return undefined;
+    if (value === undefined) return undefined;
+    if (value === 'null' || value.trim() === '') return []; // Явно возвращаем пустой массив для очистки
     if (Array.isArray(value)) return value;
     return value
       .split(',')
@@ -82,15 +93,11 @@ export class CreateCourseDto {
   @IsString({ each: true })
   coTeacherIds?: string[];
 
-  @ApiProperty({
-    type: [String],
-    required: false,
-    description: 'ID вибраних учнів для формування підгрупи',
-  })
+  @ApiProperty({ type: [String], required: false, description: 'ID вибраних учнів для підгрупи' })
   @IsOptional()
   @Transform(({ value }) => {
-    if (!value || value === 'null' || value === 'undefined' || value.trim() === '')
-      return undefined;
+    if (value === undefined) return undefined;
+    if (value === 'null' || value.trim() === '') return [];
     if (Array.isArray(value)) return value;
     return value
       .split(',')
@@ -121,17 +128,27 @@ export class UpdateCourseDto {
   @IsDateString()
   endDate?: string;
 
-  @ApiProperty({ example: 'Група 2', required: false, description: 'Назва групи' })
+  @ApiProperty({
+    example: 'Група 1',
+    description: 'Назва групи, якщо курс ділиться',
+    required: false,
+  })
   @IsOptional()
-  @Transform(({ value }) => (value && value.trim() !== '' && value !== 'null' ? value : undefined))
-  @IsString()
-  groupName?: string;
+  @Transform(({ value }) => {
+    if (value === undefined) return undefined;
+    if (value === 'null' || value.trim() === '') return null;
+    return value;
+  })
+  groupName?: string | null;
 
-  @ApiProperty({ example: '#33FF57', required: false, description: 'Колір теми курсу' })
+  @ApiProperty({ example: '#702DFF', required: false, description: 'Колір теми курсу' })
   @IsOptional()
-  @Transform(({ value }) => (value && value.trim() !== '' && value !== 'null' ? value : undefined))
-  @IsString()
-  themeColor?: string;
+  @Transform(({ value }) => {
+    if (value === undefined) return undefined;
+    if (value === 'null' || value.trim() === '') return null;
+    return value;
+  })
+  themeColor?: string | null;
 
   @ApiProperty({
     type: 'string',
@@ -165,8 +182,8 @@ export class UpdateCourseDto {
   @ApiProperty({ type: [String], required: false, description: 'ID інших вчителів-співвикладачів' })
   @IsOptional()
   @Transform(({ value }) => {
-    if (!value || value === 'null' || value === 'undefined' || value.trim() === '')
-      return undefined;
+    if (value === undefined) return undefined;
+    if (value === 'null' || value.trim() === '') return [];
     if (Array.isArray(value)) return value;
     return value
       .split(',')
@@ -177,15 +194,11 @@ export class UpdateCourseDto {
   @IsString({ each: true })
   coTeacherIds?: string[];
 
-  @ApiProperty({
-    type: [String],
-    required: false,
-    description: 'ID вибраних учнів для формування підгрупи',
-  })
+  @ApiProperty({ type: [String], required: false, description: 'ID вибраних учнів для підгрупи' })
   @IsOptional()
   @Transform(({ value }) => {
-    if (!value || value === 'null' || value === 'undefined' || value.trim() === '')
-      return undefined;
+    if (value === undefined) return undefined;
+    if (value === 'null' || value.trim() === '') return [];
     if (Array.isArray(value)) return value;
     return value
       .split(',')
@@ -217,8 +230,15 @@ export enum CourseSortBy {
   START_DATE = 'START_DATE',
 }
 
+export enum CourseRoleContext {
+  ADMIN = 'ADMIN',
+  TEACHER = 'TEACHER',
+  STUDENT = 'STUDENT',
+  PARENT = 'PARENT',
+}
+
 export class GetCoursesQueryDto {
-  @ApiProperty({ required: false, description: 'Пошук за предметом, класом або назвою групи' })
+  @ApiProperty({ required: false, description: 'Пошук за предметом, класом або назвою' })
   @IsOptional()
   @IsString()
   search?: string;
@@ -226,15 +246,41 @@ export class GetCoursesQueryDto {
   @ApiProperty({ required: false, enum: CourseFilter, default: CourseFilter.ALL })
   @IsOptional()
   @IsEnum(CourseFilter)
-  filter?: CourseFilter = CourseFilter.ALL;
+  filter?: CourseFilter;
 
   @ApiProperty({ required: false, enum: CourseSortBy, default: CourseSortBy.START_DATE })
   @IsOptional()
   @IsEnum(CourseSortBy)
-  sortBy?: CourseSortBy = CourseSortBy.START_DATE;
+  sortBy?: CourseSortBy;
 
   @ApiProperty({ required: false, enum: ['asc', 'desc'], default: 'desc' })
   @IsOptional()
   @IsString()
-  sortOrder?: 'asc' | 'desc' = 'desc';
+  sortOrder?: 'asc' | 'desc';
+
+  @ApiProperty({
+    required: false,
+    enum: CourseRoleContext,
+    description: 'Контекст ролі для отримання курсів',
+  })
+  @IsOptional()
+  @IsEnum(CourseRoleContext)
+  roleContext?: CourseRoleContext;
+
+  @ApiProperty({
+    required: false,
+    description: 'ID дитини (використовується тільки якщо roleContext = PARENT)',
+  })
+  @IsOptional()
+  @IsString()
+  childId?: string;
+
+  @ApiProperty({
+    required: false,
+    description: 'Показувати тільки курси створені мною (для TEACHER)',
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  isCreator?: boolean;
 }

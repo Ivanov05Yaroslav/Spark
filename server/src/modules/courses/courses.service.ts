@@ -256,20 +256,15 @@ export class CoursesService {
       }
     }
 
-    await this.prisma.course.update({
+await this.prisma.course.update({
       where: { id: courseId },
       data: {
         startDate: dto.startDate ? new Date(dto.startDate) : undefined,
         endDate: dto.endDate ? new Date(dto.endDate) : undefined,
-        groupName:
-          dto.groupName !== undefined
-            ? dto.groupName === 'null'
-              ? null
-              : dto.groupName
-            : undefined,
+        groupName: dto.groupName !== undefined ? dto.groupName : undefined, 
+        themeColor: dto.themeColor !== undefined ? dto.themeColor : undefined,
         isArchived: dto.isArchived !== undefined ? dto.isArchived : undefined,
         isHidden: dto.isHidden !== undefined ? dto.isHidden : undefined,
-        themeColor: dto.themeColor !== undefined ? dto.themeColor : undefined,
         backgroundUrl: backgroundUrl,
         coTeachers: coTeachersUpdate,
         students: studentsUpdate,
@@ -330,155 +325,92 @@ export class CoursesService {
   //   return `${year}-${year + 1}`;
   // }
 
-  async getMyStudentCourses(studentId: string, query: GetCoursesQueryDto) {
-    const { search, filter, sortBy, sortOrder } = query;
+  async getCourses(userId: string, schoolId: string, query: GetCoursesQueryDto) {
+    const { search, filter, sortBy, sortOrder, roleContext, childId, isCreator } = query;
     const now = new Date();
 
-    const where: any = {
-      students: { some: { studentId } },
-      isHidden: false,
-      AND: [],
-    };
-
-    switch (filter) {
-      case 'ARCHIVED':
-        where.AND.push({
-          OR: [{ isArchived: true }, { endDate: { lt: now } }],
-        });
-        break;
-      case 'IN_PROGRESS':
-        where.AND.push({
-          isArchived: false,
-          startDate: { lte: now },
-          endDate: { gte: now },
-        });
-        break;
-      case 'PLANNED':
-        where.AND.push({
-          isArchived: false,
-          startDate: { gt: now },
-        });
-        break;
-      // case 'PAST':
-      //   where.AND.push({ isArchived: false, endDate: { lt: now } });
-      //   break;
-      case 'ALL':
-      default:
-        where.AND.push({
-          isArchived: false,
-          endDate: { gte: now },
-        });
-        break;
-    }
-
-    if (search) {
-      where.AND.push({
-        OR: [
-          { subject: { name: { contains: search, mode: 'insensitive' } } },
-          { class: { name: { contains: search, mode: 'insensitive' } } },
-          { groupName: { contains: search, mode: 'insensitive' } },
-        ],
-      });
-    }
-
-    let orderBy: any = {};
-    if (sortBy === 'NAME') {
-      orderBy = { subject: { name: sortOrder || 'asc' } };
-    } else {
-      orderBy = { startDate: sortOrder || 'desc' };
-    }
-
-    const courses = await this.prisma.course.findMany({
-      where,
-      orderBy,
-      include: this.courseListInclude,
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        userRoles: { include: { role: true } },
+        parentRelations: true,
+      },
     });
 
-    return this.formatCourseList(courses);
-  }
+    if (!user) throw new HttpException('Користувача не знайдено', HttpStatus.NOT_FOUND);
 
-  async getMyTeacherCourses(teacherId: string, query: GetCoursesQueryDto) {
-    const { search, filter, sortBy, sortOrder } = query;
-    const now = new Date();
+    const roles = user.userRoles.map((ur) => ur.role.name);
 
-    const where: any = {
-      OR: [{ creatorId: teacherId }, { coTeachers: { some: { teacherId } } }],
-      AND: [],
-    };
+    let requestedContexts = roles;
 
-    switch (filter) {
-      case 'ARCHIVED':
-        where.AND.push({
-          OR: [{ isArchived: true }, { endDate: { lt: now } }],
-        });
-        break;
-      case 'IN_PROGRESS':
-        where.AND.push({
-          isArchived: false,
-          startDate: { lte: now },
-          endDate: { gte: now },
-        });
-        break;
-      case 'PLANNED':
-        where.AND.push({
-          isArchived: false,
-          startDate: { gt: now },
-        });
-        break;
-      // case 'PAST':
-      //   where.AND.push({ isArchived: false, endDate: { lt: now } });
-      //   break;
-      case 'ALL':
-      default:
-        where.AND.push({
-          isArchived: false,
-          endDate: { gte: now },
-        });
-        break;
+    if (roleContext) {
+      if (roleContext === 'ADMIN' && !roles.includes('ADMIN') && !roles.includes('SUPER_ADMIN')) {
+        throw new HttpException('Немає прав адміністратора', HttpStatus.FORBIDDEN);
+      }
+      if (roleContext !== 'ADMIN' && !roles.includes(roleContext)) {
+        throw new HttpException(`У вас немає ролі ${roleContext}`, HttpStatus.FORBIDDEN);
+      }
+      requestedContexts = [roleContext];
     }
 
-    if (search) {
-      where.AND.push({
-        OR: [
-          { subject: { name: { contains: search, mode: 'insensitive' } } },
-          { class: { name: { contains: search, mode: 'insensitive' } } },
-          { groupName: { contains: search, mode: 'insensitive' } },
-        ],
-      });
-    }
-
-    let orderBy: any = {};
-    if (sortBy === 'NAME') {
-      orderBy = { subject: { name: sortOrder || 'asc' } };
-    } else {
-      orderBy = { startDate: sortOrder || 'desc' };
-    }
-
-    const courses = await this.prisma.course.findMany({
-      where,
-      orderBy,
-      include: this.courseListInclude,
-    });
-
-    return this.formatCourseList(courses);
-  }
-
-  async getAllSchoolCourses(schoolId: string, query: GetCoursesQueryDto) {
-    const { search, filter, sortBy, sortOrder } = query;
-    const now = new Date();
+    const isAdminContext =
+      requestedContexts.includes('ADMIN') || requestedContexts.includes('SUPER_ADMIN');
 
     const where: any = {
       schoolId,
       AND: [],
     };
 
+    if (!isAdminContext) {
+      const accessOrConditions: any[] = [];
+
+      if (requestedContexts.includes('TEACHER')) {
+        if (isCreator) {
+          accessOrConditions.push({ creatorId: userId });
+        } else {
+          accessOrConditions.push({ creatorId: userId });
+          accessOrConditions.push({ coTeachers: { some: { teacherId: userId } } });
+        }
+      }
+
+      if (requestedContexts.includes('STUDENT')) {
+        accessOrConditions.push({
+          students: { some: { studentId: userId } },
+          isHidden: false,
+        });
+      }
+
+      if (requestedContexts.includes('PARENT')) {
+        if (childId) {
+          const isMyChild = user.parentRelations.some((rel) => rel.studentId === childId);
+          if (!isMyChild) throw new HttpException('Це не ваша дитина', HttpStatus.FORBIDDEN);
+
+          accessOrConditions.push({
+            students: { some: { studentId: childId } },
+            isHidden: false,
+          });
+        } else {
+          const childrenIds = user.parentRelations.map((rel) => rel.studentId);
+          if (childrenIds.length > 0) {
+            accessOrConditions.push({
+              students: { some: { studentId: { in: childrenIds } } },
+              isHidden: false,
+            });
+          }
+        }
+      }
+
+      if (accessOrConditions.length === 0) {
+        return [];
+      }
+
+      where.AND.push({ OR: accessOrConditions });
+    }
+
     switch (filter) {
       case 'ARCHIVED':
         where.AND.push({
-          OR: [
-            { isArchived: true },
-            { endDate: { lt: now } },
-          ],
+          OR: [{ isArchived: true }, { endDate: { lt: now } }],
         });
         break;
       case 'IN_PROGRESS':
@@ -489,17 +421,20 @@ export class CoursesService {
         });
         break;
       case 'PLANNED':
-        where.AND.push({ 
-          isArchived: false, 
-          startDate: { gt: now } 
+        where.AND.push({
+          isArchived: false,
+          startDate: { gt: now },
         });
         break;
-      // case 'PAST':
-      //   where.AND.push({ isArchived: false, endDate: { lt: now } });
-      //   break;
       case 'ALL':
       default:
-        break; 
+        if (!isAdminContext) {
+          where.AND.push({
+            isArchived: false,
+            endDate: { gte: now },
+          });
+        }
+        break;
     }
 
     if (search) {
