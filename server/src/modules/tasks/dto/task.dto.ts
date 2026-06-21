@@ -32,6 +32,11 @@ export class CreateTaskDto {
   @IsString()
   nusGroupId?: string;
 
+  @ApiProperty({ example: 'uuid-модуля', required: false, description: 'ID теми/модуля курсу' })
+  @IsOptional()
+  @IsString()
+  courseModuleId?: string;
+
   @ApiProperty({ required: false, default: false })
   @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)
@@ -86,6 +91,11 @@ export class UpdateTaskDto {
   @IsOptional()
   @IsString()
   nusGroupId?: string;
+
+  @ApiProperty({ example: 'uuid-модуля', required: false, description: 'ID теми/модуля курсу' })
+  @IsOptional()
+  @IsString()
+  courseModuleId?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()

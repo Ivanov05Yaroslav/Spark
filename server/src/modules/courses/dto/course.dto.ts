@@ -68,6 +68,18 @@ export class CreateCourseDto {
   @IsOptional()
   backgroundImage?: any;
 
+  @ApiProperty({ type: [String], required: false, description: 'Посилання на відеозустрічі (Zoom, Meet тощо)' })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === undefined) return undefined;
+    if (value === 'null' || value === '') return [];
+    if (Array.isArray(value)) return value;
+    return value.split(',').map((link: string) => link.trim()).filter(Boolean);
+  })
+  @IsArray()
+  @IsString({ each: true })
+  videoLinks?: string[];
+
   @ApiProperty({ example: false, description: 'Приховати курс від учнів', required: false })
   @IsOptional()
   @Transform(({ value }) => {
@@ -159,6 +171,18 @@ export class UpdateCourseDto {
   @IsOptional()
   backgroundImage?: any;
 
+  @ApiProperty({ type: [String], required: false, description: 'Посилання на відеозустрічі (Zoom, Meet тощо)' })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === undefined) return undefined;
+    if (value === 'null' || value === '') return [];
+    if (Array.isArray(value)) return value;
+    return value.split(',').map((link: string) => link.trim()).filter(Boolean);
+  })
+  @IsArray()
+  @IsString({ each: true })
+  videoLinks?: string[];
+
   @ApiProperty({ example: true, description: 'Приховати курс від учнів', required: false })
   @IsOptional()
   @Transform(({ value }) => {
@@ -208,6 +232,30 @@ export class UpdateCourseDto {
   @IsArray()
   @IsString({ each: true })
   studentIds?: string[];
+}
+
+export class CreateCourseModuleDto {
+  @ApiProperty({ example: 'Вступ до алгебри', description: 'Назва теми/модуля' })
+  @IsString()
+  @IsNotEmpty()
+  title!: string;
+
+  @ApiProperty({ required: false, description: 'Опис теми' })
+  @IsOptional()
+  @IsString()
+  description?: string;
+}
+
+export class UpdateCourseModuleDto {
+  @ApiProperty({ example: 'Вступ до геометрії', required: false })
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  description?: string;
 }
 
 export class CoTeacherDto {

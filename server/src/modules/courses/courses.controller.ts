@@ -22,8 +22,10 @@ import { CoursesService } from './courses.service';
 import {
   CoTeacherDto,
   CreateCourseDto,
+  CreateCourseModuleDto,
   GetCoursesQueryDto,
   UpdateCourseDto,
+  UpdateCourseModuleDto,
 } from './dto/course.dto';
 
 @ApiTags('courses')
@@ -106,5 +108,47 @@ export class CoursesController {
     @Param('coTeacherId') targetTeacherId: string,
   ) {
     return this.coursesService.removeCoTeacher(teacherId, courseId, targetTeacherId);
+  }
+
+  @ApiOperation({ summary: 'Створити новий модуль (тему) в курсі' })
+  @Roles('TEACHER')
+  @Post('/:id/modules')
+  async createModule(
+    @GetUser('id') teacherId: string,
+    @Param('id') courseId: string,
+    @Body() dto: CreateCourseModuleDto,
+  ) {
+    return this.coursesService.createModule(teacherId, courseId, dto);
+  }
+
+  @ApiOperation({ summary: 'Отримати всі модулі (теми) конкретного курсу' })
+  @Roles('STUDENT', 'TEACHER', 'PARENT', 'ADMIN', 'SUPER_ADMIN')
+  @Get('/:id/modules')
+  async getCourseModules(
+    @GetUser('id') userId: string,
+    @Param('id') courseId: string,
+  ) {
+    return this.coursesService.getCourseModules(userId, courseId);
+  }
+
+  @ApiOperation({ summary: 'Редагувати назву модуля (теми)' })
+  @Roles('TEACHER')
+  @Put('/modules/:moduleId')
+  async updateModule(
+    @GetUser('id') teacherId: string,
+    @Param('moduleId') moduleId: string,
+    @Body() dto: UpdateCourseModuleDto,
+  ) {
+    return this.coursesService.updateModule(teacherId, moduleId, dto);
+  }
+
+  @ApiOperation({ summary: 'Видалити модуль (тему)' })
+  @Roles('TEACHER')
+  @Delete('/modules/:moduleId')
+  async deleteModule(
+    @GetUser('id') teacherId: string,
+    @Param('moduleId') moduleId: string,
+  ) {
+    return this.coursesService.deleteModule(teacherId, moduleId);
   }
 }

@@ -67,10 +67,11 @@ export class TasksService {
         description: dto.description,
         deadline: dto.deadline ? new Date(dto.deadline) : null,
         nusGroupId: dto.nusGroupId,
+        courseModuleId: dto.courseModuleId || null,
         isHidden: dto.isHidden || false,
         attachments: attachments,
       },
-      include: { nusGroup: true },
+      include: { nusGroup: true, courseModule: true },
     });
 
     if (!task.isHidden) {
@@ -116,6 +117,7 @@ export class TasksService {
       include: {
         creator: { select: { id: true, firstName: true, lastName: true } },
         nusGroup: true,
+        courseModule: { select: { id: true, title: true } }
       },
     });
   }
@@ -126,6 +128,7 @@ export class TasksService {
       include: {
         course: { include: { students: true, coTeachers: true, class: true } },
         nusGroup: true,
+        courseModule: { select: { id: true, title: true } }
       },
     });
     if (!task) throw new HttpException('Завдання не знайдено', HttpStatus.NOT_FOUND);
@@ -189,10 +192,11 @@ export class TasksService {
         description: dto.description,
         deadline: dto.deadline ? new Date(dto.deadline) : undefined,
         nusGroupId: dto.nusGroupId,
+        courseModuleId: dto.courseModuleId !== undefined ? dto.courseModuleId : undefined,
         isHidden: dto.isHidden,
         attachments: finalAttachments,
       },
-      include: { nusGroup: true },
+      include: { nusGroup: true, courseModule: true},
     });
   }
 

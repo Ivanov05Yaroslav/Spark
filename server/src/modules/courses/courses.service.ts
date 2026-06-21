@@ -2,7 +2,13 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import 'multer';
 import { AwsS3Service } from '../../core/integrations/aws/aws-s3.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
-import { CreateCourseDto, GetCoursesQueryDto, UpdateCourseDto } from './dto/course.dto';
+import {
+  CreateCourseDto,
+  CreateCourseModuleDto,
+  GetCoursesQueryDto,
+  UpdateCourseDto,
+  UpdateCourseModuleDto,
+} from './dto/course.dto';
 
 @Injectable()
 export class CoursesService {
@@ -76,6 +82,14 @@ export class CoursesService {
       include: {
         subject: { select: { id: true, name: true } },
         class: { select: { id: true, name: true } },
+        modules: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+          },
+          orderBy: { createdAt: 'asc' },
+        },
         creator: {
           select: {
             id: true,
@@ -191,6 +205,7 @@ export class CoursesService {
         groupName: dto.groupName || null,
         themeColor: dto.themeColor || '#702DFF',
         backgroundUrl: backgroundUrl,
+        videoLinks: dto.videoLinks !== undefined ? dto.videoLinks : undefined,
         isHidden: dto.isHidden !== undefined ? dto.isHidden : false,
         coTeachers:
           coTeacherIdsFiltered.length > 0
@@ -256,16 +271,17 @@ export class CoursesService {
       }
     }
 
-await this.prisma.course.update({
+    await this.prisma.course.update({
       where: { id: courseId },
       data: {
         startDate: dto.startDate ? new Date(dto.startDate) : undefined,
         endDate: dto.endDate ? new Date(dto.endDate) : undefined,
-        groupName: dto.groupName !== undefined ? dto.groupName : undefined, 
+        groupName: dto.groupName !== undefined ? dto.groupName : undefined,
         themeColor: dto.themeColor !== undefined ? dto.themeColor : undefined,
         isArchived: dto.isArchived !== undefined ? dto.isArchived : undefined,
         isHidden: dto.isHidden !== undefined ? dto.isHidden : undefined,
         backgroundUrl: backgroundUrl,
+        videoLinks: dto.videoLinks !== undefined ? dto.videoLinks : undefined,
         coTeachers: coTeachersUpdate,
         students: studentsUpdate,
       },
@@ -459,5 +475,103 @@ await this.prisma.course.update({
     });
 
     return this.formatCourseList(courses);
+  }
+
+  async createModule(teacherId: string, courseId: string, dto: CreateCourseModuleDto) {
+    await this.ensureCourseCreator(courseId, teacherId);
+
+    return this.prisma.courseModule.create({
+      data: {
+        courseId,
+        title: dto.title,
+        description: dto.description,
+      },
+    });
+  }
+
+  async getCourseModules(userId: string, courseId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        userRoles: { include: { role: true } },
+        parentRelations: true,
+      },
+    });
+
+    if (!user) throw new HttpException('Користувача не знайдено', HttpStatus.NOT_FOUND);
+
+    const roles = user.userRoles.map((ur) => ur.role.name);
+    const isAdmin = roles.includes('ADMIN') || roles.includes('SUPER_ADMIN');
+
+    if (!isAdmin) {
+      const accessConditions: any[] = [];
+
+      if (roles.includes('TEACHER')) {
+        accessConditions.push({ creatorId: userId });
+        accessConditions.push({ coTeachers: { some: { teacherId: userId } } });
+      }
+
+      if (roles.includes('STUDENT')) {
+        accessConditions.push({ students: { some: { studentId: userId } } });
+      }
+
+      if (roles.includes('PARENT')) {
+        const childrenIds = user.parentRelations.map((rel) => rel.studentId);
+        if (childrenIds.length > 0) {
+          accessConditions.push({ students: { some: { studentId: { in: childrenIds } } } });
+        }
+      }
+
+      const courseWithAccess = await this.prisma.course.findFirst({
+        where: {
+          id: courseId,
+          OR: accessConditions.length > 0 ? accessConditions : undefined,
+        },
+      });
+
+      if (!courseWithAccess) {
+        throw new HttpException(
+          'Доступ заборонено до матеріалів цього курсу',
+          HttpStatus.FORBIDDEN,
+        );
+      }
+    }
+
+    return this.prisma.courseModule.findMany({
+      where: { courseId },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async updateModule(teacherId: string, moduleId: string, dto: UpdateCourseModuleDto) {
+    const module = await this.prisma.courseModule.findUnique({
+      where: { id: moduleId },
+    });
+    if (!module) throw new HttpException('Модуль не знайдено', HttpStatus.NOT_FOUND);
+
+    await this.ensureCourseCreator(module.courseId, teacherId);
+
+    return this.prisma.courseModule.update({
+      where: { id: moduleId },
+      data: {
+        title: dto.title,
+        description: dto.description,
+      },
+    });
+  }
+
+  async deleteModule(teacherId: string, moduleId: string) {
+    const module = await this.prisma.courseModule.findUnique({
+      where: { id: moduleId },
+    });
+    if (!module) throw new HttpException('Модуль не знайдено', HttpStatus.NOT_FOUND);
+
+    await this.ensureCourseCreator(module.courseId, teacherId);
+
+    await this.prisma.courseModule.delete({
+      where: { id: moduleId },
+    });
+
+    return { message: 'Модуль успішно видалено' };
   }
 }

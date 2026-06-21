@@ -41,6 +41,7 @@ export class TestsService {
         courseId: dto.courseId,
         creatorId: teacherId,
         nusGroupId: dto.nusGroupId,
+        courseModuleId: dto.courseModuleId || null,
         title: dto.title,
         timeLimitMinutes: dto.timeLimitMinutes,
         deadline: dto.deadline ? new Date(dto.deadline) : null,
@@ -60,8 +61,14 @@ export class TestsService {
     return this.prisma.test.update({
       where: { id: testId },
       data: {
-        ...dto,
+        nusGroupId: dto.nusGroupId,
+        courseModuleId: dto.courseModuleId !== undefined ? dto.courseModuleId : undefined,
+        title: dto.title,
+        timeLimitMinutes: dto.timeLimitMinutes,
         deadline: dto.deadline ? new Date(dto.deadline) : undefined,
+        maxAttempts: dto.maxAttempts,
+        isResultHidden: dto.isResultHidden,
+        isHidden: dto.isHidden,
       },
     });
   }
@@ -258,6 +265,7 @@ export class TestsService {
       include: {
         creator: { select: { id: true, firstName: true, lastName: true } },
         _count: { select: { questions: true } },
+        courseModule: { select: { id: true, title: true } }
       },
     });
   }

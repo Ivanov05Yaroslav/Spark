@@ -38,6 +38,7 @@ export class MaterialsService {
         creatorId: teacherId,
         title: dto.title,
         description: dto.description,
+        courseModuleId: dto.courseModuleId || null,
         linkUrl: dto.linkUrl,
         isHidden: dto.isHidden || false,
       },
@@ -56,6 +57,7 @@ export class MaterialsService {
         creatorId: teacherId,
         title: dto.title,
         description: dto.description,
+        courseModuleId: dto.courseModuleId || null,
         fileUrl: fileUrl,
         isHidden: dto.isHidden || false,
       },
@@ -88,7 +90,10 @@ export class MaterialsService {
     return this.prisma.material.findMany({
       where: whereClause,
       orderBy: { createdAt: 'desc' },
-      include: { creator: { select: { id: true, firstName: true, lastName: true } } },
+      include: {
+        creator: { select: { id: true, firstName: true, lastName: true } },
+        courseModule: { select: { id: true, title: true } },
+      },
     });
   }
 

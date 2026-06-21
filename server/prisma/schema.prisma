@@ -202,8 +202,9 @@ model Course {
   groupName     String?
   isArchived    Boolean  @default(false)
   isHidden      Boolean  @default(false)
-  backgroundUrl String?
   themeColor    String?  @default("#702DFF")
+  backgroundUrl String?
+  videoLinks    String[]
 
   school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
@@ -213,6 +214,7 @@ model Course {
   coTeachers CourseTeacher[]
   students   CourseStudent[]
 
+  modules       CourseModule[]
   announcements Announcement[]
   materials     Material[]
   tasks         Task[]
@@ -221,6 +223,21 @@ model Course {
   attendances   Attendance[]
 
   @@map("courses")
+}
+
+model CourseModule {
+  id          String   @id @default(uuid())
+  courseId    String
+  title       String
+  description String?
+  createdAt   DateTime @default(now())
+
+  course      Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  materials   Material[]
+  tasks       Task[]
+  tests       Test[]
+
+  @@map("course_modules")
 }
 
 model CourseTeacher {
@@ -267,6 +284,7 @@ model Material {
   id          String   @id @default(uuid())
   courseId    String
   creatorId   String
+  courseModuleId String?
   title       String
   description String?
   fileUrl     String?
@@ -276,6 +294,7 @@ model Material {
 
   course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
   creator User   @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  courseModule   CourseModule? @relation(fields: [courseModuleId], references: [id], onDelete: SetNull)
 
   @@map("materials")
 }
@@ -285,6 +304,7 @@ model Task {
   courseId    String
   creatorId   String
   nusGroupId  String?
+  courseModuleId String?
   title       String
   description String?
   deadline    DateTime?
@@ -295,6 +315,7 @@ model Task {
   course      Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
   creator     User         @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   nusGroup    NusGroup?    @relation(fields: [nusGroupId], references: [id], onDelete: SetNull)
+  courseModule   CourseModule? @relation(fields: [courseModuleId], references: [id], onDelete: SetNull)
   submissions Submission[]
   gradebooks  Gradebook[]
 
@@ -306,6 +327,7 @@ model Test {
   courseId         String
   creatorId        String
   nusGroupId       String?
+  courseModuleId String?
   title            String
   timeLimitMinutes Int?
   deadline         DateTime?
@@ -317,6 +339,7 @@ model Test {
   course      Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
   creator     User         @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   nusGroup    NusGroup?    @relation(fields: [nusGroupId], references: [id], onDelete: SetNull)
+  courseModule   CourseModule? @relation(fields: [courseModuleId], references: [id], onDelete: SetNull)
   questions   Question[]
   submissions Submission[]
   gradebooks  Gradebook[]

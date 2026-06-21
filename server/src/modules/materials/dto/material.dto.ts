@@ -18,6 +18,11 @@ export class CreateLinkDto {
   @IsString()
   description?: string;
 
+  @ApiProperty({ example: 'uuid-модуля', required: false, description: 'ID теми/модуля курсу' })
+  @IsOptional()
+  @IsString()
+  courseModuleId?: string;
+
   @ApiProperty({ example: 'https://youtube.com/...' })
   @IsUrl({}, { message: 'Введіть коректне URL посилання' })
   @IsNotEmpty()
@@ -45,6 +50,11 @@ export class CreateFileMaterialDto {
   @IsString()
   description?: string;
 
+  @ApiProperty({ example: 'uuid-модуля', required: false, description: 'ID теми/модуля курсу' })
+  @IsOptional()
+  @IsString()
+  courseModuleId?: string;
+
   @ApiProperty({ required: false, default: false })
   @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)
@@ -70,6 +80,11 @@ export class UpdateMaterialDto {
   @IsOptional()
   @IsUrl()
   linkUrl?: string;
+
+  @ApiProperty({ example: 'uuid-модуля', required: false, description: 'ID теми/модуля курсу' })
+  @IsOptional()
+  @IsString()
+  courseModuleId?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()

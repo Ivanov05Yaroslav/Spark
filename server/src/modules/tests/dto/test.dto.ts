@@ -31,6 +31,11 @@ export class CreateTestDto {
   @IsString()
   nusGroupId?: string;
 
+  @ApiProperty({ example: 'uuid-модуля', required: false, description: 'ID теми/модуля курсу' })
+  @IsOptional()
+  @IsString()
+  courseModuleId?: string;
+
   @ApiProperty({ example: 'Тест 1: Вступ до історії' })
   @IsString()
   @IsNotEmpty()
@@ -72,6 +77,11 @@ export class UpdateTestDto {
   @IsOptional()
   @IsString()
   nusGroupId?: string;
+
+  @ApiProperty({ example: 'uuid-модуля', required: false, description: 'ID теми/модуля курсу' })
+  @IsOptional()
+  @IsString()
+  courseModuleId?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
