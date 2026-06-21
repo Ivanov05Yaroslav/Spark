@@ -68,13 +68,20 @@ export class CreateCourseDto {
   @IsOptional()
   backgroundImage?: any;
 
-  @ApiProperty({ type: [String], required: false, description: 'Посилання на відеозустрічі (Zoom, Meet тощо)' })
+  @ApiProperty({
+    type: [String],
+    required: false,
+    description: 'Посилання на відеозустрічі (Zoom, Meet тощо)',
+  })
   @IsOptional()
   @Transform(({ value }) => {
     if (value === undefined) return undefined;
     if (value === 'null' || value === '') return [];
     if (Array.isArray(value)) return value;
-    return value.split(',').map((link: string) => link.trim()).filter(Boolean);
+    return value
+      .split(',')
+      .map((link: string) => link.trim())
+      .filter(Boolean);
   })
   @IsArray()
   @IsString({ each: true })
@@ -171,13 +178,20 @@ export class UpdateCourseDto {
   @IsOptional()
   backgroundImage?: any;
 
-  @ApiProperty({ type: [String], required: false, description: 'Посилання на відеозустрічі (Zoom, Meet тощо)' })
+  @ApiProperty({
+    type: [String],
+    required: false,
+    description: 'Посилання на відеозустрічі (Zoom, Meet тощо)',
+  })
   @IsOptional()
   @Transform(({ value }) => {
     if (value === undefined) return undefined;
     if (value === 'null' || value === '') return [];
     if (Array.isArray(value)) return value;
-    return value.split(',').map((link: string) => link.trim()).filter(Boolean);
+    return value
+      .split(',')
+      .map((link: string) => link.trim())
+      .filter(Boolean);
   })
   @IsArray()
   @IsString({ each: true })
@@ -239,11 +253,6 @@ export class CreateCourseModuleDto {
   @IsString()
   @IsNotEmpty()
   title!: string;
-
-  @ApiProperty({ required: false, description: 'Опис теми' })
-  @IsOptional()
-  @IsString()
-  description?: string;
 }
 
 export class UpdateCourseModuleDto {
@@ -251,11 +260,6 @@ export class UpdateCourseModuleDto {
   @IsOptional()
   @IsString()
   title?: string;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsString()
-  description?: string;
 }
 
 export class CoTeacherDto {

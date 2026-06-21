@@ -86,7 +86,7 @@ export class CoursesService {
           select: {
             id: true,
             title: true,
-            description: true,
+            createdAt: true,
           },
           orderBy: { createdAt: 'asc' },
         },
@@ -484,7 +484,6 @@ export class CoursesService {
       data: {
         courseId,
         title: dto.title,
-        description: dto.description,
       },
     });
   }
@@ -555,7 +554,6 @@ export class CoursesService {
       where: { id: moduleId },
       data: {
         title: dto.title,
-        description: dto.description,
       },
     });
   }
