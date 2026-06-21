@@ -1,14 +1,16 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
   IsDateString,
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
+  Min,
 } from 'class-validator';
 
 export class CreateCourseDto {
@@ -335,4 +337,22 @@ export class GetCoursesQueryDto {
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   isCreator?: boolean;
+
+  @ApiProperty({ required: false, description: 'Номер сторінки (за замовчуванням 1)', default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number = 1;
+
+  @ApiProperty({
+    required: false,
+    description: 'Кількість елементів на сторінку (за замовчуванням 8)',
+    default: 8
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  limit?: number = 8;
 }

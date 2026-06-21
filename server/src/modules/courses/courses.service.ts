@@ -342,8 +342,20 @@ export class CoursesService {
   // }
 
   async getCourses(userId: string, schoolId: string, query: GetCoursesQueryDto) {
-    const { search, filter, sortBy, sortOrder, roleContext, childId, isCreator } = query;
+    const {
+      search,
+      filter,
+      sortBy,
+      sortOrder,
+      roleContext,
+      childId,
+      isCreator,
+      page = 1,
+      limit = 8,
+    } = query;
     const now = new Date();
+
+    const skip = (page - 1) * limit;
 
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -468,13 +480,26 @@ export class CoursesService {
       orderBy = { startDate: sortOrder || 'desc' };
     }
 
-    const courses = await this.prisma.course.findMany({
-      where,
-      orderBy,
-      include: this.courseListInclude,
-    });
+    const [total, courses] = await this.prisma.$transaction([
+      this.prisma.course.count({ where }),
+      this.prisma.course.findMany({
+        where,
+        orderBy,
+        include: this.courseListInclude,
+        skip,
+        take: limit,
+      }),
+    ]);
 
-    return this.formatCourseList(courses);
+    return {
+      data: this.formatCourseList(courses),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async createModule(teacherId: string, courseId: string, dto: CreateCourseModuleDto) {
