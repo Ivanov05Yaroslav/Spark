@@ -83,7 +83,18 @@ export class AuthService {
         userRoles: {
           include: { role: true },
         },
-        parentRelations: true,
+        parentRelations: {
+          include: {
+            student: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                middleName: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -114,7 +125,13 @@ export class AuthService {
         avatarUrl: user.avatarUrl,
         roles: user.userRoles.map((ur) => ur.role.name),
         schoolId: user.schoolId,
-        childrenIds: user.parentRelations?.map((rel) => rel.studentId) || [],
+        children:
+          user.parentRelations?.map((rel) => ({
+            id: rel.student.id,
+            firstName: rel.student.firstName,
+            lastName: rel.student.lastName,
+            middleName: rel.student.middleName,
+          })) || [],
       },
     };
   }
@@ -131,7 +148,18 @@ export class AuthService {
           userRoles: {
             include: { role: true },
           },
-          parentRelations: true,
+          parentRelations: {
+            include: {
+              student: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  middleName: true,
+                },
+              },
+            },
+          },
         },
       });
 
@@ -152,7 +180,13 @@ export class AuthService {
           avatarUrl: user.avatarUrl,
           roles: user.userRoles.map((ur) => ur.role.name),
           schoolId: user.schoolId,
-          childrenIds: user.parentRelations?.map((rel) => rel.studentId) || [],
+          children:
+            user.parentRelations?.map((rel) => ({
+              id: rel.student.id,
+              firstName: rel.student.firstName,
+              lastName: rel.student.lastName,
+              middleName: rel.student.middleName,
+            })) || [],
         },
       };
     } catch (e) {
@@ -162,13 +196,19 @@ export class AuthService {
 
   private async generateTokens(user: any) {
     const roles = user.userRoles?.map((ur) => ur.role.name) || [];
-    const childrenIds = user.parentRelations?.map((rel: any) => rel.studentId) || [];
+    const children =
+      user.parentRelations?.map((rel: any) => ({
+        id: rel.student?.id || rel.studentId,
+        firstName: rel.student?.firstName || '',
+        lastName: rel.student?.lastName || '',
+        middleName: rel.student?.middleName || '',
+      })) || [];
     const payload = {
       id: user.id,
       email: user.email,
       roles,
       schoolId: user.schoolId,
-      childrenIds,
+      children,
     };
 
     const accessToken = this.jwtService.sign(payload, {
@@ -184,7 +224,7 @@ export class AuthService {
     return {
       accessToken,
       refreshToken,
-      user: { id: user.id, email: user.email, roles, schoolId: user.schoolId, childrenIds },
+      user: { id: user.id, email: user.email, roles, schoolId: user.schoolId, children },
     };
   }
 
@@ -499,7 +539,18 @@ export class AuthService {
         userRoles: {
           include: { role: true },
         },
-        parentRelations: true,
+        parentRelations: {
+          include: {
+            student: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                middleName: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -519,7 +570,13 @@ export class AuthService {
         avatarUrl: newParent.avatarUrl,
         roles: newParent.userRoles.map((ur) => ur.role.name),
         schoolId: newParent.schoolId,
-        childrenIds: newParent.parentRelations?.map((rel) => rel.studentId) || [],
+        children:
+          newParent.parentRelations?.map((rel) => ({
+            id: rel.student.id,
+            firstName: rel.student.firstName,
+            lastName: rel.student.lastName,
+            middleName: rel.student.middleName,
+          })) || [],
       },
     };
   }
