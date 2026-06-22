@@ -1,4 +1,9 @@
-import { DeleteObjectCommand, PutObjectCommand, GetObjectCommand, S3Client } from '@aws-sdk/client-s3'; // Додали GetObjectCommand
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
@@ -74,11 +79,23 @@ export class AwsS3Service {
         Key: key,
       });
 
-      const signedUrl = await getSignedUrl(this.s3Client as any, command, { expiresIn: expiresInSeconds });
+      const signedUrl = await getSignedUrl(this.s3Client as any, command, {
+        expiresIn: expiresInSeconds,
+      });
       return signedUrl;
     } catch (error) {
       this.logger.error(`Помилка генерації Presigned URL для ${fileUrl}:`, error);
-      return fileUrl; // У разі збою повертаємо оригінал як запасний варіант
+      return fileUrl;
     }
+  }
+
+  async generateDownloadUrl(key: string, downloadFileName: string): Promise<string> {
+    const command = new GetObjectCommand({
+      Bucket: this.bucketName,
+      Key: key,
+      ResponseContentDisposition: `attachment; filename="${downloadFileName}"`,
+    });
+
+    return getSignedUrl(this.s3Client as any, command, { expiresIn: 3600 });
   }
 }

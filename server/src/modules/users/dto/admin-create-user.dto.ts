@@ -48,12 +48,6 @@ export class AdminCreateUserDto {
   subjects?: string[];
 }
 
-export class BulkImportUsersDto {
-  @ApiProperty({ type: [AdminCreateUserDto], description: 'Масив користувачів для імпорту' })
-  @IsArray()
-  users!: AdminCreateUserDto[];
-}
-
 export class GetSchoolUsersDto {
   @ApiProperty({ required: false, description: 'Номер сторінки (за замовчуванням 1)', default: 1 })
   @IsOptional()

@@ -482,6 +482,16 @@ export class UsersService {
       throw new HttpException('Одну або декілька ролей не знайдено', HttpStatus.BAD_REQUEST);
     }
 
+    const forbiddenRoles = ['ADMIN', 'SUPER_ADMIN'];
+    const hasForbiddenRole = dto.roles.some((role) => forbiddenRoles.includes(role.toUpperCase()));
+
+    if (hasForbiddenRole) {
+      throw new HttpException(
+        'Заборонено створювати користувачів з правами адміністратора через цей ендпоінт',
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
     if (dto.roles.includes('STUDENT') && !dto.className) {
       throw new HttpException(
         "Для учня обов'язково потрібно вказати клас (className)",
@@ -551,7 +561,21 @@ export class UsersService {
     };
   }
 
-  async bulkImportByAdmin(adminId: string, users: AdminCreateUserDto[]) {
+async getBulkImportTemplateUrl() {
+    return this.awsS3Service.generateDownloadUrl(
+      'templates/spark_users_template.csv',
+      'spark_users_template.csv',
+    );
+  }
+
+  async getBulkImportInstructionUrl() {
+    return this.awsS3Service.generateDownloadUrl(
+      'templates/bulk_import_instruction.pdf',
+      'Spark_Bulk_Import_Instruction.pdf',
+    );
+  }
+
+  async bulkImportByAdmin(adminId: string, file: Express.Multer.File) {
     const results: {
       successful: string[];
       failed: { email: string; reason: string }[];
@@ -560,7 +584,64 @@ export class UsersService {
       failed: [],
     };
 
-    for (const userDto of users) {
+    let csvContent = file.buffer.toString('utf-8');
+    if (csvContent.charCodeAt(0) === 0xfeff) {
+      csvContent = csvContent.slice(1);
+    }
+    const lines = csvContent.split(/\r?\n/).filter((line) => line.trim() !== '');
+
+    if (lines.length < 2) {
+      throw new HttpException(
+        'Файл порожній або не містить даних для імпорту',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+
+      const separator = line.includes(';') ? ';' : ',';
+      const values = line.split(separator);
+
+      if (values.length < 5) continue;
+
+      const email = values[0]?.trim();
+      const firstName = values[1]?.trim();
+      const lastName = values[2]?.trim();
+      const middleName = values[3]?.trim();
+      const rolesStr = values[4]?.trim();
+      const className = values[5]?.trim();
+      const subjectsStr = values[6]?.trim();
+
+      if (!email || !firstName || !lastName || !rolesStr) {
+        results.failed.push({
+          email: email || `Рядок ${i + 1}`,
+          reason: "Пропущені обов'язкові поля (email, firstName, lastName, roles)",
+        });
+        continue;
+      }
+
+      const roles = rolesStr
+        .split('|')
+        .map((r) => r.trim())
+        .filter(Boolean);
+      const subjects = subjectsStr
+        ? subjectsStr
+            .split('|')
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : [];
+
+      const userDto: AdminCreateUserDto = {
+        email,
+        firstName,
+        lastName,
+        middleName: middleName || undefined,
+        roles,
+        className: className || undefined,
+        subjects: subjects.length > 0 ? subjects : undefined,
+      };
+
       try {
         await this.createByAdmin(adminId, userDto);
         results.successful.push(userDto.email);

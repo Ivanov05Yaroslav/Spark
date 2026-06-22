@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   HttpCode,
+  HttpException,
   HttpStatus,
   Param,
   Patch,
@@ -15,16 +16,13 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import 'multer';
 import { GetUser } from '../../common/decorators/get-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
-import {
-  AdminCreateUserDto,
-  BulkImportUsersDto,
-  GetSchoolUsersDto,
-} from './dto/admin-create-user.dto';
+import { AdminCreateUserDto, GetSchoolUsersDto } from './dto/admin-create-user.dto';
 import { AddChildDto } from './dto/manage-children.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { SyncRolesDto } from './dto/user-role.dto';
@@ -115,12 +113,50 @@ export class UsersController {
     return this.usersService.createByAdmin(adminId, dto);
   }
 
-  @ApiOperation({ summary: 'Масовий імпорт користувачів через JSON (Тільки для Адміна)' })
+  @ApiOperation({ summary: 'Отримати посилання на CSV шаблон для масового імпорту (з AWS S3)' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
-  @Post('/admin/import')
-  async bulkImportUsers(@GetUser('id') adminId: string, @Body() dto: BulkImportUsersDto) {
-    return this.usersService.bulkImportByAdmin(adminId, dto.users);
+  @Get('/admin/bulk/template')
+  async getBulkImportTemplate() {
+    const url = await this.usersService.getBulkImportTemplateUrl();
+    return { url };
+  }
+
+  @ApiOperation({ summary: 'Отримати посилання на PDF-інструкцію для масового імпорту (з AWS S3)' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get('/admin/bulk/instruction')
+  async getBulkImportInstruction() {
+    const url = await this.usersService.getBulkImportInstructionUrl();
+    return { url };
+  }
+
+  @ApiOperation({ summary: 'Масовий імпорт користувачів через CSV файл (Тільки для Адміна)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'CSV файл для імпорту',
+        },
+      },
+    },
+  })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Post('/admin/bulk')
+  @UseInterceptors(FileInterceptor('file'))
+  async bulkImportByAdmin(
+    @GetUser('id') adminId: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new HttpException('Файл не знайдено', HttpStatus.BAD_REQUEST);
+    }
+    return this.usersService.bulkImportByAdmin(adminId, file);
   }
 
   @ApiOperation({ summary: 'Синхронізувати ролі користувача (Тільки для Адміна)' })
