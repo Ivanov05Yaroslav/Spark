@@ -697,7 +697,7 @@ async getBulkImportTemplateUrl() {
 
     const targetUser = await this.findById(targetUserId);
 
-    const isTargetAdmin = targetUser.userRoles.some((ur) => ur.role.name === 'ADMIN');
+    const isTargetAdmin = targetUser.roles.includes('ADMIN');
     if (isTargetAdmin) {
       throw new HttpException('Не можна видалити іншого адміністратора', HttpStatus.FORBIDDEN);
     }
