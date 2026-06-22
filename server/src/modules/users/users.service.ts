@@ -38,6 +38,9 @@ export class UsersService {
 
     return {
       ...result,
+      avatarUrl: user.avatarUrl
+        ? await this.awsS3Service.generatePresignedUrl(user.avatarUrl)
+        : null,
       roles: userRoles.map((ur: any) => ur.role.name),
     };
   }
@@ -93,7 +96,9 @@ export class UsersService {
       firstName: user.firstName,
       lastName: user.lastName,
       middleName: user.middleName,
-      avatarUrl: user.avatarUrl,
+      avatarUrl: user.avatarUrl
+        ? await this.awsS3Service.generatePresignedUrl(user.avatarUrl)
+        : null,
       roles,
       createdAt: user.createdAt,
       themePreference: user.themePreference,
@@ -167,7 +172,9 @@ export class UsersService {
             firstName: relation.student.firstName,
             lastName: relation.student.lastName,
             middleName: relation.student.middleName,
-            avatarUrl: relation.student.avatarUrl,
+            avatarUrl: relation.student.avatarUrl
+              ? await this.awsS3Service.generatePresignedUrl(relation.student.avatarUrl)
+              : null,
             class: childClass ? { id: childClass.id, name: childClass.name } : null,
             coursesCount: childCoursesCount,
             classmatesCount: childClassmatesCount,
@@ -231,7 +238,9 @@ export class UsersService {
       firstName: child.firstName,
       lastName: child.lastName,
       middleName: child.middleName,
-      avatarUrl: child.avatarUrl,
+      avatarUrl: child.avatarUrl
+        ? await this.awsS3Service.generatePresignedUrl(child.avatarUrl)
+        : null,
       roles: ['STUDENT'],
       school: child.school
         ? {
@@ -300,13 +309,18 @@ export class UsersService {
       }),
     ]);
 
-    const formattedUsers = users.map((user) => {
-      const { userRoles, ...rest } = user;
-      return {
-        ...rest,
-        roles: userRoles.map((ur) => ur.role.name),
-      };
-    });
+    const formattedUsers = await Promise.all(
+      users.map(async (user) => {
+        const { userRoles, ...rest } = user;
+        return {
+          ...rest,
+          avatarUrl: user.avatarUrl
+            ? await this.awsS3Service.generatePresignedUrl(user.avatarUrl)
+            : null,
+          roles: userRoles.map((ur) => ur.role.name),
+        };
+      }),
+    );
 
     return {
       data: formattedUsers,
@@ -534,9 +548,6 @@ export class UsersService {
         isPasswordCustom: false,
         userRoles: { create: roleRecords.map((r) => ({ roleId: r.id })) },
       },
-      include: {
-        userRoles: { include: { role: true } },
-      },
     });
 
     if (dto.roles.includes('STUDENT') && dto.className) {
@@ -557,11 +568,14 @@ export class UsersService {
 
     return {
       ...result,
+      avatarUrl: newUser.avatarUrl
+        ? await this.awsS3Service.generatePresignedUrl(newUser.avatarUrl)
+        : null,
       roles: dto.roles,
     };
   }
 
-async getBulkImportTemplateUrl() {
+  async getBulkImportTemplateUrl() {
     return this.awsS3Service.generateDownloadUrl(
       'templates/spark_users_template.csv',
       'spark_users_template.csv',
