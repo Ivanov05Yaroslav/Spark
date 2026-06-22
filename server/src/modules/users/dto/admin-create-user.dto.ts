@@ -1,15 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsEmail, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsArray, IsEmail, IsInt, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator';
 
 export class AdminCreateUserDto {
   @ApiProperty({ example: 'student@school.com' })
   @IsEmail()
   email!: string;
-
-  @ApiProperty({ example: 'SecurePass123!' })
-  @IsString()
-  @MinLength(8, { message: 'Пароль має містити щонайменше 8 символів' })
-  password!: string;
 
   @ApiProperty({ example: 'Іван' })
   @IsString()
@@ -41,11 +37,6 @@ export class AdminCreateUserDto {
   @IsString()
   className?: string;
 
-  @ApiProperty({ example: '5-Б', description: 'Клас, де вчитель є керівником', required: false })
-  @IsOptional()
-  @IsString()
-  homeroomClassName?: string;
-
   @ApiProperty({
     example: ['Математика', 'Алгебра'],
     description: 'Предмети (Обовʼязково для вчителів)',
@@ -61,4 +52,29 @@ export class BulkImportUsersDto {
   @ApiProperty({ type: [AdminCreateUserDto], description: 'Масив користувачів для імпорту' })
   @IsArray()
   users!: AdminCreateUserDto[];
+}
+
+export class GetSchoolUsersDto {
+  @ApiProperty({ required: false, description: 'Номер сторінки (за замовчуванням 1)', default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number = 1;
+
+  @ApiProperty({
+    required: false,
+    description: 'Кількість елементів на сторінку (за замовчуванням 10)',
+    default: 10,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  limit?: number = 10;
+
+  @ApiProperty({ required: false, description: 'Пошук за ФІО або email' })
+  @IsOptional()
+  @IsString()
+  search?: string;
 }

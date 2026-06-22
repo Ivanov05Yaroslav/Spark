@@ -9,6 +9,7 @@ import {
   Patch,
   Post,
   Put,
+  Query,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -19,7 +20,11 @@ import { GetUser } from '../../common/decorators/get-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
-import { AdminCreateUserDto, BulkImportUsersDto } from './dto/admin-create-user.dto';
+import {
+  AdminCreateUserDto,
+  BulkImportUsersDto,
+  GetSchoolUsersDto,
+} from './dto/admin-create-user.dto';
 import { AddChildDto } from './dto/manage-children.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { SyncRolesDto } from './dto/user-role.dto';
@@ -49,10 +54,7 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('PARENT', 'TEACHER', 'ADMIN', 'SUPER_ADMIN')
   @Get('/profile/children/:childId')
-  async getChildProfile(
-    @GetUser('id') parentId: string,
-    @Param('childId') childId: string,
-  ) {
+  async getChildProfile(@GetUser('id') parentId: string, @Param('childId') childId: string) {
     return this.usersService.getChildProfileForParent(parentId, childId);
   }
 
@@ -95,6 +97,14 @@ export class UsersController {
   @Get('/:id')
   getUserById(@Param('id') id: string) {
     return this.usersService.findById(id);
+  }
+
+  @ApiOperation({ summary: 'Отримати всіх користувачів школи з пагінацією (Тільки для Адміна)' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get('/admin/school-users')
+  async getSchoolUsers(@GetUser('id') adminId: string, @Query() query: GetSchoolUsersDto) {
+    return this.usersService.getSchoolUsers(adminId, query);
   }
 
   @ApiOperation({ summary: 'Створити одного користувача (Тільки для Адміна)' })

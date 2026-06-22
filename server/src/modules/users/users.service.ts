@@ -6,7 +6,7 @@ import { PrismaService } from '../../core/prisma/prisma.service';
 import { ClassesService } from '../classes/classes.service';
 import { RolesService } from '../roles/roles.service';
 import { SubjectsService } from '../subjects/subjects.service';
-import { AdminCreateUserDto } from './dto/admin-create-user.dto';
+import { AdminCreateUserDto, GetSchoolUsersDto } from './dto/admin-create-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Injectable()
@@ -20,52 +20,9 @@ export class UsersService {
     private readonly emailService: EmailService,
   ) {}
 
-  async create(dto: AdminCreateUserDto) {
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: dto.email },
-    });
-    if (existingUser) {
-      throw new HttpException('Користувач з таким email вже існує', HttpStatus.BAD_REQUEST);
-    }
-
-    const roleRecords = await this.prisma.role.findMany({
-      where: { name: { in: dto.roles } },
-    });
-
-    if (roleRecords.length !== dto.roles.length) {
-      throw new HttpException('Одну або декілька ролей не знайдено', HttpStatus.BAD_REQUEST);
-    }
-
-    let generatedParentsCode: string | null = null;
-
-    if (dto.roles.includes('STUDENT')) {
-      let isUnique = false;
-      while (!isUnique) {
-        generatedParentsCode = Math.floor(100000 + Math.random() * 900000).toString();
-        const existingCode = await this.prisma.user.findUnique({
-          where: { parentsCode: generatedParentsCode },
-        });
-        if (!existingCode) {
-          isUnique = true;
-        }
-      }
-    }
-
-    const hashPassword = await bcrypt.hash(dto.password, 10);
-
-    const user = await this.prisma.user.create({
-      data: {
-        email: dto.email,
-        password: hashPassword,
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        middleName: dto.middleName,
-        schoolId: dto.schoolId,
-        parentsCode: generatedParentsCode,
-        userRoles: {
-          create: roleRecords.map((r) => ({ roleId: r.id })),
-        },
-      },
+  async findById(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
       include: {
         userRoles: {
           include: { role: true },
@@ -73,26 +30,16 @@ export class UsersService {
       },
     });
 
-    return user;
-  }
-
-  async findByEmail(email: string) {
-    return this.prisma.user.findUnique({
-      where: { email },
-      include: { userRoles: { include: { role: true } } },
-    });
-  }
-
-  async findById(id: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
-      include: { userRoles: { include: { role: true } } },
-    });
-
     if (!user) {
       throw new HttpException('Користувача з таким ID не знайдено', HttpStatus.NOT_FOUND);
     }
-    return user;
+
+    const { password, userRoles, ...result } = user as any;
+
+    return {
+      ...result,
+      roles: userRoles.map((ur: any) => ur.role.name),
+    };
   }
 
   async getAllUsers() {
@@ -187,13 +134,15 @@ export class UsersService {
         id: ts.subject.id,
         name: ts.subject.name,
       }));
-      profile.homeroomClass = user.homeroomClass ? {
-        id: user.homeroomClass.id,
-        name: user.homeroomClass.name,
-      } : null;
+      profile.homeroomClass = user.homeroomClass
+        ? {
+            id: user.homeroomClass.id,
+            name: user.homeroomClass.name,
+          }
+        : null;
     }
 
-if (roles.includes('PARENT')) {
+    if (roles.includes('PARENT')) {
       profile.children = await Promise.all(
         user.parentRelations.map(async (relation) => {
           const childId = relation.student.id;
@@ -242,7 +191,7 @@ if (roles.includes('PARENT')) {
 
     if (!relation) {
       throw new HttpException(
-        'Доступ заборонено: цей учень не пов\'язаний з вашим акаунтом',
+        "Доступ заборонено: цей учень не пов'язаний з вашим акаунтом",
         HttpStatus.FORBIDDEN,
       );
     }
@@ -284,13 +233,89 @@ if (roles.includes('PARENT')) {
       middleName: child.middleName,
       avatarUrl: child.avatarUrl,
       roles: ['STUDENT'],
-      school: child.school ? {
-        id: child.school.id,
-        name: child.school.shortName || child.school.fullName,
-      } : null,
+      school: child.school
+        ? {
+            id: child.school.id,
+            name: child.school.shortName || child.school.fullName,
+          }
+        : null,
       class: activeClass ? { id: activeClass.id, name: activeClass.name } : null,
       coursesCount,
       classmatesCount,
+    };
+  }
+
+  async getSchoolUsers(adminId: string, query: GetSchoolUsersDto) {
+    const { page = 1, limit = 10, search } = query;
+    const skip = (page - 1) * limit;
+
+    const admin = await this.prisma.user.findUnique({ where: { id: adminId } });
+    if (!admin) {
+      throw new HttpException('Адміністратора не знайдено', HttpStatus.NOT_FOUND);
+    }
+    if (!admin.schoolId) {
+      throw new HttpException("Адміністратор не прив'язаний до школи", HttpStatus.FORBIDDEN);
+    }
+
+    const where: any = {
+      schoolId: admin.schoolId,
+    };
+
+    if (search) {
+      where.AND = [
+        {
+          OR: [
+            { firstName: { contains: search, mode: 'insensitive' } },
+            { lastName: { contains: search, mode: 'insensitive' } },
+            { middleName: { contains: search, mode: 'insensitive' } },
+            { email: { contains: search, mode: 'insensitive' } },
+          ],
+        },
+      ];
+    }
+
+    const [total, users] = await this.prisma.$transaction([
+      this.prisma.user.count({ where }),
+      this.prisma.user.findMany({
+        where,
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          middleName: true,
+          avatarUrl: true,
+          createdAt: true,
+          userRoles: {
+            select: {
+              role: {
+                select: { name: true },
+              },
+            },
+          },
+        },
+        orderBy: { lastName: 'asc' },
+      }),
+    ]);
+
+    const formattedUsers = users.map((user) => {
+      const { userRoles, ...rest } = user;
+      return {
+        ...rest,
+        roles: userRoles.map((ur) => ur.role.name),
+      };
+    });
+
+    return {
+      data: formattedUsers,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 
@@ -457,6 +482,20 @@ if (roles.includes('PARENT')) {
       throw new HttpException('Одну або декілька ролей не знайдено', HttpStatus.BAD_REQUEST);
     }
 
+    if (dto.roles.includes('STUDENT') && !dto.className) {
+      throw new HttpException(
+        "Для учня обов'язково потрібно вказати клас (className)",
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (dto.roles.includes('TEACHER') && (!dto.subjects || dto.subjects.length === 0)) {
+      throw new HttpException(
+        "Для вчителя обов'язково потрібно вказати хоча б один предмет (subjects)",
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     let generatedParentsCode: string | null = null;
     if (dto.roles.includes('STUDENT')) {
       let isUnique = false;
@@ -485,6 +524,9 @@ if (roles.includes('PARENT')) {
         isPasswordCustom: false,
         userRoles: { create: roleRecords.map((r) => ({ roleId: r.id })) },
       },
+      include: {
+        userRoles: { include: { role: true } },
+      },
     });
 
     if (dto.roles.includes('STUDENT') && dto.className) {
@@ -492,26 +534,21 @@ if (roles.includes('PARENT')) {
       await this.classesService.addStudent(classroom.id, newUser.id);
     }
 
-    if (dto.roles.includes('TEACHER')) {
-      if (dto.subjects && dto.subjects.length > 0) {
-        for (const subjectName of dto.subjects) {
-          const subject = await this.subjectsService.findOrCreateByName(subjectName);
-          await this.subjectsService.assignToTeacher(newUser.id, subject.id);
-        }
-      }
-      if (dto.homeroomClassName) {
-        const classroom = await this.classesService.findOrCreateClass(
-          admin.schoolId,
-          dto.homeroomClassName,
-        );
-        await this.classesService.setHomeroomTeacher(classroom.id, newUser.id);
+    if (dto.roles.includes('TEACHER') && dto.subjects && dto.subjects.length > 0) {
+      for (const subjectName of dto.subjects) {
+        const subject = await this.subjectsService.findOrCreateByName(subjectName);
+        await this.subjectsService.assignToTeacher(newUser.id, subject.id);
       }
     }
 
     await this.emailService.sendWelcomeEmail(newUser.email, plainPassword);
 
-    const { password, ...result } = newUser;
-    return result;
+    const { password, userRoles, ...result } = newUser as any;
+
+    return {
+      ...result,
+      roles: dto.roles,
+    };
   }
 
   async bulkImportByAdmin(adminId: string, users: AdminCreateUserDto[]) {
