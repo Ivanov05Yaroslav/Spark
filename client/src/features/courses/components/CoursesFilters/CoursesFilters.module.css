@@ -1,0 +1,38 @@
+.filtersContainer {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.searchWrapper {
+    flex: 1;
+}
+
+.selectWrapper {
+    flex-shrink: 0;
+}
+.checkboxWrapper {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.checkboxLabel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: #4b5563;
+    font-weight: 500;
+    user-select: none;
+}
+
+.checkboxInput {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #8b5cf6;
+}

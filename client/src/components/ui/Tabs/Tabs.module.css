@@ -29,7 +29,7 @@
 
 .tabButton.active {
     color: #702DFF;
-    font-weight: 600;
+    font-weight: 500;
 }
 
 .tabButton.active::after {

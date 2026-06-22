@@ -1,0 +1,52 @@
+.statusMessage {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 250px;
+    width: 100%;
+    color: #6b7280;
+    font-size: 1.125rem;
+    font-weight: 500;
+    text-align: center;
+    padding: 2rem;
+    background-color: #f9fafb;
+    border-radius: 16px;
+    border: 1px dashed #e5e7eb;
+    margin-top: 2rem;
+}
+
+.statusMessage p {
+    margin: 0;
+}
+
+.coursesGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    width: 100%;
+    padding-bottom: 2rem;
+}
+
+@media (max-width: 1280px) {
+    .coursesGrid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 992px) {
+    .coursesGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .coursesGrid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .statusMessage {
+        min-height: 150px;
+        font-size: 1rem;
+    }
+}

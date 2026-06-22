@@ -25,14 +25,8 @@ export const courseService = {
             headers: { 'Content-Type': 'multipart/form-data' }
         }).then(res => res.data),
 
-    getTeacherCourses: () =>
-        apiClient.get<CourseItemDto[]>('/courses/teacher').then(res => res.data),
-
-    getStudentCourses: () =>
-        apiClient.get<CourseItemDto[]>('/courses/student').then(res => res.data),
-
-    getAllCourses: () =>
-        apiClient.get<CourseItemDto[]>('/courses/all').then(res => res.data),
+    getCourses: (params?: any) =>
+        apiClient.get<CourseItemDto[]>('/courses', { params }).then(res => res.data),
 
     getCourseById: (courseId: string) =>
         apiClient.get<CourseDetailDto>(`/courses/${courseId}`).then(res => res.data),
@@ -41,4 +35,7 @@ export const courseService = {
         apiClient.put<CourseResponseDto>(`/courses/${courseId}`, data, {
             headers: { 'Content-Type': 'multipart/form-data' }
         }).then(res => res.data),
+
+    deleteCourse: (id: string) =>
+        apiClient.delete(`/courses/${id}`).then(res => res.data)
 };

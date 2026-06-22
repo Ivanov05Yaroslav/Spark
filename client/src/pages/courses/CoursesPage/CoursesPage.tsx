@@ -1,130 +1,71 @@
-import React, { useState } from 'react';
-import { CoursesFilters } from '@/components/courses/CoursesFilters/CoursesFilters.tsx';
-import { CourseCard } from '@/components/courses/CourseCard/CourseCard.tsx';
-import { CoursesBanner } from "@/components/courses/CoursesBanner/CoursesBanner.tsx";
+import React from 'react';
+import { CoursesFilters } from '@/features/courses/components/CoursesFilters/CoursesFilters.tsx';
+import { CoursesBanner } from '@/features/courses/components/CoursesBanner/CoursesBanner.tsx';
+import { CoursesList } from '@/features/courses/components/CoursesList/CoursesList.tsx';
+import { useMyCourses } from '@/features/courses/hooks/useMyCourses.ts';
+import { useNavigate } from 'react-router-dom';
+import { Tabs, TabItem } from '@/components/ui/Tabs/Tabs';
+import { ROLE_LABELS } from '@/libs/constants/users.constants';
 import styles from './CoursesPage.module.css';
 
-interface Course {
-    id: number;
-    title: string;
-    imageUrl: string;
-    year: string;
-    group: string;
-    teacherName: string;
-    teacherAvatar: string;
-}
-
-const MOCK_COURSES: Course[] = [
-    {
-        id: 1,
-        title: 'Інформатика',
-        imageUrl: 'https://www.aventusinformatics.com/_next/image?url=%2Fassets%2Fimages%2Fhome%2Fbanner%2Fcareer-banner.webp&w=3840&q=75',
-        year: '2025-2026',
-        group: '11-Б',
-        teacherName: 'Шевченко Іван',
-        teacherAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde'
-    },
-    {
-        id: 1,
-        title: 'Інформатика',
-        imageUrl: 'https://www.aventusinformatics.com/_next/image?url=%2Fassets%2Fimages%2Fhome%2Fbanner%2Fcareer-banner.webp&w=3840&q=75',
-        year: '2025-2026',
-        group: '11-Б',
-        teacherName: 'Шевченко Іван',
-        teacherAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde'
-    },{
-        id: 1,
-        title: 'Інформатика',
-        imageUrl: 'https://www.aventusinformatics.com/_next/image?url=%2Fassets%2Fimages%2Fhome%2Fbanner%2Fcareer-banner.webp&w=3840&q=75',
-        year: '2025-2026',
-        group: '11-Б',
-        teacherName: 'Шевченко Іван',
-        teacherAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde'
-    },
-    {
-        id: 1,
-        title: 'Інформатика',
-        imageUrl: 'https://www.aventusinformatics.com/_next/image?url=%2Fassets%2Fimages%2Fhome%2Fbanner%2Fcareer-banner.webp&w=3840&q=75',
-        year: '2025-2026',
-        group: '11-Б',
-        teacherName: 'Шевченко Іван',
-        teacherAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde'
-    },
-    {
-        id: 1,
-        title: 'Інформатика',
-        imageUrl: 'https://www.aventusinformatics.com/_next/image?url=%2Fassets%2Fimages%2Fhome%2Fbanner%2Fcareer-banner.webp&w=3840&q=75',
-        year: '2025-2026',
-        group: '11-Б',
-        teacherName: 'Шевченко Іван',
-        teacherAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde'
-    },
-    {
-        id: 1,
-        title: 'Інформатика',
-        imageUrl: 'https://www.aventusinformatics.com/_next/image?url=%2Fassets%2Fimages%2Fhome%2Fbanner%2Fcareer-banner.webp&w=3840&q=75',
-        year: '2025-2026',
-        group: '11-Б',
-        teacherName: 'Шевченко Іван',
-        teacherAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde'
-    },
-    {
-        id: 1,
-        title: 'Інформатика',
-        imageUrl: 'https://www.aventusinformatics.com/_next/image?url=%2Fassets%2Fimages%2Fhome%2Fbanner%2Fcareer-banner.webp&w=3840&q=75',
-        year: '2025-2026',
-        group: '11-Б',
-        teacherName: 'Шевченко Іван',
-        teacherAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde'
-    },
-    {
-        id: 1,
-        title: 'Інформатика',
-        imageUrl: 'https://www.aventusinformatics.com/_next/image?url=%2Fassets%2Fimages%2Fhome%2Fbanner%2Fcareer-banner.webp&w=3840&q=75',
-        year: '2025-2026',
-        group: '11-Б',
-        teacherName: 'Шевченко Іван',
-        teacherAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde'
-    },
-    {
-        id: 1,
-        title: 'Інформатика',
-        imageUrl: 'https://www.aventusinformatics.com/_next/image?url=%2Fassets%2Fimages%2Fhome%2Fbanner%2Fcareer-banner.webp&w=3840&q=75',
-        year: '2025-2026',
-        group: '11-Б',
-        teacherName: 'Шевченко Іван',
-        teacherAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde'
-    },
-    {
-        id: 1,
-        title: 'Інформатика',
-        imageUrl: 'https://www.aventusinformatics.com/_next/image?url=%2Fassets%2Fimages%2Fhome%2Fbanner%2Fcareer-banner.webp&w=3840&q=75',
-        year: '2025-2026',
-        group: '11-Б',
-        teacherName: 'Шевченко Іван',
-        teacherAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde'
-    },
-    {
-        id: 1,
-        title: 'Інформатика',
-        imageUrl: 'https://www.aventusinformatics.com/_next/image?url=%2Fassets%2Fimages%2Fhome%2Fbanner%2Fcareer-banner.webp&w=3840&q=75',
-        year: '2025-2026',
-        group: '11-Б',
-        teacherName: 'Шевченко Іван',
-        teacherAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde'
-    },
-
-
-];
-
 export const CoursesPage = () => {
-    const [courses] = useState<Course[]>(MOCK_COURSES);
-    const [search, setSearch] = useState('');
-    const [status, setStatus] = useState('in-process');
-    const [sortBy, setSortBy] = useState('name');
+    const navigate = useNavigate();
+
+    const {
+        courses,
+        isLoading,
+        search,
+        setSearch,
+        status,
+        setStatus,
+        sortBy,
+        setSortBy,
+        sortOrder,
+        setSortOrder,
+        activeRole,
+        setActiveRole,
+        availableRoles,
+        isCreator,
+        setIsCreator,
+        childId,
+        setChildId,
+        children,
+        hasNextPage,
+        isFetchingNextPage,
+        fetchNextPage,
+    } = useMyCourses();
+
+    const handleCreateCourseClick = () => {
+        navigate('/courses/create');
+    };
+
+    const childrenOptions = children.map((child: any) => ({
+        value: child.id,
+        label: `${child.firstName} ${child.lastName}`
+    }));
+
+    const roleTabs: TabItem[] = availableRoles.map((role) => ({
+        id: role,
+        label: ROLE_LABELS[role as keyof typeof ROLE_LABELS] || role,
+    }));
 
     return (
         <div className={styles.pageContainer}>
+            <CoursesBanner
+                onCreateClick={handleCreateCourseClick}
+                showCreateButton={activeRole === 'TEACHER'}
+            />
+
+            {availableRoles.length > 1 && (
+                <div className={styles.tabsWrapper}>
+                    <Tabs
+                        items={roleTabs}
+                        activeId={activeRole}
+                        onTabChange={setActiveRole}
+                    />
+                </div>
+            )}
+
             <CoursesFilters
                 search={search}
                 onSearchChange={setSearch}
@@ -132,23 +73,25 @@ export const CoursesPage = () => {
                 onStatusChange={setStatus}
                 sortBy={sortBy}
                 onSortByChange={setSortBy}
+                sortOrder={sortOrder}
+                onSortOrderChange={setSortOrder}
+
+                activeRole={activeRole}
+                isCreator={isCreator}
+                onIsCreatorChange={setIsCreator}
+                childId={childId}
+                onChildIdChange={setChildId}
+                childrenOptions={childrenOptions}
             />
 
-            <CoursesBanner />
-
-            <div className={styles.coursesGrid}>
-                {courses.map((course) => (
-                    <CourseCard
-                        key={course.id}
-                        title={course.title}
-                        imageUrl={course.imageUrl}
-                        year={course.year}
-                        group={course.group}
-                        teacherName={course.teacherName}
-                        teacherAvatar={course.teacherAvatar}
-                    />
-                ))}
-            </div>
+            <CoursesList
+                courses={courses}
+                isLoading={isLoading}
+                hasNextPage={hasNextPage}
+                isFetchingNextPage={isFetchingNextPage}
+                fetchNextPage={fetchNextPage}
+                activeRole={activeRole}
+            />
         </div>
     );
 };

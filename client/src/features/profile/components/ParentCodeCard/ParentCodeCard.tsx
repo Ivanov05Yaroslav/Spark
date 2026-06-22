@@ -1,7 +1,7 @@
 import React from 'react';
 import HashIcon from '../../../../assets/hash.svg?react';
 import CopyIcon from '../../../../assets/copy.svg?react';
-import { toast } from '@/libs/configs/Toast.ts'; // Перевір правильність шляху
+import { toast } from '@/libs/configs/Toast.ts';
 import styles from './ParentCodeCard.module.css';
 
 interface ParentCodeCardProps {

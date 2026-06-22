@@ -1,9 +1,8 @@
 import type { ComponentType, SVGProps } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import styles from './Sidebar.module.css';
-
 import { useStore } from '../../../stores/useStore';
-
+import { Avatar } from '@/components/ui/Avatar/Avatar';
 import SparkLogo from '../../../assets/logo.svg?react';
 import DashboardIcon from '../../../assets/dashboard.svg?react';
 import JournalIcon from '../../../assets/journal.svg?react';
@@ -12,7 +11,7 @@ import ChatsIcon from '../../../assets/chats.svg?react';
 import StatisticsIcon from '../../../assets/statistics.svg?react';
 import AdminIcon from '../../../assets/admin.svg?react';
 import LogoutIcon from '../../../assets/logout.svg?react';
-
+import {ROLE_LABELS} from '@/libs/constants/users.constants'
 type NavItem = {
     id: number;
     label: string;
@@ -66,11 +65,15 @@ export const Sidebar = ({ isExpanded, setIsExpanded, onOpenNotifications }: Side
         ? `${user.lastName} ${user.firstName} ${user.middleName}`.trim()
         : 'Завантаження...';
 
-    const displayRole = user && user.roles?.length > 0
-        ? ROLE_TRANSLATIONS[user.roles[0].toUpperCase()] || user.roles[0]
-        : 'Користувач';
+    const roleString = user?.roles?.[0] || '';
+    const roleKey = roleString.replace('ROLE_', '');
+    const displayRole = ROLE_LABELS[roleKey] || 'Користувач';
 
-    const avatarSrc = user?.avatarUrl || '';
+    const defaultAvatar = user
+        ? `https://ui-avatars.com/api/?name=${user.firstName}+${user.lastName}&background=E1D4FE&color=702DFF`
+        : `https://ui-avatars.com/api/?name=User&background=E1D4FE&color=702DFF`;
+
+    const avatarSrc = user?.avatarUrl || defaultAvatar;
 
     return (
         <aside
@@ -110,15 +113,11 @@ export const Sidebar = ({ isExpanded, setIsExpanded, onOpenNotifications }: Side
                     onClick={() => navigate('/profile')}
                     style={{ cursor: 'pointer' }}
                 >
-                    {avatarSrc ? (
-                        <img
-                            src={avatarSrc}
-                            alt="User Avatar"
-                            className={styles.avatar}
-                        />
-                    ) : (
-                        <div className={styles.avatar} />
-                    )}
+                    <Avatar
+                        src={avatarSrc || `https://ui-avatars.com/api/?name=${fullName.replace(' ', '+')}&background=EBF4FF&color=4F46E5`}
+                        size={40}
+                        className={styles.avatar}
+                    />
                     <div className={styles.profileInfo}>
                         <span className={styles.profileName} title={fullName}>
                             {fullName}

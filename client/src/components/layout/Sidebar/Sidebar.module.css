@@ -8,6 +8,24 @@
     --icon-size: 22px;
 }
 
+/*.sidebar {*/
+/*    position: fixed;*/
+/*    top: 0;*/
+/*    left: 0;*/
+/*    height: 100vh;*/
+/*    width: var(--width-closed);*/
+/*    background-color: #FFFFFF;*/
+/*    padding-top: 30px;*/
+/*    padding-bottom: 10px;*/
+/*    display: flex;*/
+/*    flex-direction: column;*/
+/*    transition: width 0.3s ease;*/
+/*    box-shadow: 2px 0 15px rgba(0, 0, 0, 0.05);*/
+/*    z-index: 50;*/
+/*    overflow: hidden;*/
+/*    white-space: nowrap;*/
+/*}*/
+
 .sidebar {
     position: fixed;
     top: 0;
@@ -19,11 +37,14 @@
     padding-bottom: 10px;
     display: flex;
     flex-direction: column;
-    transition: width 0.3s ease;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 2px 0 15px rgba(0, 0, 0, 0.05);
     z-index: 50;
     overflow: hidden;
     white-space: nowrap;
+    will-change: width, transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
 }
 
 .sidebar.expanded {

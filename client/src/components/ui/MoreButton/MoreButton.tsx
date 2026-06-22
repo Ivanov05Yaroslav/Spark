@@ -36,6 +36,8 @@ export const MoreButton: React.FC<MoreButtonProps> = ({ onEdit, onDelete }) => {
         setIsOpen(false);
     };
 
+
+
     return (
         <div className={styles.container} ref={containerRef}>
             <button type="button" className={styles.button} onClick={handleToggle}>
@@ -45,11 +47,11 @@ export const MoreButton: React.FC<MoreButtonProps> = ({ onEdit, onDelete }) => {
             {isOpen && (
                 <div className={styles.dropdown}>
                     <button className={styles.menuItem} onClick={handleEdit}>
-                        <EditIcon className={styles.menuItemIcon} />
+                        <EditIcon className={styles.menuItemIcon}/>
                         Edit
                     </button>
                     <button className={`${styles.menuItem} ${styles.deleteItem}`} onClick={handleDelete}>
-                        <DeleteIcon className={styles.menuItemIcon} />
+                        <DeleteIcon className={styles.menuItemIcon}/>
                         Delete
                     </button>
                 </div>
