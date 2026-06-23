@@ -13,17 +13,46 @@ interface CreateTaskFormProps {
 }
 
 export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({ onBack }) => {
-    const { formState, filesState, linksState, isFormValid, handleSubmit } = useCreateTaskForm();
+    const {
+        formState,
+        filesState,
+        linksState,
+        options,
+        isLoading,
+        isSubmitting,
+        isFormValid,
+        handleSubmit
+    } = useCreateTaskForm();
 
     return (
         <TwoColumnContentLayout
             title="Створити завдання"
             onBack={onBack}
-            sidebarContent={<TaskSidebarSettings formState={formState} />}
+            sidebarContent={
+                <TaskSidebarSettings
+                    formState={{
+                        dueDate: formState.dueDate,
+                        setDueDate: formState.setDueDate,
+                        module: formState.module,
+                        setModule: formState.setModule,
+                        nusGroup: formState.nusGroup,
+                        setNusGroup: formState.setNusGroup,
+                        hideTask: formState.hideTask,
+                        setHideTask: formState.setHideTask
+                    }}
+                    options={{
+                        class: options.classes?.[0] || null,
+                        subject: options.subject,
+                        modules: options.modules,
+                        gradingGroups: options.gradingGroups
+                    }}
+                    isLoading={isLoading}
+                />
+            }
             showHeaderButton={true}
-            headerButtonText="Створити"
+            headerButtonText={isSubmitting ? "Створення..." : "Створити"}
             onHeaderButtonClick={handleSubmit}
-            isHeaderButtonDisabled={!isFormValid}
+            isHeaderButtonDisabled={!isFormValid || isSubmitting}
         >
             <ContentCard>
                 <Input
@@ -31,14 +60,16 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({ onBack }) => {
                     value={formState.title}
                     onChange={(e) => formState.setTitle(e.target.value)}
                     placeholder="Введіть назву завдання"
+                    disabled={isSubmitting}
                 />
 
                 <TextAreaField
                     label="Інструкції"
                     value={formState.instructions}
                     onChange={(e) => formState.setInstructions(e.target.value)}
-                    placeholder="Введиіть інструкції (необов'язково)"
+                    placeholder="Введіть інструкції (необов'язково)"
                     rows={4}
+                    disabled={isSubmitting}
                 />
             </ContentCard>
 
@@ -46,7 +77,6 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({ onBack }) => {
                 filesState={filesState}
                 linksState={linksState}
             />
-
         </TwoColumnContentLayout>
     );
 };

@@ -5,6 +5,7 @@ import { useCourseData } from '../hooks/useCourseData';
 import { courseService } from '@/api/courses.service';
 import { toast } from '@/libs/configs/Toast';
 import { formatToInputDate, formatToStrictISO } from '@/libs/utils/date';
+import { DEFAULT_THEME_COLORS } from '@/libs/constants/courses.constants';
 
 export const useEditCourse = () => {
     const { id } = useParams<{ id: string }>();
@@ -36,13 +37,39 @@ export const useEditCourse = () => {
 
     useEffect(() => {
         if (courseDetail && !isInitialized) {
-            setSubject(courseDetail.subjectId || '');
-            setGrade(courseDetail.classId || '');
+            setSubject(courseDetail.subject?.id ? String(courseDetail.subject.id) : '');
+            setGrade(courseDetail.class?.id ? String(courseDetail.class.id) : '');
 
             if (courseDetail.startDate) setStartDate(formatToInputDate(courseDetail.startDate));
             if (courseDetail.endDate) setEndDate(formatToInputDate(courseDetail.endDate));
 
-            setThemeColor(courseDetail.themeColor || 'purple');
+            let resolvedThemeColor = 'purple';
+
+            if (courseDetail.themeColor) {
+                const serverColor = courseDetail.themeColor.trim();
+
+                const isNameMatch = DEFAULT_THEME_COLORS.find(c => c.value === serverColor);
+
+                if (isNameMatch) {
+                    resolvedThemeColor = isNameMatch.value;
+                } else {
+                    const hexColor = serverColor.startsWith('#') ? serverColor : `#${serverColor}`;
+
+                    const isHexMatch = DEFAULT_THEME_COLORS.find(
+                        c => c.base.toLowerCase() === hexColor.toLowerCase()
+                    );
+
+                    if (isHexMatch) {
+                        resolvedThemeColor = isHexMatch.value;
+                    } else if (hexColor.toUpperCase() === '#702DFF') {
+                        resolvedThemeColor = 'purple';
+                    } else {
+                        resolvedThemeColor = 'purple';
+                    }
+                }
+            }
+            setThemeColor(resolvedThemeColor);
+
             setIsHidden(courseDetail.isHidden || false);
             setExistingBackgroundUrl(courseDetail.backgroundUrl || null);
 
@@ -102,7 +129,9 @@ export const useEditCourse = () => {
         formData.append('classId', grade.trim());
         formData.append('startDate', formatToStrictISO(startDate));
         formData.append('endDate', formatToStrictISO(endDate));
+
         formData.append('themeColor', themeColor.trim());
+
         formData.append('isHidden', String(isHidden));
 
         if (coTeachers && coTeachers.length > 0) {
@@ -150,11 +179,15 @@ export const useEditCourse = () => {
         },
         data: {
             subjects: courseDetail?.subject
-                ? [{ value: courseDetail.subject.id, label: courseDetail.subject.name }]
-                : [],
+                ? [{ id: String(courseDetail.subject.id), name: courseDetail.subject.name }]
+                : courseDetail?.subjectId
+                    ? [{ id: String(courseDetail.subjectId), name: `Предмет` }]
+                    : [],
             classes: courseDetail?.class
-                ? [{ value: courseDetail.class.id, label: courseDetail.class.name }]
-                : [],
+                ? [{ id: String(courseDetail.class.id), name: courseDetail.class.name }]
+                : courseDetail?.classId
+                    ? [{ id: String(courseDetail.classId), name: `Клас` }]
+                    : [],
             teachers: teachersQuery?.data || [],
             students: studentsQuery?.data || [],
             isLoading: isCourseLoading || teachersQuery?.isLoading || studentsQuery?.isLoading
