@@ -59,9 +59,14 @@ export class CreateTaskDto {
   })
   @IsOptional()
   @Transform(({ value }) => {
-    if (!value || value === '') return undefined;
-    if (value === 'string' || (Array.isArray(value) && value.length === 1 && value[0] === 'string'))
-      return undefined;
+    if (value === undefined || value === null) return undefined;
+    if (value === '' || value === '[]') return [];
+    if (
+      value === 'string' ||
+      (Array.isArray(value) && value.length === 1 && value[0] === 'string')
+    ) {
+      return [];
+    }
 
     if (typeof value === 'string') {
       return value
@@ -133,9 +138,14 @@ export class UpdateTaskDto {
   })
   @IsOptional()
   @Transform(({ value }) => {
-    if (!value || value === '') return undefined;
-    if (value === 'string' || (Array.isArray(value) && value.length === 1 && value[0] === 'string'))
-      return undefined;
+    if (value === undefined || value === null) return undefined;
+    if (value === '' || value === '[]') return [];
+    if (
+      value === 'string' ||
+      (Array.isArray(value) && value.length === 1 && value[0] === 'string')
+    ) {
+      return [];
+    }
 
     if (typeof value === 'string') {
       return value
@@ -153,9 +163,14 @@ export class UpdateTaskDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @Transform(({ value }) => {
-    if (!value || value === '') return undefined;
-    if (value === 'string' || (Array.isArray(value) && value.length === 1 && value[0] === 'string'))
-      return undefined;
+    if (value === undefined || value === null) return undefined;
+    if (value === '' || value === '[]') return [];
+    if (
+      value === 'string' ||
+      (Array.isArray(value) && value.length === 1 && value[0] === 'string')
+    ) {
+      return [];
+    }
 
     if (typeof value === 'string') {
       return value
