@@ -29,6 +29,13 @@
     min-width: 0;
 }
 
+.fullWidthWrapper {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto 32px auto;
+    box-sizing: border-box;
+}
+
 .sidebarColumn {
     display: flex;
     flex-direction: column;

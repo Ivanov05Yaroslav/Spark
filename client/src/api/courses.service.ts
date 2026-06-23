@@ -8,6 +8,7 @@ import {
     CourseItemDto,
     CourseDetailDto
 } from '@/types/courses.types';
+import {ModuleDto} from "@/types/modules.types.ts";
 
 export const courseService = {
     getMySubjects: () => apiClient.get<SubjectDto[]>('/subjects/my').then(res => res.data),
@@ -37,5 +38,11 @@ export const courseService = {
         }).then(res => res.data),
 
     deleteCourse: (id: string) =>
-        apiClient.delete(`/courses/${id}`).then(res => res.data)
+        apiClient.delete(`/courses/${id}`).then(res => res.data),
+
+    getModulesByCourseId: (courseId: string) =>
+        apiClient.get<ModuleDto[]>(`/courses/${courseId}/modules`).then(res => res.data),
+
+    createModule: (courseId: string, title: string) =>
+        apiClient.post<ModuleDto>(`/courses/${courseId}/modules`, { title }).then(res => res.data),
 };

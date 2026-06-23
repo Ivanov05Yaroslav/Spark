@@ -51,18 +51,20 @@ export const CreatableSelect = ({
     };
 
     const handleCreateNewClick = () => {
+        if (disabled) return;
         setIsCreating(true);
         setIsOpen(false);
         onChange?.('');
     };
 
     const handleCancelCreate = () => {
+        if (disabled) return;
         setIsCreating(false);
         onChange?.('');
     };
 
     return (
-        <div className={`${styles.wrapper} ${className}`}>
+        <div className={`${styles.wrapper} ${className} ${disabled ? styles.wrapperDisabled : ''}`}>
             {label && <label className={styles.label}>{label}</label>}
 
             <div
@@ -70,7 +72,7 @@ export const CreatableSelect = ({
                 className={`${styles.container} ${isOpen && !isCreating ? styles.containerOpen : ''}`}
             >
                 {isCreating ? (
-                    <div className={styles.inputContainer}>
+                    <div className={`${styles.inputContainer} ${disabled ? styles.inputContainerDisabled : ''}`}>
                         <input
                             type="text"
                             className={styles.inputTrigger}
@@ -78,11 +80,13 @@ export const CreatableSelect = ({
                             onChange={(e) => onChange?.(e.target.value)}
                             placeholder="Введіть назву нового модуля"
                             autoFocus
+                            disabled={disabled}
                         />
                         <button
                             type="button"
                             className={styles.closeButton}
                             onClick={handleCancelCreate}
+                            disabled={disabled}
                         >
                             <CloseIcon />
                         </button>

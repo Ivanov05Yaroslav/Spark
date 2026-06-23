@@ -15,6 +15,12 @@ export const UploadFilesModal: React.FC<UploadFilesModalProps> = ({
                                                                       uploadedFiles,
                                                                       onFilesSelect
                                                                   }) => {
+
+    const handleFilesChange = (newFiles: File[]) => {
+        onFilesSelect(newFiles);
+        onClose();
+    };
+
     return (
         <ModalLayout
             isOpen={isOpen}
@@ -25,7 +31,7 @@ export const UploadFilesModal: React.FC<UploadFilesModalProps> = ({
         >
             <FileUpload
                 values={uploadedFiles}
-                onFilesChange={onFilesSelect}
+                onFilesChange={handleFilesChange}
                 showList={false}
                 height="200px"
             />

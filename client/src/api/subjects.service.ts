@@ -1,20 +1,13 @@
-import { MySubjectsResponseDTO } from '@/types/subjects.types.ts';
-import { apiClient } from '@/api/apiClient.ts';
+import { apiClient } from '@/api/apiClient';
+import {NushGradingGroupDto, SubjectDTO} from '@/types/subjects.types';
 
 export const subjectsService = {
+    getMySubjects: () =>
+        apiClient.get<SubjectDTO[]>('/subjects/my').then(res => res.data),
 
-    async getMySubjects(): Promise<MySubjectsResponseDTO> {
-        try {
-            const response = await apiClient.get<MySubjectsResponseDTO>('/subjects/my');
+    getSubjects: () =>
+        apiClient.get<SubjectDTO[]>(`/subjects`).then(res => res.data),
 
-            return response.data;
-
-        } catch (error: any) {
-            if (error.response && error.response.data) {
-                throw new Error(error.response.data.message || 'Щось пішло не так');
-            }
-
-            throw new Error('Помилка сервера. Спробуйте пізніше');
-        }
-    },
+    getGradingGroupsBySubject: (subjectId: string) =>
+        apiClient.get<NushGradingGroupDto[]>(`/subjects/${subjectId}/nus-groups`).then(res => res.data),
 };

@@ -24,8 +24,6 @@ interface TaskAttachmentsSectionProps {
         setIsUploadLinkModalOpen: (isOpen: boolean) => void;
         linkInput: string;
         setLinkInput: (value: string) => void;
-        linkNameInput: string;
-        setLinkNameInput: (value: string) => void;
         handleAddLink: (e: React.FormEvent) => void;
         handleRemoveLink: (indexToRemove: number) => void;
     };
@@ -36,27 +34,24 @@ export const TaskAttachmentsSection: React.FC<TaskAttachmentsSectionProps> = ({
                                                                                   linksState
                                                                               }) => {
     return (
-        <ContentCard title="Прикріпити (необов'язково)">
+        <ContentCard>
             {(filesState.uploadedFiles.length > 0 || linksState.uploadedLinks.length > 0) && (
                 <>
                     {filesState.uploadedFiles.map((file, index) => (
                         <FileCard
-                            key={`file-${file.name}-${index}`}
+                            key={`file-${index}`}
                             fileName={file.name}
                             onRemove={() => filesState.handleRemoveFile(index)}
                         />
                     ))}
 
-                    {linksState.uploadedLinks.map((link, index) => {
-                        const displayName = link.name ? `${link.name} (${link.url})` : link.url;
-                        return (
-                            <FileCard
-                                key={`link-${index}`}
-                                fileName={displayName}
-                                onRemove={() => linksState.handleRemoveLink(index)}
-                            />
-                        );
-                    })}
+                    {linksState.uploadedLinks.map((link, index) => (
+                        <FileCard
+                            key={`link-${index}`}
+                            fileName={link.url}
+                            onRemove={() => linksState.handleRemoveLink(index)}
+                        />
+                    ))}
                 </>
             )}
 
@@ -85,8 +80,6 @@ export const TaskAttachmentsSection: React.FC<TaskAttachmentsSectionProps> = ({
                 onClose={() => linksState.setIsUploadLinkModalOpen(false)}
                 linkInput={linksState.linkInput}
                 setLinkInput={linksState.setLinkInput}
-                linkNameInput={linksState.linkNameInput}
-                setLinkNameInput={linksState.setLinkNameInput}
                 onSubmit={linksState.handleAddLink}
             />
         </ContentCard>

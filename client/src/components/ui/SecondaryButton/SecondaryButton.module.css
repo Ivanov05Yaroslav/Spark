@@ -3,15 +3,24 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    width: 140px;
+    min-width: 140px;
+    max-width: fit-content;
+    padding: 0 16px;
     height: 42px;
     border: none;
-    background-color: rgba(112, 45, 255, 0.1);
+
+    --btn-color: rgba(112, 45, 255, 0.9);
+    --btn-color-hover: #702DFF;
+    --btn-bg: rgba(112, 45, 255, 0.1);
+    --btn-bg-hover: rgba(112, 45, 255, 0.18);
+    --btn-bg-active: rgba(112, 45, 255, 0.25);
+
+    background-color: var(--btn-bg);
     border-radius: 12px;
     font-family: 'Inter', sans-serif;
     font-size: 14px;
     font-weight: 500;
-    color: rgba(112, 45, 255, 0.9);
+    color: var(--btn-color);
     cursor: pointer;
     transition: all 0.15s ease;
     box-sizing: border-box;
@@ -19,12 +28,12 @@
 }
 
 .secondaryButton:hover:not(:disabled) {
-    background-color: rgba(112, 45, 255, 0.18);
-    color: #702DFF;
+    background-color: var(--btn-bg-hover);
+    color: var(--btn-color-hover);
 }
 
 .secondaryButton:active:not(:disabled) {
-    background-color: rgba(112, 45, 255, 0.25);
+    background-color: var(--btn-bg-active);
 }
 
 .secondaryButton:disabled {
@@ -38,7 +47,18 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 16px;
-    height: 16px;
-    color: inherit;
+}
+
+.contentWrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.iconWrapper svg,
+.contentWrapper svg {
+    width: 20px;
+    height: 20px;
+    display: block;
 }

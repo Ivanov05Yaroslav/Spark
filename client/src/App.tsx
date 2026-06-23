@@ -1,6 +1,6 @@
 import {BrowserRouter, Route, Routes} from "react-router-dom";
 import MainLayout from "./components/layout/MainLayout/MainLayout.tsx";
-import {CoursesPage, EditCoursePage} from "./pages/courses";
+import {CoursePage, CoursesPage, EditCoursePage} from "./pages/courses";
 import {ProfilePage} from "./pages/profile";
 import {
     EmailVerificationPage as AuthEmailVerificationPage,
@@ -16,7 +16,9 @@ import React from "react";
 import {ToastContainer} from "react-toastify";
 import {CreateCoursePage} from "@/pages/courses";
 // import {CreateAnnouncementPage, EditAnnouncementPage} from "@/features/announcements";
-import {CreateTaskPage} from "@/pages/tasks";
+import {CreateTaskPage, EditTaskPage} from "@/pages/tasks";
+import {CreateAnnouncementPage, EditAnnouncementPage} from "@/pages/announcements";
+import {AdminUserManagementPage} from "@/pages/administration";
 
 function App() {
 
@@ -55,8 +57,10 @@ function App() {
                     <Route path="/courses" element={<CoursesPage />} />
                     <Route path="/courses/create" element={<CreateCoursePage />} />
                     <Route path="/courses/:id/edit" element={<EditCoursePage />} />
+                    <Route path="/courses/:id" element={<CoursePage />} />
 
                     <Route path="/courses/:id/tasks/create" element={<CreateTaskPage />} />
+                    <Route path="/courses/:id/tasks/:taskId/edit" element={<EditTaskPage />} />
                     {/*/courses/:courseId/tasks — список всех тасок курса*/}
 
                     {/*/courses/:courseId/tasks/:taskId — просмотр конкретной таски*/}
@@ -65,10 +69,10 @@ function App() {
 
                     {/*/courses/:courseId/tasks/create — создание новой*/}
 
-                    {/*<Route path="/announcements/create" element={<CreateAnnouncementPage />} />*/}
-                    {/*<Route path="/announcements/:announcementId/edit" element={<EditAnnouncementPage />} />*/}
+                    <Route path="/courses/:id/announcements/create" element={<CreateAnnouncementPage />} />
+                    <Route path="/courses/:id/announcements/:announcementId/edit" element={<EditAnnouncementPage />} />
 
-
+                    <Route path="/admin" element={<AdminUserManagementPage />} />
 
 
 

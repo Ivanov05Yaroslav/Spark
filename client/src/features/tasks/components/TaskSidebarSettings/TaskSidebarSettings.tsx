@@ -1,38 +1,60 @@
 import React from 'react';
 import { ContentCard } from '@/components/ui/ContentCard/ContentCard.tsx';
-import { MultiSelectField } from "@/components/ui/MultiSelectField/MultiSelectField.tsx";
 import { DatePickerField } from '@/components/ui/DatePickerField/DatePickerField.tsx';
 import { CreatableSelect } from '@/components/ui/CreatableSelect/CreatableSelect.tsx';
 import { SelectField } from '@/components/ui/SelectField/SelectField.tsx';
 import { CustomCheckbox } from '@/components/ui/CustomCheckbox/CustomCheckbox.tsx';
-import { MODULE_OPTIONS, LEVEL_OPTIONS } from '@/libs/constants/tasks.constants';
 
 import styles from './TaskSidebarSettings.module.css';
 
+interface SelectOption {
+    value: string;
+    label: string;
+}
+
 interface TaskSidebarSettingsProps {
     formState: {
-        classes: string[];
-        setClasses: (value: string[]) => void;
         dueDate: string;
         setDueDate: (value: string) => void;
         module: string;
         setModule: (value: string) => void;
-        gradingGroup: string;
-        setGradingGroup: (value: string) => void;
+        nusGroup: string;
+        setNusGroup: (value: string) => void;
         hideTask: boolean;
         setHideTask: (value: boolean) => void;
     };
+    options: {
+        class: SelectOption | null;
+        subject: SelectOption | null;
+        modules: SelectOption[];
+        gradingGroups: SelectOption[];
+    };
+    isLoading?: boolean;
 }
 
-export const TaskSidebarSettings: React.FC<TaskSidebarSettingsProps> = ({ formState }) => {
+export const TaskSidebarSettings: React.FC<TaskSidebarSettingsProps> = ({
+                                                                            formState,
+                                                                            options,
+                                                                            isLoading
+                                                                        }) => {
     return (
-        <ContentCard>
-            <MultiSelectField
+        <ContentCard className={styles.sidebarCard}>
+            <SelectField
                 label="Клас"
-                options={LEVEL_OPTIONS}
-                value={formState.classes}
-                onChange={formState.setClasses}
-                placeholder="Оберіть клас"
+                options={options.class ? [options.class] : []}
+                value={options.class ? options.class.value : ''}
+                onChange={() => {}}
+                placeholder={isLoading ? "Завантаження..." : "Клас не вказано"}
+                disabled={true}
+            />
+
+            <SelectField
+                label="Предмет"
+                options={options.subject ? [options.subject] : []}
+                value={options.subject ? options.subject.value : ''}
+                onChange={() => {}}
+                placeholder={isLoading ? "Завантаження..." : "Предмет не вказано"}
+                disabled={true}
             />
 
             <DatePickerField
@@ -43,19 +65,21 @@ export const TaskSidebarSettings: React.FC<TaskSidebarSettingsProps> = ({ formSt
             />
 
             <CreatableSelect
-                options={MODULE_OPTIONS}
+                options={options.modules}
                 value={formState.module}
                 onChange={formState.setModule}
                 label="Тема"
-                placeholder="Оберіть тему"
+                placeholder={isLoading ? "Завантаження..." : "Оберіть тему"}
+                disabled={isLoading}
             />
 
             <SelectField
-                label="Група оцінювання"
-                options={LEVEL_OPTIONS}
-                value={formState.gradingGroup}
-                onChange={formState.setGradingGroup}
-                placeholder="Оберіть групу оцінювання"
+                label="Група оцінювання НУШ"
+                options={options.gradingGroups}
+                value={formState.nusGroup}
+                onChange={formState.setNusGroup}
+                placeholder={isLoading ? "Завантаження..." : "Оберіть групу результатів"}
+                disabled={isLoading}
             />
 
             <div className={styles.checkboxGroup}>

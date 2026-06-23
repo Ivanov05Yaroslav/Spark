@@ -1,10 +1,11 @@
 import React from 'react';
 import { PageHeader } from '@/components/ui/PageHeader/PageHeader';
+import { SimplePageHeader } from '@/components/ui/SimplePageHeader/SimplePageHeader';
 import styles from './TwoColumnContentLayout.module.css';
 
 interface TwoColumnContentLayoutProps {
     title: string;
-    onBack: () => void;
+    onBack?: () => void;
     children: React.ReactNode;
     sidebarContent: React.ReactNode;
     sidebarWidth?: string;
@@ -12,6 +13,9 @@ interface TwoColumnContentLayoutProps {
     headerButtonText?: string;
     onHeaderButtonClick?: () => void;
     isHeaderButtonDisabled?: boolean;
+
+    fullWidthContent?: React.ReactNode;
+    useSimpleHeader?: boolean;
 }
 
 export const TwoColumnContentLayout: React.FC<TwoColumnContentLayoutProps> = ({
@@ -24,17 +28,29 @@ export const TwoColumnContentLayout: React.FC<TwoColumnContentLayoutProps> = ({
                                                                                   headerButtonText,
                                                                                   onHeaderButtonClick,
                                                                                   isHeaderButtonDisabled = false,
+                                                                                  fullWidthContent,
+                                                                                  useSimpleHeader = false,
                                                                               }) => {
     return (
         <div className={styles.pageContainer}>
-            <PageHeader
-                title={title}
-                onBack={onBack}
-                showButton={showHeaderButton}
-                buttonText={headerButtonText}
-                onButtonClick={onHeaderButtonClick}
-                isButtonDisabled={isHeaderButtonDisabled}
-            />
+            {useSimpleHeader ? (
+                <SimplePageHeader title={title} />
+            ) : (
+                <PageHeader
+                    title={title}
+                    onBack={onBack}
+                    showButton={showHeaderButton}
+                    buttonText={headerButtonText}
+                    onButtonClick={onHeaderButtonClick}
+                    isButtonDisabled={isHeaderButtonDisabled}
+                />
+            )}
+
+            {fullWidthContent && (
+                <div className={styles.fullWidthWrapper}>
+                    {fullWidthContent}
+                </div>
+            )}
 
             <div className={styles.layoutWrapper}>
                 <div

@@ -135,7 +135,7 @@ export const FileUpload = ({
                         <FileCard
                             key={`${file.name}-${index}`}
                             fileName={file.name}
-                            previewUrl={URL.createObjectURL(file)}
+                            previewUrl={file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined}
                             onRemove={() => handleRemoveFile(index)}
                         />
                     ))}
