@@ -47,6 +47,31 @@ export class TasksService {
       }
     }
 
+    let finalModuleId = dto.courseModuleId || null;
+
+    if (dto.newModuleTitle && dto.newModuleTitle.trim() !== '') {
+      const cleanedTitle = dto.newModuleTitle.trim();
+
+      const existingModule = await this.prisma.courseModule.findFirst({
+        where: {
+          courseId: dto.courseId,
+          title: { equals: cleanedTitle, mode: 'insensitive' },
+        },
+      });
+
+      if (existingModule) {
+        finalModuleId = existingModule.id;
+      } else {
+        const newModule = await this.prisma.courseModule.create({
+          data: {
+            courseId: dto.courseId,
+            title: cleanedTitle,
+          },
+        });
+        finalModuleId = newModule.id;
+      }
+    }
+
     const attachments: string[] = [];
     if (files && files.length > 0) {
       for (const file of files) {
@@ -67,7 +92,7 @@ export class TasksService {
         description: dto.description,
         deadline: dto.deadline ? new Date(dto.deadline) : null,
         nusGroupId: dto.nusGroupId,
-        courseModuleId: dto.courseModuleId || null,
+        courseModuleId: finalModuleId,
         isHidden: dto.isHidden || false,
         attachments: attachments,
       },
@@ -117,7 +142,7 @@ export class TasksService {
       include: {
         creator: { select: { id: true, firstName: true, lastName: true } },
         nusGroup: true,
-        courseModule: { select: { id: true, title: true } }
+        courseModule: { select: { id: true, title: true } },
       },
     });
   }
@@ -128,7 +153,7 @@ export class TasksService {
       include: {
         course: { include: { students: true, coTeachers: true, class: true } },
         nusGroup: true,
-        courseModule: { select: { id: true, title: true } }
+        courseModule: { select: { id: true, title: true } },
       },
     });
     if (!task) throw new HttpException('Завдання не знайдено', HttpStatus.NOT_FOUND);
@@ -156,6 +181,31 @@ export class TasksService {
           'Помилка: Ця група результатів НУШ належить до іншого предмету!',
           HttpStatus.BAD_REQUEST,
         );
+      }
+    }
+
+    let finalModuleId = dto.courseModuleId !== undefined ? dto.courseModuleId : task.courseModuleId;
+
+    if (dto.newModuleTitle && dto.newModuleTitle.trim() !== '') {
+      const cleanedTitle = dto.newModuleTitle.trim();
+
+      const existingModule = await this.prisma.courseModule.findFirst({
+        where: {
+          courseId: task.courseId,
+          title: { equals: cleanedTitle, mode: 'insensitive' },
+        },
+      });
+
+      if (existingModule) {
+        finalModuleId = existingModule.id;
+      } else {
+        const newModule = await this.prisma.courseModule.create({
+          data: {
+            courseId: task.courseId,
+            title: cleanedTitle,
+          },
+        });
+        finalModuleId = newModule.id;
       }
     }
 
@@ -192,11 +242,11 @@ export class TasksService {
         description: dto.description,
         deadline: dto.deadline ? new Date(dto.deadline) : undefined,
         nusGroupId: dto.nusGroupId,
-        courseModuleId: dto.courseModuleId !== undefined ? dto.courseModuleId : undefined,
+        courseModuleId: finalModuleId,
         isHidden: dto.isHidden,
         attachments: finalAttachments,
       },
-      include: { nusGroup: true, courseModule: true},
+      include: { nusGroup: true, courseModule: true },
     });
   }
 

@@ -37,6 +37,15 @@ export class CreateTaskDto {
   @IsString()
   courseModuleId?: string;
 
+  @ApiProperty({
+    example: 'Вступ до геометрії',
+    required: false,
+    description: 'Назва нового модуля, якщо його потрібно створити разом із завданням',
+  })
+  @IsOptional()
+  @IsString()
+  newModuleTitle?: string;
+
   @ApiProperty({ required: false, default: false })
   @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)
@@ -96,6 +105,16 @@ export class UpdateTaskDto {
   @IsOptional()
   @IsString()
   courseModuleId?: string;
+
+  @ApiProperty({
+    example: 'Повторення матеріалу',
+    required: false,
+    description:
+      'Назва нового модуля, якщо його потрібно створити прямо під час редагування завдання',
+  })
+  @IsOptional()
+  @IsString()
+  newModuleTitle?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
