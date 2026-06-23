@@ -9,9 +9,6 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
-    /*content-visibility: auto;*/
-    /*contain-intrinsic-size: 320px;*/
-    /*will-change: transform;*/
 }
 
 .imageWrapper {
@@ -25,6 +22,12 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+.imagePlaceholder {
+    width: 100%;
+    height: 100%;
+    transition: background-color 0.2s ease;
 }
 
 .content {
@@ -41,11 +44,16 @@
 
 .title {
     margin: 0;
-    font-family: 'Inter', sans-serif;
     font-size: 16px;
     font-weight: 500;
-    color: #202020;
     line-height: 1.2;
+}
+
+.teacherInfo {
+    display: flex;
+    font-size: 14px;
+    align-items: center;
+    gap: 8px;
 }
 
 .footer {
@@ -53,46 +61,4 @@
     align-items: center;
     justify-content: space-between;
     margin-top: 4px;
-}
-
-.teacherInfo {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    object-fit: cover;
-}
-
-.teacherName {
-    font-family: 'Inter', sans-serif;
-    font-size: 14px;
-    font-weight: 400;
-    color: #202020;
-}
-
-.menuButton {
-    background: none;
-    border: none;
-    padding: 6px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    transition: background-color 0.2s ease;
-}
-
-.menuButton:hover {
-    background-color: #F5F5F5;
-}
-
-.menuIcon {
-    width: 20px;
-    height: 20px;
-    color: #202020;
 }

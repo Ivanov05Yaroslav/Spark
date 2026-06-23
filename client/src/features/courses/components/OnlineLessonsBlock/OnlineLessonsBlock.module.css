@@ -1,0 +1,84 @@
+.container {
+    background-color: #ffffff;
+    border: 1px solid #F3F4F6;
+    border-radius: 16px;
+    padding: 20px 24px;
+    width: 100%;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-black, #111827);
+}
+
+.addButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background-color: #F3F4F6;
+    color: #4B5563;
+    transition: all 0.2s ease;
+}
+
+.addButton:hover {
+    background-color: #E5E7EB;
+    color: #111827;
+}
+
+.plusIcon {
+    width: 16px;
+    height: 16px;
+}
+
+.linksList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.linkItem {
+    transition: transform 0.2s ease;
+}
+
+.linkItem:hover {
+    transform: translateX(4px);
+}
+
+.linkAnchor {
+    text-decoration: none;
+    display: block;
+    color: inherit;
+}
+
+.emptyState {
+    font-size: 14px;
+    color: #8E8E93;
+    text-align: center;
+    padding: 16px 0;
+    background-color: #F9FAFB;
+    border-radius: 12px;
+    border: 1px dashed #E5E7EB;
+}
+
+@media (max-width: 600px) {
+    .container {
+        padding: 16px;
+    }
+}

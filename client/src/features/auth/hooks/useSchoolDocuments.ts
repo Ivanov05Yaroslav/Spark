@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from '@/libs/configs/Toast.ts';
 import { authService } from '@/api/auth.service.ts';
-import { SubmitSchoolDocsRequestDTO } from '@/types/school.types.ts';
+import { SubmitSchoolDocsRequestDTO } from '@/types/auth.types.ts';
 
 export const useSchoolDocuments = (sessionId: string) => {
     const [passportFiles, setPassportFiles] = useState<File[]>([]);

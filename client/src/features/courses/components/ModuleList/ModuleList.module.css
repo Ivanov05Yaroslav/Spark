@@ -1,0 +1,25 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+}
+
+.emptyState {
+    text-align: center;
+    padding: 40px 20px;
+    background-color: #F9FAFB;
+    border: 1px dashed #D1D5DB;
+    border-radius: 16px;
+    color: #6B7280;
+    font-size: 15px;
+    font-family: 'Inter', sans-serif;
+}
+
+.emptyModule {
+    padding: 12px 0;
+    color: #9CA3AF;
+    font-size: 14px;
+    font-style: italic;
+    font-family: 'Inter', sans-serif;
+}

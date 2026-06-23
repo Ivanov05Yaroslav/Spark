@@ -8,6 +8,14 @@ export interface User {
     lastLoginAt: string;
     roles: string[];
     schoolId: string | null;
+    children: Child[];
+}
+
+export interface Child {
+    id: string;
+    firstName: string;
+    lastName: string;
+    middleName: string;
 }
 
 export interface LoginRequest {

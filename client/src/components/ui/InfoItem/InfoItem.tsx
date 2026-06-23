@@ -1,4 +1,5 @@
 import React from 'react';
+import { MoreButton } from '@/components/ui/MoreButton/MoreButton';
 import styles from './InfoItem.module.css';
 
 interface InfoItemProps {
@@ -7,6 +8,10 @@ interface InfoItemProps {
     subtitle?: string;
     variant?: 'info' | 'task';
     className?: string;
+
+    showMoreMenu?: boolean;
+    onEdit?: () => void;
+    onDelete?: () => void;
 }
 
 export const InfoItem: React.FC<InfoItemProps> = ({
@@ -14,7 +19,10 @@ export const InfoItem: React.FC<InfoItemProps> = ({
                                                       title,
                                                       subtitle,
                                                       variant = 'info',
-                                                      className = ''
+                                                      className = '',
+                                                      showMoreMenu = false,
+                                                      onEdit,
+                                                      onDelete
                                                   }) => {
     return (
         <div className={`${styles.container} ${className}`.trim()}>
@@ -26,6 +34,12 @@ export const InfoItem: React.FC<InfoItemProps> = ({
                 <span className={styles.topText}>{title}</span>
                 {subtitle && <span className={styles.bottomText}>{subtitle}</span>}
             </div>
+
+            {showMoreMenu && (
+                <div className={styles.moreMenuWrapper}>
+                    <MoreButton onEdit={onEdit} onDelete={onDelete} />
+                </div>
+            )}
         </div>
     );
 };

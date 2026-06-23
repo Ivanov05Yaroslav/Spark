@@ -1,3 +1,4 @@
-export { CoursesPage } from '@/pages/courses/CoursesPage/CoursesPage.tsx';
-export { CreateCoursePage } from '@/pages/courses/CreateCoursePage/CreateCoursePage.tsx';
-export { EditCoursePage } from '@/pages/courses/EditCoursePage/EditCoursePage.tsx';
+export { CoursesPage } from '@/pages/courses/CoursesPage/CoursesPage';
+export { CreateCoursePage } from '@/pages/courses/CreateCoursePage/CreateCoursePage';
+export { EditCoursePage } from '@/pages/courses/EditCoursePage/EditCoursePage';
+export { CoursePage } from '@/pages/courses/CoursePage/CoursePage';

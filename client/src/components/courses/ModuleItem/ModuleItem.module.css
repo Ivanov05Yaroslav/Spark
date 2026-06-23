@@ -1,0 +1,53 @@
+.container {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 0;
+    border-bottom: 1px solid #E5E7EB;
+    cursor: pointer;
+    background-color: transparent;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.container:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.container:first-child {
+    padding-top: 0;
+}
+
+.container:hover {
+    opacity: 0.7;
+}
+
+.container:active {
+    transform: scale(0.99);
+}
+
+.icon {
+    width: 24px;
+    height: 24px;
+    color: #111827;
+    flex-shrink: 0;
+}
+
+.textContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-family: 'Inter', sans-serif;
+}
+
+.title {
+    font-size: 15px;
+    font-weight: 500;
+    color: #111827;
+}
+
+.subtitle {
+    font-size: 12px;
+    font-weight: 400;
+    color: #6B7280;
+}

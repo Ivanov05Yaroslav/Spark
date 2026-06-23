@@ -1,0 +1,21 @@
+.container {
+    background-color: #ffffff;
+    border: 1px solid #F3F4F6;
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+}
+
+.title {
+    margin: 0 0 20px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.itemsList {
+    display: flex;
+    flex-direction: column;
+}
