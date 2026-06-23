@@ -184,4 +184,12 @@ export class UpdateTaskDto {
   @IsArray()
   @IsString({ each: true })
   links?: string[];
+
+  @ApiProperty({
+    type: 'array',
+    items: { type: 'string', format: 'binary' },
+    description: 'Нові файли-вкладення',
+    required: false,
+  })
+  files?: any[];
 }
