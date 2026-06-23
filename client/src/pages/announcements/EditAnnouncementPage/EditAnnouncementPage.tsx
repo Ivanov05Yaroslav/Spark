@@ -1,85 +1,46 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { CenteredFormLayout } from '@/components/layout/CenteredFormLayout/CenteredFormLayout.tsx';
-import { MultiSelectField } from '@/components/ui/MultiSelectField/MultiSelectField.tsx';
-import { Input } from '@/components/ui/Input/Input.tsx';
-import { TextAreaField } from '@/components/ui/TextAreaField/TextAreaField.tsx';
-import { PrimaryButton } from '@/components/ui/PrimaryButton/PrimaryButton.tsx';
+import { useEditAnnouncement } from '@/features/announcements/hooks/useEditAnnouncement';
+import { EditAnnouncementForm } from '@/features/announcements/components/EditAnnouncementForm/EditAnnouncementForm';
 
-const courseOptions = [
-    { value: 'course-1', label: 'Математика — 5 клас' },
-    { value: 'course-2', label: 'Англійська мова — 6 клас' },
-    { value: 'course-3', label: 'Природничі науки — 7 клас' },
-];
+import styles from './EditAnnouncementPage.module.css';
 
 export const EditAnnouncementPage = () => {
     const navigate = useNavigate();
+    const {
+        values,
+        handlers,
+        data,
+        isFormValid,
+        isLoadingData,
+        isSubmitting
+    } = useEditAnnouncement();
 
-    const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
-    const [topicName, setTopicName] = useState('');
-    const [text, setText] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-
-    const isSubmitDisabled = selectedCourses.length === 0 || !topicName.trim();
-
-    const handleSave = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        setIsLoading(true);
-        console.log('Updating announcement:', {
-            courses: selectedCourses,
-            topicName,
-            text
-        });
-
-        try {
-            navigate(-1);
-        } catch (error) {
-            console.error('Error updating announcement:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    if (isLoadingData) {
+        return (
+            <div className={styles.loaderContainer} style={{ textAlign: 'center', padding: '40px' }}>
+                Завантаження даних...
+            </div>
+        );
+    }
 
     return (
         <CenteredFormLayout
             title="РЕДАГУВАННЯ ОГОЛОШЕННЯ"
             onBack={() => navigate(-1)}
             showButton={true}
-            buttonText="Зберегти"
+            buttonText={isSubmitting ? "Збереження..." : "Зберегти"}
+            onButtonClick={() => handlers.handleUpdate()}
+            isButtonDisabled={!isFormValid || isSubmitting}
         >
-            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <MultiSelectField
-                    label="Курс"
-                    placeholder="Оберіть курс"
-                    options={courseOptions}
-                    value={selectedCourses}
-                    onChange={setSelectedCourses}
-                    disabled={true}
-                />
-
-                <Input
-                    label="Назва теми"
-                    placeholder="Введіть назву теми"
-                    value={topicName}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTopicName(e.target.value)}
-                />
-
-                <TextAreaField
-                    label="Текст"
-                    placeholder="Введіть текст (необов'язково)"
-                    value={text}
-                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setText(e.target.value)}
-                />
-
-                <PrimaryButton
-                    type="submit"
-                    disabled={isLoading || isSubmitDisabled}
-                >
-                    {isLoading ? 'ЗБЕРЕЖЕННЯ...' : 'ЗБЕРЕГТИ'}
-                </PrimaryButton>
-            </form>
+            <EditAnnouncementForm
+                values={values}
+                handlers={handlers}
+                data={data}
+                isSubmitting={isSubmitting}
+            />
         </CenteredFormLayout>
     );
 };
