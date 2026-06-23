@@ -1,0 +1,32 @@
+.bubbleContainer {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 16px;
+    padding: 16px 20px;
+    font-family: 'Inter', sans-serif;
+    max-width: 80%;
+    width: fit-content;
+    transition: border-radius 0.15s ease;
+}
+
+.left {
+    border-radius: 20px 20px 20px 4px;
+}
+
+.right {
+    border-radius: 20px 20px 4px 20px;
+}
+
+.text {
+    font-size: 16px;
+    line-height: 1.4;
+    color: #111827;
+    word-break: break-word;
+}
+
+.time {
+    font-size: 14px;
+    line-height: 1.4;
+    white-space: nowrap;
+    margin-bottom: 1px;
+}

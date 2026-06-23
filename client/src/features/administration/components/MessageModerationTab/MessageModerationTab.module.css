@@ -1,0 +1,29 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.emptyState {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6B7280;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    background-color: #F9FAFB;
+    border-radius: 12px;
+    border: 1px dashed #D1D5DB;
+}

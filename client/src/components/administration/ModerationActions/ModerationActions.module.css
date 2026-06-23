@@ -1,0 +1,13 @@
+.actionsStack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 160px;
+}
+
+.actionBtn {
+    width: 100% !important;
+    max-width: 100% !important;
+    justify-content: flex-start !important;
+    padding-left: 16px !important;
+}
