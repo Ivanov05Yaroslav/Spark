@@ -39,10 +39,11 @@ export const useCreateCourse = () => {
         onSuccess: (data: any) => {
             toast.success(data?.message || 'Курс успішно створено!');
             queryClient.invalidateQueries({ queryKey: ['courses'] });
-            navigate('/courses');
+            setTimeout(() => {
+                navigate('/courses');
+            }, 1500);
         },
         onError: (err: any) => {
-            console.error("Помилка при створенні курсу:", err);
             const serverErrorMessage = err?.response?.data?.message || err?.message || 'Помилка при створенні курсу';
             toast.error(serverErrorMessage);
         }

@@ -21,6 +21,17 @@
     margin-top: 16px;
 }
 
+.loaderContainer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 70vh;
+    width: 100%;
+    color: #7E7E7E;
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+}
+
 @media (max-width: 768px) {
     .contentGrid {
         grid-template-columns: 1fr;

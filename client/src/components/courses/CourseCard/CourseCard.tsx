@@ -1,11 +1,12 @@
 import React from 'react';
 import { Badge } from '../../ui/Badge/Badge.tsx';
 import { MoreButton } from '../../ui/MoreButton/MoreButton.tsx';
+import { DEFAULT_THEME_COLORS } from '@/libs/constants/courses.constants.ts';
 import styles from './CourseCard.module.css';
 
 interface CourseCardProps {
     title: string;
-    imageUrl: string;
+    imageUrl?: string | null;
     year: string;
     group?: string;
     studentsCount: number;
@@ -37,10 +38,29 @@ export const CourseCard: React.FC<CourseCardProps> = ({
         .toUpperCase()
         .slice(0, 2);
 
+    const foundColor = DEFAULT_THEME_COLORS.find(color => color.value === themeColor);
+
+    const finalHexColor = foundColor ? foundColor.base : (themeColor.startsWith('#') ? themeColor : '#B88BFF');
+
+    const placeholderStyle = { backgroundColor: finalHexColor };
+
     return (
         <div className={`${styles.card} ${styles[themeColor] || ''}`}>
             <div className={styles.imageWrapper}>
-                <img src={imageUrl} alt={title} className={styles.image} loading="lazy" decoding="async"/>
+                {imageUrl ? (
+                    <img
+                        src={imageUrl}
+                        alt={title}
+                        className={styles.image}
+                        loading="lazy"
+                        decoding="async"
+                    />
+                ) : (
+                    <div
+                        className={styles.imagePlaceholder}
+                        style={placeholderStyle}
+                    />
+                )}
             </div>
 
             <div className={styles.content}>

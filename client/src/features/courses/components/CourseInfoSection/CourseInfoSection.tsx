@@ -17,7 +17,8 @@ export const CourseInfoSection = ({ values, handlers, data = {} }: any) => {
         <>
             <SelectField
                 label="Предмет"
-                options={data.subjects}
+                placeholder="Оберіть предмет"
+                options={subjectOptions}
                 value={values.subject}
                 onChange={handlers.setSubject}
                 disabled={values.isEditMode}
@@ -25,14 +26,15 @@ export const CourseInfoSection = ({ values, handlers, data = {} }: any) => {
 
             <SelectField
                 label="Клас"
-                options={data.classes}
+                placeholder="Оберіть клас"
+                options={classOptions}
                 value={values.grade}
                 onChange={handlers.setGrade}
-                disabled={values.isEditMode}
+                disabled={isDataLoading || values.isEditMode}
             />
 
-            <div style={{display: 'flex', gap: '24px', width: '100%'}}>
-                <div style={{flex: 1}}>
+            <div style={{ display: 'flex', gap: '24px', width: '100%' }}>
+                <div style={{ flex: 1 }}>
                     <DatePickerField
                         label="Дата початку курсу"
                         value={values.startDate}
@@ -40,7 +42,7 @@ export const CourseInfoSection = ({ values, handlers, data = {} }: any) => {
                         placeholder="Оберіть дату"
                     />
                 </div>
-                <div style={{flex: 1}}>
+                <div style={{ flex: 1 }}>
                     <DatePickerField
                         label="Дата закінчення курсу"
                         value={values.endDate}
@@ -51,8 +53,8 @@ export const CourseInfoSection = ({ values, handlers, data = {} }: any) => {
             </div>
 
             <MultiSelectField
-                label="Співвикладач"
-                placeholder="Оберіть співвикладачів"
+                label="Співвикладачі"
+                placeholder="Оберіть вчителів"
                 options={teacherOptions}
                 value={values.coTeachers}
                 onChange={handlers.setCoTeachers}
