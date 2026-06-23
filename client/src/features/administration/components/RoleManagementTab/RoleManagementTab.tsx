@@ -1,10 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { SearchInput } from '@/components/ui/SearchInput/SearchInput';
 import { RoleManagementListItem } from '@/components/administration/RoleManagementListItem/RoleManagementListItem';
-import { DeleteUserModal } from '@/features/administration/components/DeleteUserModal/DeleteUserModal';
 import { ROLE_LABELS } from '@/libs/constants/users.constants';
 import { useRoleManagement } from '@/features/administration/hooks/useRoleManagement';
 import styles from './RoleManagementTab.module.css';
+import {ConfirmDeleteModal} from "@/components/modals/ConfirmDeleteModal/ConfirmDeleteModal.tsx";
 
 const roleOptions = Object.entries(ROLE_LABELS)
     .filter(([key]) => key !== 'SUPER_ADMIN')
@@ -94,12 +94,13 @@ export const RoleManagementTab = () => {
                 )}
             </div>
 
-            <DeleteUserModal
+            <ConfirmDeleteModal
                 isOpen={deleteModal.isOpen}
                 onClose={deleteModal.onClose}
                 onConfirm={deleteModal.onConfirm}
-                userName={deleteModal.userName}
                 isDeleting={deleteModal.isDeleting}
+                title="Видалення користувача"
+                itemName={deleteModal.userName ? `користувача ${deleteModal.userName}` : 'цього користувача'}
             />
         </div>
     );

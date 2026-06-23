@@ -5,8 +5,8 @@ import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { courseService } from '@/api/courses.service';
 import { toast } from '@/libs/configs/Toast';
-import { DeleteCourseModal } from '@/features/courses/components/DeleteCourseModal/DeleteCourseModal';
 import { useStore } from '@/stores/useStore';
+import {ConfirmDeleteModal} from "@/components/modals/ConfirmDeleteModal/ConfirmDeleteModal.tsx";
 
 interface CoursesListProps {
     courses: any[];
@@ -146,12 +146,13 @@ export const CoursesList: React.FC<CoursesListProps> = ({
                 </div>
             </div>
 
-            <DeleteCourseModal
+            <ConfirmDeleteModal
                 isOpen={isDeleteModalOpen}
                 onClose={closeDeleteModal}
                 onConfirm={confirmDelete}
-                courseTitle={courseToDelete?.title}
                 isDeleting={deleteCourseMutation.isPending}
+                title="Видалення курсу"
+                itemName={courseToDelete?.title ? `курс «${courseToDelete.title}»` : 'цей курс'}
             />
         </>
     );
