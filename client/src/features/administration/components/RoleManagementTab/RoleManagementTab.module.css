@@ -1,0 +1,26 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.statusMessage {
+    text-align: center;
+    padding: 30px 20px;
+    color: #7E7E7E;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+}

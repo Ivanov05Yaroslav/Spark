@@ -1,0 +1,38 @@
+.contentGrid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 64px;
+    align-items: start;
+    width: 100%;
+}
+
+.formColumn {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #111;
+    font-weight: 600;
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    text-transform: uppercase;
+    user-select: none;
+    align-self: center;
+}
+
+@media (max-width: 1024px) {
+    .contentGrid {
+        grid-template-columns: 1fr;
+        gap: 32px;
+    }
+
+    .divider {
+        padding: 16px 0;
+        align-self: stretch;
+    }
+}

@@ -1,0 +1,1 @@
+export { AdminUserManagementPage } from '@/pages/administration/AdminUserManagementPage/AdminUserManagementPage';

@@ -15,7 +15,7 @@ interface FullNameInputProps {
 }
 
 export const FullNameInput: React.FC<FullNameInputProps> = ({
-                                                                label = "Повне ім'я",
+                                                                label = "ПІБ",
                                                                 firstName,
                                                                 middleName,
                                                                 lastName,

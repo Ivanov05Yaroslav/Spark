@@ -1,0 +1,131 @@
+.itemContainer {
+    display: grid;
+    grid-template-columns: 40px 1.2fr 1.5fr 240px 200px;
+    align-items: center;
+    gap: 24px;
+    padding: 16px 24px;
+    background-color: #ffffff;
+    border-bottom: 1px solid #f3f4f6;
+    transition: background-color 0.2s ease;
+    font-family: 'Inter', sans-serif;
+    border-radius: 20px;
+}
+
+.itemContainer:hover {
+    background-color: #f9fafb;
+}
+
+.avatarWrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.email {
+    font-size: 14px;
+    color: #6b7280;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.selectWrapper {
+    width: 100%;
+}
+
+.selectWrapper :global(.input-container),
+.selectWrapper :global(.select-wrapper) {
+    margin-bottom: 0 !important;
+    width: 100% !important;
+}
+
+.deleteButton {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+@media (max-width: 1024px) {
+    .itemContainer {
+        grid-template-columns: 40px 1fr 220px;
+        gap: 16px;
+        padding: 16px;
+    }
+
+    .name {
+        grid-column: 2;
+        white-space: normal;
+    }
+
+    .email {
+        grid-column: 2;
+        white-space: normal;
+        margin-top: -8px;
+    }
+
+    .selectWrapper {
+        grid-column: 3;
+        grid-row: 1 / span 2;
+    }
+
+    .deleteButton {
+        grid-column: 1 / span 3;
+        height: 38px;
+    }
+}
+
+@media (max-width: 600px) {
+    .itemContainer {
+        grid-template-columns: 40px 1fr;
+        grid-template-rows: auto auto auto auto;
+        gap: 12px;
+        padding: 16px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        margin-bottom: 4px;
+    }
+
+    .avatarWrapper {
+        grid-column: 1;
+        grid-row: 1 / span 2;
+        align-self: start;
+        margin-top: 2px;
+    }
+
+    .name {
+        grid-column: 2;
+        grid-row: 1;
+        font-size: 15px;
+    }
+
+    .email {
+        grid-column: 2;
+        grid-row: 2;
+        font-size: 13px;
+        margin-top: 0;
+    }
+
+    .selectWrapper {
+        grid-column: 1 / span 2;
+        grid-row: 3;
+        margin-top: 4px;
+    }
+
+    .deleteButton {
+        grid-column: 1 / span 2;
+        grid-row: 4;
+        height: 42px;
+    }
+}
