@@ -1,0 +1,17 @@
+.section {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.commentsList {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.divider {
+    height: 1px;
+    width: 100%;
+    margin: 16px 0;
+}

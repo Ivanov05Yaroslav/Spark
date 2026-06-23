@@ -1,0 +1,46 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.statusText {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.statusAssigned {
+    color: #702DFF;
+}
+
+.statusLate {
+    color: #9F0712;
+}
+
+.badge {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    background-color: #F8F5FF;
+    padding: 4px 12px;
+    border-radius: 8px;
+}
+
+.grade {
+    font-size: 16px;
+    font-weight: 500;
+    color: #702DFF;
+}
+
+.divider {
+    font-size: 14px;
+    font-weight: 500;
+    color: #702DFF;
+    margin: 0 2px;
+}
+
+.maxGrade {
+    font-size: 14px;
+    font-weight: 500;
+    color: #702DFF;
+}

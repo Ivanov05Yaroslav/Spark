@@ -1,7 +1,7 @@
 import React from 'react';
 import { ContentCard } from '@/components/ui/ContentCard/ContentCard';
 import { FileCard } from '@/components/ui/FileCard/FileCard';
-import { IconActionButton } from '@/components/tasks/IconActionButton/IconActionButton';
+import { IconActionButton } from '@/components/ui/IconActionButton/IconActionButton';
 import UploadIcon from '@/assets/upload.svg?react';
 import LinkIcon from '@/assets/link.svg?react';
 

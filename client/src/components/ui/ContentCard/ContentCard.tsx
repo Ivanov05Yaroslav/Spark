@@ -3,7 +3,8 @@ import styles from './ContentCard.module.css';
 
 interface ContentCardProps {
     title?: string;
-    headerRight?: React.ReactNode;
+    headerRightText?: string;
+    headerRightComponent?: React.ReactNode;
     children: React.ReactNode;
     className?: string;
     noPadding?: boolean;
@@ -11,25 +12,39 @@ interface ContentCardProps {
 
 export const ContentCard: React.FC<ContentCardProps> = ({
                                                             title,
-                                                            headerRight,
+                                                            headerRightText,
+                                                            headerRightComponent,
                                                             children,
                                                             className = '',
                                                             noPadding = false,
                                                         }) => {
-    const hasHeader = Boolean(title || headerRight);
+    const hasHeader = Boolean(title || headerRightText || headerRightComponent);
 
     return (
-        <div className={`${styles.card} ${className}`}>
+        <div className={`${styles.card} ${className} ${noPadding ? styles.noPadding : ''}`}>
             {hasHeader && (
                 <div className={styles.header}>
                     {title && <h3 className={styles.title}>{title}</h3>}
-                    {headerRight && <div className={styles.headerRight}>{headerRight}</div>}
+
+                    {(headerRightText || headerRightComponent) && (
+                        <div className={styles.headerRight}>
+                            {headerRightText && (
+                                <span className={styles.headerRightText}>
+                                    {headerRightText}
+                                </span>
+                            )}
+                            {headerRightComponent && (
+                                <div className={styles.headerRightComponent}>
+                                    {headerRightComponent}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             )}
 
             <div className={`
                 ${styles.body} 
-                ${noPadding ? styles.noPadding : ''} 
                 ${!hasHeader ? styles.bodyWithoutHeader : ''}
             `}>
                 {children}

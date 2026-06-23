@@ -16,7 +16,7 @@ import React from "react";
 import {ToastContainer} from "react-toastify";
 import {CreateCoursePage} from "@/pages/courses";
 // import {CreateAnnouncementPage, EditAnnouncementPage} from "@/features/announcements";
-import {CreateTaskPage, EditTaskPage} from "@/pages/tasks";
+import {CreateTaskPage, EditTaskPage, TaskDetailsPage} from "@/pages/tasks";
 import {CreateAnnouncementPage, EditAnnouncementPage} from "@/pages/announcements";
 import {AdminUserManagementPage} from "@/pages/administration";
 
@@ -60,6 +60,7 @@ function App() {
                     <Route path="/courses/:id" element={<CoursePage />} />
 
                     <Route path="/courses/:id/tasks/create" element={<CreateTaskPage />} />
+                    <Route path="/courses/:id/tasks/:taskId" element={<TaskDetailsPage />} />
                     <Route path="/courses/:id/tasks/:taskId/edit" element={<EditTaskPage />} />
                     {/*/courses/:courseId/tasks — список всех тасок курса*/}
 

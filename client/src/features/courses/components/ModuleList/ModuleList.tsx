@@ -1,5 +1,5 @@
 import React from 'react';
-import { CourseModule } from '@/components/courses/CourseModule/CourseModule';
+import { ModuleBlock } from '@/components/ui/ModuleBlock/ModuleBlock';
 import { ModuleItem } from '@/components/courses/ModuleItem/ModuleItem';
 
 import LinkIcon from '@/assets/link.svg?react';
@@ -15,7 +15,7 @@ export interface ModuleItemData {
     id: string;
     type: MaterialType;
     title: string;
-    subtitle?: string; // Например "Due: March 25"
+    subtitle?: string;
 }
 
 export interface ModuleData {
@@ -51,7 +51,7 @@ export const ModuleList: React.FC<ModuleListProps> = ({ modules, onItemClick }) 
     return (
         <div className={styles.container}>
             {modules.map((module) => (
-                <CourseModule key={module.id} title={module.title}>
+                <ModuleBlock key={module.id} title={module.title}>
                     {module.items.length > 0 ? (
                         module.items.map((item) => (
                             <ModuleItem
@@ -67,7 +67,7 @@ export const ModuleList: React.FC<ModuleListProps> = ({ modules, onItemClick }) 
                             У цьому модулі поки немає матеріалів
                         </div>
                     )}
-                </CourseModule>
+                </ModuleBlock>
             ))}
         </div>
     );

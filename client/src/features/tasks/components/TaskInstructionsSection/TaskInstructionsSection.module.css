@@ -1,0 +1,52 @@
+.description {
+    font-size: 15px;
+    line-height: 1.6;
+    color: #374151;
+}
+
+.description p {
+    margin: 0 0 16px 0;
+}
+
+.description p:last-child {
+    margin-bottom: 0;
+}
+
+.noDescription {
+    color: #9CA3AF;
+    font-style: italic;
+}
+
+.attachmentsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+    width: 100%;
+    margin-top: 24px;
+}
+
+.attachmentLink {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    outline: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+@media (hover: hover) {
+    .attachmentLink:hover {
+        transform: translateY(-2px);
+    }
+}
+
+@media (max-width: 480px) {
+    .description {
+        font-size: 14px;
+    }
+
+    .attachmentsGrid {
+        grid-template-columns: 1fr;
+        margin-top: 20px;
+        gap: 10px;
+    }
+}
