@@ -96,7 +96,10 @@ export class TasksService {
         isHidden: dto.isHidden || false,
         attachments: attachments,
       },
-      include: { nusGroup: true, courseModule: true },
+      include: {
+        nusGroup: true,
+        courseModule: { select: { id: true, title: true, createdAt: true } },
+      },
     });
 
     if (!task.isHidden) {
@@ -246,7 +249,10 @@ export class TasksService {
         isHidden: dto.isHidden,
         attachments: finalAttachments,
       },
-      include: { nusGroup: true, courseModule: true },
+      include: {
+        nusGroup: true,
+        courseModule: { select: { id: true, title: true, createdAt: true } },
+      },
     });
   }
 

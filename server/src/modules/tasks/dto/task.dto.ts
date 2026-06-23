@@ -63,7 +63,12 @@ export class CreateTaskDto {
     if (value === 'string' || (Array.isArray(value) && value.length === 1 && value[0] === 'string'))
       return undefined;
 
-    if (typeof value === 'string') return [value];
+    if (typeof value === 'string') {
+      return value
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
     if (Array.isArray(value)) return value;
     return undefined;
   })
@@ -132,7 +137,12 @@ export class UpdateTaskDto {
     if (value === 'string' || (Array.isArray(value) && value.length === 1 && value[0] === 'string'))
       return undefined;
 
-    if (typeof value === 'string') return [value];
+    if (typeof value === 'string') {
+      return value
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
     if (Array.isArray(value)) return value;
     return undefined;
   })
@@ -147,7 +157,12 @@ export class UpdateTaskDto {
     if (value === 'string' || (Array.isArray(value) && value.length === 1 && value[0] === 'string'))
       return undefined;
 
-    if (typeof value === 'string') return [value];
+    if (typeof value === 'string') {
+      return value
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
     if (Array.isArray(value)) return value;
     return undefined;
   })
