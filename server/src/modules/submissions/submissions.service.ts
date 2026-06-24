@@ -74,6 +74,47 @@ export class SubmissionsService {
     };
   }
 
+  async getMySubmissionForTask(studentId: string, taskId: string) {
+    const task = await this.prisma.task.findUnique({
+      where: { id: taskId },
+      include: { course: { include: { students: true } } },
+    });
+
+    if (!task) {
+      throw new HttpException('Завдання не знайдено', HttpStatus.NOT_FOUND);
+    }
+
+    const isStudent = task.course.students.some((s) => s.studentId === studentId);
+    if (!isStudent) {
+      throw new HttpException('Ви не є учасником цього курсу', HttpStatus.FORBIDDEN);
+    }
+
+    const submission = await this.prisma.submission.findFirst({
+      where: {
+        taskId: taskId,
+        studentId: studentId,
+      },
+    });
+
+    if (!submission) {
+      return null;
+    }
+
+    const signedAttachments = await Promise.all(
+      submission.attachments.map(async (url) => {
+        if (url.includes('amazonaws.com')) {
+          return await this.awsS3Service.generatePresignedUrl(url);
+        }
+        return url;
+      }),
+    );
+
+    return {
+      ...submission,
+      attachments: signedAttachments,
+    };
+  }
+
   async getSubmissionsByTask(teacherId: string, taskId: string, query: GetSubmissionsQueryDto) {
     const task = await this.prisma.task.findUnique({
       where: { id: taskId },

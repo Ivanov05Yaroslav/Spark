@@ -45,6 +45,13 @@ export class SubmissionsController {
     return this.submissionsService.submitTask(studentId, dto, files);
   }
 
+  @ApiOperation({ summary: 'Отримати мою здану роботу для конкретного завдання' })
+  @Roles('STUDENT')
+  @Get('/task/:taskId/my')
+  async getMySubmission(@GetUser('id') studentId: string, @Param('taskId') taskId: string) {
+    return this.submissionsService.getMySubmissionForTask(studentId, taskId);
+  }
+
   @ApiOperation({ summary: 'Отримати всі здані роботи до ЗАВДАННЯ (Тільки Вчитель)' })
   @Roles('TEACHER')
   @Get('/task/:taskId/all')

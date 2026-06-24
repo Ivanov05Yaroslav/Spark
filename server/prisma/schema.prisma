@@ -66,15 +66,16 @@ model User {
   enrolledCourses CourseStudent[]
 
   // Зв'язки: Контент та оцінки
-  announcements  Announcement[]
-  materials      Material[]
-  tasks          Task[]
-  tests          Test[]
-  submissions    Submission[]
-  comments       Comment[]
-  givenGrades    Gradebook[]    @relation("TeacherGrades")
-  receivedGrades Gradebook[]    @relation("StudentGrades")
-  attendances    Attendance[]
+  announcements   Announcement[]
+  materials       Material[]
+  tasks           Task[]
+  tests           Test[]
+  submissions     Submission[]
+  writtenComments Comment[]      @relation("CommentAuthor")
+  targetComments  Comment[]      @relation("CommentTarget")
+  givenGrades     Gradebook[]    @relation("TeacherGrades")
+  receivedGrades  Gradebook[]    @relation("StudentGrades")
+  attendances     Attendance[]
 
   // Зв'язки: Комунікація
   sentNotifications     Notification[] @relation("SentNotifications")
@@ -317,6 +318,7 @@ model Task {
   courseModule CourseModule? @relation(fields: [courseModuleId], references: [id], onDelete: SetNull)
   submissions  Submission[]
   gradebooks   Gradebook[]
+  comments     Comment[]
 
   @@map("tasks")
 }
@@ -342,6 +344,7 @@ model Test {
   questions    Question[]
   submissions  Submission[]
   gradebooks   Gradebook[]
+  comments     Comment[]
 
   @@map("tests")
 }
@@ -380,23 +383,26 @@ model Submission {
   score       String?
   attachments String[]
 
-  task     Task?     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  test     Test?     @relation(fields: [testId], references: [id], onDelete: Cascade)
-  student  User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  comments Comment[]
+  task    Task? @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  test    Test? @relation(fields: [testId], references: [id], onDelete: Cascade)
+  student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@map("submissions")
 }
 
 model Comment {
-  id           String   @id @default(uuid())
-  submissionId String
-  authorId     String
-  content      String
-  createdAt    DateTime @default(now())
+  id              String   @id @default(uuid())
+  authorId        String
+  targetStudentId String
+  content         String
+  createdAt       DateTime @default(now())
+  taskId          String?
+  testId          String?
 
-  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-  author     User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author        User  @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  targetStudent User  @relation("CommentTarget", fields: [targetStudentId], references: [id], onDelete: Cascade)
+  task          Task? @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  test          Test? @relation(fields: [testId], references: [id], onDelete: Cascade)
 
   @@map("comments")
 }
