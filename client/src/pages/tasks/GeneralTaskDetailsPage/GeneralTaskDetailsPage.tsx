@@ -6,7 +6,7 @@ import { TaskSubmissionSection } from '@/features/tasks/components/TaskSubmissio
 import { TaskCommentsSection } from '@/features/tasks/components/TaskCommentsSection/TaskCommentsSection';
 import { useTaskInstructions } from '@/features/tasks/hooks/useTaskInstructions';
 
-export const TaskDetailsPage: React.FC = () => {
+export const GeneralTaskDetailsPage: React.FC = () => {
     const navigate = useNavigate();
     const handleBack = () => navigate(-1);
 
@@ -77,12 +77,11 @@ export const TaskDetailsPage: React.FC = () => {
                 />
             }
         >
-            <TaskInstructionsSection task={task} />
+            <TaskInstructionsSection />
 
             <TaskCommentsSection
                 comments={comments}
                 onAddComment={handleAddComment}
-                onReplyComment={handleReplyComment}
             />
         </TwoColumnContentLayout>
     );

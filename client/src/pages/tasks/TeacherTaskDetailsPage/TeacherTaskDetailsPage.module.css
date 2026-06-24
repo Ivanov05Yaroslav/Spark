@@ -1,0 +1,130 @@
+.pageContainer {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.tabsWrapper {
+    margin-bottom: 24px;
+}
+
+.content {
+    width: 100%;
+}
+
+.tableCard {
+    background: #ffffff;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.tableHeader {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    padding: 16px 24px;
+    background: #F9FAFB;
+    border-bottom: 1px solid #E5E7EB;
+    font-weight: 600;
+    color: #4B5563;
+    font-size: 14px;
+}
+
+.tableRow {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    padding: 16px 24px;
+    border-bottom: 1px solid #F3F4F6;
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.tableRow:hover {
+    background-color: #F9FAFB;
+}
+
+.tableRow:last-child {
+    border-bottom: none;
+}
+
+.studentName {
+    font-weight: 500;
+    color: #111827;
+}
+
+.status {
+    font-size: 13px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 6px;
+    width: fit-content;
+}
+
+.graded { background: #EEE6FF; color: #702DFF; }
+.turnedin { background: #E1FBF2; color: #00B37E; }
+.assigned { background: #F3F4F6; color: #6B7280; }
+.missing { background: #FEE2E2; color: #EF4444; }
+
+.grade {
+    font-weight: 600;
+    color: #111827;
+}
+
+.centered {
+    display: flex;
+    justify-content: center;
+    padding: 64px;
+    color: #6B7280;
+}
+
+.centeredError {
+    display: flex;
+    justify-content: center;
+    padding: 64px;
+    color: #EF4444;
+    font-weight: 500;
+}
+
+.studentsTabContainer {
+    display: flex;
+    align-items: flex-start;
+    gap: 24px;
+    width: 100%;
+}
+
+.studentsListWrapper {
+    width: 450px;
+    flex-shrink: 0;
+}
+
+.reviewPanelWrapper {
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.emptySelection {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    background-color: #F9FAFB;
+    border-radius: 12px;
+    color: #6B7280;
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+}
+
+@media (max-width: 900px) {
+    .studentsTabContainer {
+        flex-direction: column;
+    }
+
+    .studentsListWrapper {
+        width: 100%;
+    }
+
+    .reviewPanelWrapper {
+        width: 100%;
+    }
+}

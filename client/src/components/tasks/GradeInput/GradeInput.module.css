@@ -1,0 +1,68 @@
+.container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.label {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: #111827;
+}
+
+.inputWrapper {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    background-color: #FFFFFF;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    width: fit-content;
+}
+
+.inputWrapper:focus-within {
+    border-color: #702DFF;
+    box-shadow: 0 0 0 2px rgba(112, 45, 255, 0.1);
+}
+
+.inputWrapper.disabled {
+    background-color: #F9FAFB;
+    cursor: not-allowed;
+    border-color: #E5E7EB;
+}
+
+.input {
+    width: 28px;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #111827;
+    text-align: right;
+    padding: 0;
+    margin-right: 4px;
+    -moz-appearance: textfield;
+}
+
+.input::-webkit-outer-spin-button,
+.input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.input:disabled {
+    cursor: not-allowed;
+}
+
+.maxGradeText {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: #6B7280;
+    white-space: nowrap;
+    user-select: none;
+}

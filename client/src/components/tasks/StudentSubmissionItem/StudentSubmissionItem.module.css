@@ -1,0 +1,122 @@
+.container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: transparent;
+    width: 100%;
+    box-sizing: border-box;
+    cursor: pointer;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #F3F4F6;
+    transition: background-color 0.2s ease;
+}
+
+.container:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.container:hover {
+    background-color: #F9FAFB;
+}
+
+.leftSection {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex: 1;
+    min-width: 0;
+}
+
+.avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.avatarPlaceholder {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background-color: #F3E8FF;
+    color: #702DFF;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 16px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    flex-shrink: 0;
+}
+
+.studentName {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.3;
+    word-break: break-word;
+}
+
+.rightSection {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.gradeText {
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    min-width: 24px;
+    text-align: right;
+}
+
+.chevron {
+    width: 18px;
+    height: 18px;
+    color: #9CA3AF;
+    flex-shrink: 0;
+}
+
+.statusBadge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 9999px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    white-space: nowrap;
+}
+
+.container.active {
+    background-color: #F5F3FF;
+}
+
+.container.active:hover {
+    background-color: #EDE9FE;
+}
+
+.statusDot { width: 4px; height: 4px; border-radius: 50%; flex-shrink: 0; }
+.statusTurnedIn { background-color: #ECFDF5; color: #059669; }
+.dotTurnedIn { background-color: #10B981; }
+.statusAssigned { background-color: #F3F4F6; color: #4B5563; }
+.dotAssigned { background-color: #6B7280; }
+.statusMissing { background-color: #FEF2F2; color: #DC2626; }
+.dotMissing { background-color: #EF4444; }
+
+@media (max-width: 640px) {
+    .container {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    .rightSection {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}

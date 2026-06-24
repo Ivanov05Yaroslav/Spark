@@ -10,6 +10,7 @@ interface PageHeaderProps {
     buttonText?: string;
     onButtonClick?: () => void;
     isButtonDisabled?: boolean;
+    showBottomBorder?: boolean;
 }
 
 export const PageHeader = ({
@@ -18,10 +19,11 @@ export const PageHeader = ({
                                showButton = false,
                                buttonText = 'Create',
                                onButtonClick,
-                               isButtonDisabled = false
+                               isButtonDisabled = false,
+                               showBottomBorder = true
                            }: PageHeaderProps) => {
     return (
-        <div className={styles.headerContainer}>
+        <div className={`${styles.headerContainer} ${!showBottomBorder ? styles.noBorder : ''}`}>
             <div className={styles.leftSection}>
                 <button type="button" onClick={onBack} className={styles.backBtn} aria-label="Go back">
                     <ArrowLeftIcon className={styles.icon} />
