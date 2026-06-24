@@ -265,7 +265,7 @@ export class TestsService {
       include: {
         creator: { select: { id: true, firstName: true, lastName: true } },
         _count: { select: { questions: true } },
-        courseModule: { select: { id: true, title: true } }
+        courseModule: { select: { id: true, title: true } },
       },
     });
   }
@@ -344,6 +344,7 @@ export class TestsService {
         testId,
         studentId,
         score: totalScore.toString(),
+        duration: dto.duration,
         checkedAt: new Date(),
         attachments: [],
       },

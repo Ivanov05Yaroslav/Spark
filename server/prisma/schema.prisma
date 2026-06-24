@@ -381,6 +381,7 @@ model Submission {
   submittedAt DateTime  @default(now())
   checkedAt   DateTime?
   score       String?
+  duration    Int?
   attachments String[]
 
   task    Task? @relation(fields: [taskId], references: [id], onDelete: Cascade)

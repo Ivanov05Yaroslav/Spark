@@ -209,4 +209,13 @@ export class SubmitTestDto {
   @ValidateNested({ each: true })
   @Type(() => AnswerSelectionDto)
   answers!: AnswerSelectionDto[];
+
+  @ApiProperty({
+    example: 120,
+    description: 'Час, витрачений на проходження тесту (у секундах)',
+    required: false,
+  })
+  @IsOptional()
+  @IsInt()
+  duration?: number;
 }
