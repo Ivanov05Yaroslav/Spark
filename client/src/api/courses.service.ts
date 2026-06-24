@@ -42,7 +42,4 @@ export const courseService = {
 
     getModulesByCourseId: (courseId: string) =>
         apiClient.get<ModuleDto[]>(`/courses/${courseId}/modules`).then(res => res.data),
-
-    createModule: (courseId: string, title: string) =>
-        apiClient.post<ModuleDto>(`/courses/${courseId}/modules`, { title }).then(res => res.data),
 };

@@ -107,28 +107,36 @@ export const CreatableSelect = ({
                         </button>
 
                         {isOpen && !disabled && (
-                            <ul className={styles.dropdown}>
-                                {options.map((option) => {
-                                    const isActive = option.value === value;
-                                    return (
-                                        <li
-                                            key={option.value}
-                                            className={`${styles.option} ${isActive ? styles.optionActive : ''}`}
-                                            onClick={() => handleOptionClick(option.value)}
-                                        >
-                                            {option.label}
-                                        </li>
-                                    );
-                                })}
-                                {options.length > 0 && <div className={styles.divider} />}
-                                <li
-                                    className={`${styles.option} ${styles.createNewOption}`}
-                                    onClick={handleCreateNewClick}
-                                >
-                                    + Створити нову
-                                </li>
-                            </ul>
+                            <div className={styles.dropdown}>
+
+                                <ul className={styles.optionsList}>
+                                    {options.map((option) => {
+                                        const isActive = option.value === value;
+                                        return (
+                                            <li
+                                                key={option.value}
+                                                className={`${styles.option} ${isActive ? styles.optionActive : ''}`}
+                                                onClick={() => handleOptionClick(option.value)}
+                                            >
+                                                {option.label}
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+
+                                <div className={styles.stickyFooter}>
+                                    {options.length > 0 && <div className={styles.divider} />}
+                                    <div
+                                        className={`${styles.option} ${styles.createNewOption}`}
+                                        onClick={handleCreateNewClick}
+                                    >
+                                        +  Створити нову
+                                    </div>
+                                </div>
+
+                            </div>
                         )}
+
                     </>
                 )}
             </div>

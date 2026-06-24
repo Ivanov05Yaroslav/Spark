@@ -1,0 +1,90 @@
+.answerWrapper {
+    width: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.inputContainer {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+}
+
+.customInput {
+    width: 100%;
+    margin: 0;
+}
+
+.statusButton {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.statusButton:hover {
+    background-color: #F3F4F6;
+}
+
+.statusButton:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+.icon {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    user-select: none;
+}
+
+.deleteButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9CA3AF;
+    border-radius: 8px;
+    max-width: 0;
+    padding: 0;
+    margin-left: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-width 0.3s ease, opacity 0.3s ease, padding 0.3s ease, margin-left 0.3s ease;
+}
+
+.deleteIcon {
+    width: 20px;
+    height: 20px;
+    color: inherit;
+    flex-shrink: 0;
+}
+
+.answerWrapper:hover .deleteButton,
+.answerWrapper:focus-within .deleteButton {
+    max-width: 40px;
+    padding: 8px;
+    margin-left: 8px;
+    opacity: 1;
+}
+
+.deleteButton:hover {
+    background-color: #FEE2E2;
+    color: #EF4444;
+}
+
+.deleteButton:active {
+    transform: scale(0.95);
+}

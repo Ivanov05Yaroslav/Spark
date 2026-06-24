@@ -1,0 +1,82 @@
+.cardWrapper {
+    width: 100%;
+    transition: all 0.2s ease;
+    border-radius: 12px;
+}
+
+.activeCard {
+     box-shadow: 0 0 0 1px #702DFF;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.topRow {
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+}
+
+.questionInput {
+    flex: 3;
+    margin: 0;
+}
+
+.typeSelect {
+    flex: 1;
+    margin: 0;
+}
+
+.answersGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    width: 100%;
+}
+
+.addOptionBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: none;
+    color: #702DFF;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+    padding: 8px 0;
+    width: fit-content;
+    transition: opacity 0.2s ease, transform 0.1s ease;
+    margin-top: -4px;
+}
+
+.addOptionBtn:hover {
+    opacity: 0.8;
+}
+
+.addOptionBtn:active {
+    transform: scale(0.98);
+}
+
+.plusIcon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    color: inherit;
+}
+
+@media (max-width: 768px) {
+    .topRow {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .answersGrid {
+        grid-template-columns: 1fr;
+    }
+}

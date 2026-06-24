@@ -16,9 +16,10 @@ import React from "react";
 import {ToastContainer} from "react-toastify";
 import {CreateCoursePage} from "@/pages/courses";
 // import {CreateAnnouncementPage, EditAnnouncementPage} from "@/features/announcements";
-import {CreateTaskPage, EditTaskPage, GeneralTaskDetailsPage, TeacherTaskDetailsPage} from "@/pages/tasks";
+import {CreateTaskPage, EditTaskPage, GeneralTaskDetailsPage} from "@/pages/tasks";
 import {CreateAnnouncementPage, EditAnnouncementPage} from "@/pages/announcements";
 import {AdminUserManagementPage} from "@/pages/administration";
+import {CreateTestPage, EditTestPage} from "@/pages/tests";
 
 function App() {
 
@@ -60,16 +61,12 @@ function App() {
                     <Route path="/courses/:id" element={<CoursePage />} />
 
                     <Route path="/courses/:id/tasks/create" element={<CreateTaskPage />} />
-                    {/*<Route path="/courses/:id/tasks/:taskId" element={<GeneralTaskDetailsPage />} />*/}
-                    <Route path="/courses/:id/tasks/:taskId" element={<TeacherTaskDetailsPage />} />
+                    <Route path="/courses/:id/tasks/:taskId" element={<GeneralTaskDetailsPage />} />
+                    {/*<Route path="/courses/:id/tasks/:taskId" element={<TeacherTaskDetailsPage />} />*/}
                     <Route path="/courses/:id/tasks/:taskId/edit" element={<EditTaskPage />} />
-                    {/*/courses/:courseId/tasks — список всех тасок курса*/}
 
-                    {/*/courses/:courseId/tasks/:taskId — просмотр конкретной таски*/}
-
-                    {/*/courses/:courseId/tasks/:taskId/edit — редактирование таски*/}
-
-                    {/*/courses/:courseId/tasks/create — создание новой*/}
+                    <Route path="/courses/:id/tests/create" element={<CreateTestPage />} />
+                    <Route path="/courses/:id/tests/:testId/edit" element={<EditTestPage />} />
 
                     <Route path="/courses/:id/announcements/create" element={<CreateAnnouncementPage />} />
                     <Route path="/courses/:id/announcements/:announcementId/edit" element={<EditAnnouncementPage />} />

@@ -55,6 +55,21 @@
     outline: none;
 }
 
+.triggerDisabled {
+    background-color: #F5F5F5;
+    color: #A0A0A0;
+    cursor: not-allowed;
+    border-color: #EAEAEA;
+}
+
+.triggerDisabled .arrow {
+    color: #D0D0D0;
+}
+
+.placeholderText {
+    color: #B5B5B5;
+}
+
 .arrow {
     flex-shrink: 0;
     width: 16px;
@@ -69,39 +84,41 @@
 
 .dropdown {
     position: absolute;
-    top: calc(100% + 6px);
+    top: 100%;
     left: 0;
-    min-width: 100%;
-    max-width: 100%;
-    max-height: 180px;
-    overflow-y: auto;
-    overflow-x: hidden;
+    width: 100%;
     background-color: #ffffff;
-    border: 1px solid rgba(204, 204, 204, 0.8);
+    border: 1px solid #EAEAEA;
     border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    padding: 6px 0;
-    margin: 0;
-    list-style: none;
-    z-index: 100;
-    box-sizing: border-box;
+    margin-top: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    z-index: 10;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
-.dropdown::-webkit-scrollbar {
+.optionsList {
+    list-style: none;
+    margin: 0;
+    padding: 8px 0;
+    max-height: 136px;
+    overflow-y: auto;
+}
+
+.optionsList::-webkit-scrollbar {
     width: 6px;
 }
-
-.dropdown::-webkit-scrollbar-track {
+.optionsList::-webkit-scrollbar-track {
     background: transparent;
 }
-
-.dropdown::-webkit-scrollbar-thumb {
+.optionsList::-webkit-scrollbar-thumb {
     background: #EAEAEA;
     border-radius: 4px;
 }
-
-.dropdown::-webkit-scrollbar-thumb:hover {
-    background: #CCCCCC;
+.optionsList::-webkit-scrollbar-thumb:hover {
+    background: #D1D5DB;
 }
 
 .option {
@@ -112,6 +129,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    line-height: 20px;
 }
 
 .option:hover {
@@ -123,19 +141,26 @@
     font-weight: 500;
 }
 
-.triggerDisabled {
-    background-color: #F5F5F5;
-    color: #A0A0A0;
-    cursor: not-allowed;
-    border-color: #EAEAEA;
+.stickyFooter {
+    background-color: #F9FAFB;
+    width: 100%;
+    flex-shrink: 0;
 }
 
-.triggerDisabled .arrow {
-    color: #D0D0D0;
+.divider {
+    height: 1px;
+    background-color: #EAEAEA;
+    width: 100%;
+    margin: 0;
 }
 
-.placeholderText {
-    color: #B5B5B5;
+.createNewOption {
+    color: #702DFF;
+    font-weight: 500;
+}
+
+.createNewOption:hover {
+    background-color: #F5F3FF;
 }
 
 .inputContainer {
@@ -185,19 +210,4 @@
 .closeButton svg {
     width: 16px;
     height: 16px;
-}
-
-.divider {
-    height: 1px;
-    background-color: #EAEAEA;
-    margin: 4px 0;
-}
-
-.createNewOption {
-    color: #702DFF;
-    font-weight: 500;
-}
-
-.createNewOption:hover {
-    background-color: #F5F3FF;
 }
