@@ -1,0 +1,89 @@
+.navigationButtons {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+}
+
+button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 42px;
+    border-radius: 12px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    width: 140px;
+    font-size: 14px;
+    font-weight: 400;
+}
+
+.leftButton {
+    border: 1px solid #EAEAEA;
+    background-color: #FFFFFF;
+    color: #5F5F5F;
+    cursor: pointer;
+}
+
+.leftButton .arrowIcon {
+    color: #5F5F5F;
+}
+
+.leftButton:hover {
+    border-color: #D1D5DB;
+    background-color: #FAFAFA;
+    color: #1F2937;
+}
+
+.leftButton:hover .arrowIcon {
+    transform: translateX(-4px);
+    color: #1F2937;
+}
+
+.leftButton:active {
+    background-color: #F3F4F6;
+}
+
+.leftButton .arrowIcon path {
+    stroke: #5F5F5F;
+    transition: fill 0.2s ease, stroke 0.2s ease;
+}
+
+.leftButton:hover .arrowIcon path {
+    stroke: #1F2937;
+}
+
+.rightButton {
+    --btn-color: rgba(112, 45, 255, 0.9);
+    --btn-color-hover: #702DFF;
+    --btn-bg: rgba(112, 45, 255, 0.1);
+    --btn-bg-hover: rgba(112, 45, 255, 0.18);
+    --btn-bg-active: rgba(112, 45, 255, 0.25);
+    background-color: var(--btn-bg);
+    color: var(--btn-color);
+    cursor: pointer;
+}
+
+.rightButton:hover {
+    background-color: var(--btn-bg-hover);
+    color: var(--btn-color-hover);
+}
+
+.rightButton:active {
+    background-color: var(--btn-bg-active);
+}
+
+.arrowIcon {
+    width: 20px;
+    height: 20px;
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.rightButton .arrowIcon {
+    color: #702DFF;
+}
+
+.rightButton:hover .arrowIcon {
+    transform: translateX(4px);
+    color: #702DFF;
+}

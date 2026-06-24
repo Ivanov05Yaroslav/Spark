@@ -1,0 +1,19 @@
+.container {
+    display: inline-flex;
+    align-items: center;
+    background-color: #DCD0FC;
+    color: #702DFF;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 400;
+    height: 42px;
+}
+
+.text {
+    line-height: 1.2;
+}
+
+.timeValue {
+    font-weight: 500;
+}

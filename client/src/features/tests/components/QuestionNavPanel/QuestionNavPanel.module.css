@@ -1,0 +1,11 @@
+.panel {
+    width: 100%;
+    /* max-width: 320px; */
+}
+
+.gridContainer {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 44px);
+    gap: 12px;
+    justify-content: start;
+}

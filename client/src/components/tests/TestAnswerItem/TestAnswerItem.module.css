@@ -1,0 +1,88 @@
+.wrapper {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    cursor: pointer;
+    user-select: none;
+    font-family: 'Inter', sans-serif;
+    width: 100%;
+}
+
+.disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.hiddenInput {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    margin: 0;
+}
+
+.control {
+    width: 24px;
+    height: 24px;
+    background-color: #F8F9FA;
+    border: 1px solid #D1D5DB;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease-in-out;
+    flex-shrink: 0;
+}
+
+.control.checked {
+    background-color: #EADFFF;
+    border-color: #EADFFF;
+}
+
+.hiddenInput:focus-visible + .control {
+    outline: 2px solid #702DFF;
+    outline-offset: 2px;
+}
+
+.checkbox {
+    border-radius: 6px;
+}
+
+.icon {
+    width: 14px;
+    height: 14px;
+    color: #702DFF;
+}
+
+.radio {
+    border-radius: 50%;
+}
+
+.radioDot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background-color: #702DFF;
+}
+
+.textContainer {
+    flex-grow: 1;
+    height: 42px;
+    padding: 8px 16px;
+    border: 1px solid #EAEAEA;
+    border-radius: 12px;
+    background-color: #ffffff;
+    font-size: 14px;
+    color: #757575;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+}
+
+.wrapper:hover:not(.disabled) .textContainer {
+    border-color: #D1D5DB;
+    background-color: #FAFAFA;
+}
+
+.textContainerChecked {
+    color: #202020;
+}

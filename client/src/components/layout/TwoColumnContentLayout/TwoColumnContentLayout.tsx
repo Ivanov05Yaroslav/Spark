@@ -13,6 +13,7 @@ interface TwoColumnContentLayoutProps {
     headerButtonText?: string;
     onHeaderButtonClick?: () => void;
     isHeaderButtonDisabled?: boolean;
+    headerRightComponent?: React.ReactNode;
 
     fullWidthContent?: React.ReactNode;
     useSimpleHeader?: boolean;
@@ -27,14 +28,18 @@ export const TwoColumnContentLayout: React.FC<TwoColumnContentLayoutProps> = ({
                                                                                   showHeaderButton = false,
                                                                                   headerButtonText,
                                                                                   onHeaderButtonClick,
-                                                                                  isHeaderButtonDisabled = false,
+                                                                                  isHeaderButtonDisabled,
+                                                                                  headerRightComponent,
                                                                                   fullWidthContent,
                                                                                   useSimpleHeader = false,
                                                                               }) => {
     return (
         <div className={styles.pageContainer}>
             {useSimpleHeader ? (
-                <SimplePageHeader title={title} />
+                <SimplePageHeader
+                    title={title}
+                    rightComponent={headerRightComponent}
+                />
             ) : (
                 <PageHeader
                     title={title}
@@ -43,6 +48,7 @@ export const TwoColumnContentLayout: React.FC<TwoColumnContentLayoutProps> = ({
                     buttonText={headerButtonText}
                     onButtonClick={onHeaderButtonClick}
                     isButtonDisabled={isHeaderButtonDisabled}
+                    rightComponent={headerRightComponent}
                 />
             )}
 

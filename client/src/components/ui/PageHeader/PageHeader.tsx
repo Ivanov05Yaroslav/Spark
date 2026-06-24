@@ -11,6 +11,7 @@ interface PageHeaderProps {
     onButtonClick?: () => void;
     isButtonDisabled?: boolean;
     showBottomBorder?: boolean;
+    rightComponent?: React.ReactNode;
 }
 
 export const PageHeader = ({
@@ -20,7 +21,8 @@ export const PageHeader = ({
                                buttonText = 'Create',
                                onButtonClick,
                                isButtonDisabled = false,
-                               showBottomBorder = true
+                               showBottomBorder = true,
+                               rightComponent
                            }: PageHeaderProps) => {
     return (
         <div className={`${styles.headerContainer} ${!showBottomBorder ? styles.noBorder : ''}`}>
@@ -33,7 +35,9 @@ export const PageHeader = ({
             <h1 className={styles.title}>{title}</h1>
 
             <div className={styles.rightSection}>
-                {showButton && (
+                {rightComponent ? (
+                    rightComponent
+                ) : showButton && (
                     <SecondaryButton
                         onClick={onButtonClick}
                         disabled={isButtonDisabled}

@@ -1,0 +1,24 @@
+.questionCard {
+    width: 100%;
+}
+
+.content {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    font-family: 'Inter', sans-serif;
+}
+
+.questionText {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 400;
+    color: #202020;
+    line-height: 1.5;
+}
+
+.optionsList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}

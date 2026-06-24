@@ -1,0 +1,42 @@
+.card {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    padding: 0;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.unanswered {
+    background-color: #ffffff;
+    border: 1px solid #EAEAEA;
+    color: #B5B5B5;
+}
+
+.unanswered:hover {
+    border-color: #D1D5DB;
+    background-color: #FAFAFA;
+}
+
+.active {
+    background-color: #C5AAFE;
+    border: 1px solid #702DFF;
+    color: #702DFF;
+}
+
+.answered {
+    background-color: #DCD0FC;
+    border: none;
+    color: #702DFF;
+}
+
+.answered:hover {
+    border: 1px solid #702DFF;
+}
