@@ -94,12 +94,30 @@
     border-radius: 10px !important;
 }
 
-.thAttempt { width: 15%; }
-.thDate { width: 30%; }
-.thScore { width: 20%; }
-.thStatus { width: 20%; }
-.thAction { width: 15%; text-align: center; }
-.tdAction { text-align: center; }
+.thAttempt {
+    width: 15%;
+}
+
+.thDate {
+    width: 30%;
+}
+
+.thScore {
+    width: 20%;
+}
+
+.thStatus {
+    width: 20%;
+}
+
+.thAction {
+    width: 15%;
+    text-align: center;
+}
+
+.tdAction {
+    text-align: center;
+}
 
 .table {
     width: 100%;

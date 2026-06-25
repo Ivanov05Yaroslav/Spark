@@ -5,36 +5,35 @@ import { TestQuestionsList } from '@/features/tests/components/TestQuestionsList
 import { TestSettingsSidebar } from '@/features/tests/components/TestSettingsSidebar/TestSettingsSidebar.tsx';
 
 interface EditTestFormProps {
-    onBack: () => void;
+  onBack: () => void;
 }
 
 export const EditTestForm: React.FC<EditTestFormProps> = ({ onBack }) => {
-    const { id: testId } = useParams<{ id: string }>();
-    const [isSubmitting, setIsSubmitting] = useState(false);
+  const { id: testId } = useParams<{ id: string }>();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleUpdateTest = () => {
-        setIsSubmitting(true);
-        console.log('Оновлюємо тест...', { testId });
+  const handleUpdateTest = () => {
+    setIsSubmitting(true);
+    console.log('Оновлюємо тест...', { testId });
 
-        setTimeout(() => {
-            setIsSubmitting(false);
-        }, 1000);
-    };
+    setTimeout(() => {
+      setIsSubmitting(false);
+    }, 1000);
+  };
 
-    return (
-        <div>
-            {/*<TwoColumnContentLayout*/}
-            {/*    title="Редагувати тест"*/}
-            {/*    onBack={onBack}*/}
-            {/*    sidebarContent={<TestSettingsSidebar />}*/}
-            {/*    showHeaderButton={true}*/}
-            {/*    headerButtonText={isSubmitting ? "Збереження..." : "Зберегти зміни"}*/}
-            {/*    onHeaderButtonClick={handleUpdateTest}*/}
-            {/*    isHeaderButtonDisabled={isSubmitting}*/}
-            {/*>*/}
-            {/*    <TestQuestionsList />*/}
-            {/*</TwoColumnContentLayout>*/}
-        </div>
-
-    );
+  return (
+    <div>
+      {/*<TwoColumnContentLayout*/}
+      {/*    title="Редагувати тест"*/}
+      {/*    onBack={onBack}*/}
+      {/*    sidebarContent={<TestSettingsSidebar />}*/}
+      {/*    showHeaderButton={true}*/}
+      {/*    headerButtonText={isSubmitting ? "Збереження..." : "Зберегти зміни"}*/}
+      {/*    onHeaderButtonClick={handleUpdateTest}*/}
+      {/*    isHeaderButtonDisabled={isSubmitting}*/}
+      {/*>*/}
+      {/*    <TestQuestionsList />*/}
+      {/*</TwoColumnContentLayout>*/}
+    </div>
+  );
 };

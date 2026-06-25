@@ -8,39 +8,33 @@ import { EditAnnouncementForm } from '@/features/announcements/components/EditAn
 import styles from './EditAnnouncementPage.module.css';
 
 export const EditAnnouncementPage = () => {
-    const navigate = useNavigate();
-    const {
-        values,
-        handlers,
-        data,
-        isFormValid,
-        isLoadingData,
-        isSubmitting
-    } = useEditAnnouncement();
+  const navigate = useNavigate();
+  const { values, handlers, data, isFormValid, isLoadingData, isSubmitting } =
+    useEditAnnouncement();
 
-    if (isLoadingData) {
-        return (
-            <div className={styles.loaderContainer} style={{ textAlign: 'center', padding: '40px' }}>
-                Завантаження даних...
-            </div>
-        );
-    }
-
+  if (isLoadingData) {
     return (
-        <CenteredFormLayout
-            title="РЕДАГУВАННЯ ОГОЛОШЕННЯ"
-            onBack={() => navigate(-1)}
-            showButton={true}
-            buttonText={isSubmitting ? "Збереження..." : "Зберегти"}
-            onButtonClick={() => handlers.handleUpdate()}
-            isButtonDisabled={!isFormValid || isSubmitting}
-        >
-            <EditAnnouncementForm
-                values={values}
-                handlers={handlers}
-                data={data}
-                isSubmitting={isSubmitting}
-            />
-        </CenteredFormLayout>
+      <div className={styles.loaderContainer} style={{ textAlign: 'center', padding: '40px' }}>
+        Завантаження даних...
+      </div>
     );
+  }
+
+  return (
+    <CenteredFormLayout
+      title="РЕДАГУВАННЯ ОГОЛОШЕННЯ"
+      onBack={() => navigate(-1)}
+      showButton={true}
+      buttonText={isSubmitting ? 'Збереження...' : 'Зберегти'}
+      onButtonClick={() => handlers.handleUpdate()}
+      isButtonDisabled={!isFormValid || isSubmitting}
+    >
+      <EditAnnouncementForm
+        values={values}
+        handlers={handlers}
+        data={data}
+        isSubmitting={isSubmitting}
+      />
+    </CenteredFormLayout>
+  );
 };

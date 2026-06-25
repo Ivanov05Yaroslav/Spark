@@ -4,19 +4,17 @@ import { BulkUserImport } from '@/features/administration/components/UserManagem
 import styles from './UserManagementTab.module.css';
 
 export const UserManagementTab = () => {
-    return (
-        <div className={styles.contentGrid}>
-            <div className={styles.formColumn}>
-                <ManualUserCreation />
-            </div>
+  return (
+    <div className={styles.contentGrid}>
+      <div className={styles.formColumn}>
+        <ManualUserCreation />
+      </div>
 
-            <div className={styles.divider}>
-                АБО
-            </div>
+      <div className={styles.divider}>АБО</div>
 
-            <div className={styles.formColumn}>
-                <BulkUserImport />
-            </div>
-        </div>
-    );
+      <div className={styles.formColumn}>
+        <BulkUserImport />
+      </div>
+    </div>
+  );
 };

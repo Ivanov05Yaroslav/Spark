@@ -61,10 +61,25 @@
     width: fit-content;
 }
 
-.graded { background: #EEE6FF; color: #702DFF; }
-.turnedin { background: #E1FBF2; color: #00B37E; }
-.assigned { background: #F3F4F6; color: #6B7280; }
-.missing { background: #FEE2E2; color: #EF4444; }
+.graded {
+    background: #EEE6FF;
+    color: #702DFF;
+}
+
+.turnedin {
+    background: #E1FBF2;
+    color: #00B37E;
+}
+
+.assigned {
+    background: #F3F4F6;
+    color: #6B7280;
+}
+
+.missing {
+    background: #FEE2E2;
+    color: #EF4444;
+}
 
 .grade {
     font-weight: 600;

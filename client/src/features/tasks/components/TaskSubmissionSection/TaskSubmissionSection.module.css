@@ -16,10 +16,21 @@
     font-weight: 600;
 }
 
-.statusAssigned { color: #2563EB; }
-.statusTurnedIn { color: #059669; }
-.statusGraded { color: #4B5563; }
-.statusMissing { color: #DC2626; }
+.statusAssigned {
+    color: #2563EB;
+}
+
+.statusTurnedIn {
+    color: #059669;
+}
+
+.statusGraded {
+    color: #4B5563;
+}
+
+.statusMissing {
+    color: #DC2626;
+}
 
 .filesSection {
     display: flex;

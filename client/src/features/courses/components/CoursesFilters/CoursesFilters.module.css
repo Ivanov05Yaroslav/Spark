@@ -13,6 +13,7 @@
 .selectWrapper {
     flex-shrink: 0;
 }
+
 .checkboxWrapper {
     display: flex;
     align-items: center;

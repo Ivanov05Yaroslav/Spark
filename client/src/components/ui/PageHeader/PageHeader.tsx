@@ -4,48 +4,45 @@ import { SecondaryButton } from '@/components/ui/SecondaryButton/SecondaryButton
 import ArrowLeftIcon from '@/assets/arrowLeft.svg?react';
 
 interface PageHeaderProps {
-    title: string;
-    onBack?: () => void;
-    showButton?: boolean;
-    buttonText?: string;
-    onButtonClick?: () => void;
-    isButtonDisabled?: boolean;
-    showBottomBorder?: boolean;
-    rightComponent?: React.ReactNode;
+  title: string;
+  onBack?: () => void;
+  showButton?: boolean;
+  buttonText?: string;
+  onButtonClick?: () => void;
+  isButtonDisabled?: boolean;
+  showBottomBorder?: boolean;
+  rightComponent?: React.ReactNode;
 }
 
 export const PageHeader = ({
-                               title,
-                               onBack,
-                               showButton = false,
-                               buttonText = 'Create',
-                               onButtonClick,
-                               isButtonDisabled = false,
-                               showBottomBorder = true,
-                               rightComponent
-                           }: PageHeaderProps) => {
-    return (
-        <div className={`${styles.headerContainer} ${!showBottomBorder ? styles.noBorder : ''}`}>
-            <div className={styles.leftSection}>
-                <button type="button" onClick={onBack} className={styles.backBtn} aria-label="Go back">
-                    <ArrowLeftIcon className={styles.icon} />
-                </button>
-            </div>
+  title,
+  onBack,
+  showButton = false,
+  buttonText = 'Create',
+  onButtonClick,
+  isButtonDisabled = false,
+  showBottomBorder = true,
+  rightComponent,
+}: PageHeaderProps) => {
+  return (
+    <div className={`${styles.headerContainer} ${!showBottomBorder ? styles.noBorder : ''}`}>
+      <div className={styles.leftSection}>
+        <button type="button" onClick={onBack} className={styles.backBtn} aria-label="Go back">
+          <ArrowLeftIcon className={styles.icon} />
+        </button>
+      </div>
 
-            <h1 className={styles.title}>{title}</h1>
+      <h1 className={styles.title}>{title}</h1>
 
-            <div className={styles.rightSection}>
-                {rightComponent ? (
-                    rightComponent
-                ) : showButton && (
-                    <SecondaryButton
-                        onClick={onButtonClick}
-                        disabled={isButtonDisabled}
-                    >
-                        {buttonText}
-                    </SecondaryButton>
-                )}
-            </div>
-        </div>
-    );
+      <div className={styles.rightSection}>
+        {rightComponent
+          ? rightComponent
+          : showButton && (
+              <SecondaryButton onClick={onButtonClick} disabled={isButtonDisabled}>
+                {buttonText}
+              </SecondaryButton>
+            )}
+      </div>
+    </div>
+  );
 };

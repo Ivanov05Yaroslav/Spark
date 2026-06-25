@@ -6,29 +6,29 @@ import { TestSettingsSidebar } from '@/features/tests/components/TestSettingsSid
 import { useCreateTestForm } from '@/features/tests/hooks/useCreateTestForm';
 
 interface TestBuilderProps {
-    onBack: () => void;
+  onBack: () => void;
 }
 
 export const CreateTestForm: React.FC<TestBuilderProps> = ({ onBack }) => {
-    const { id: courseId } = useParams<{ id: string }>();
+  const { id: courseId } = useParams<{ id: string }>();
 
-    const { isSubmitting, onSubmitForm, sidebarProps, questionsProps } = useCreateTestForm(courseId);
+  const { isSubmitting, onSubmitForm, sidebarProps, questionsProps } = useCreateTestForm(courseId);
 
-    const handleSaveTest = () => {
-        onSubmitForm();
-    };
+  const handleSaveTest = () => {
+    onSubmitForm();
+  };
 
-    return (
-        <TwoColumnContentLayout
-            title="Створити тест"
-            onBack={onBack}
-            sidebarContent={<TestSettingsSidebar {...sidebarProps} />}
-            showHeaderButton={true}
-            headerButtonText={isSubmitting ? "Збереження..." : "Зберегти"}
-            onHeaderButtonClick={handleSaveTest}
-            isHeaderButtonDisabled={isSubmitting}
-        >
-            <TestQuestionsList {...questionsProps} />
-        </TwoColumnContentLayout>
-    );
+  return (
+    <TwoColumnContentLayout
+      title="Створити тест"
+      onBack={onBack}
+      sidebarContent={<TestSettingsSidebar {...sidebarProps} />}
+      showHeaderButton={true}
+      headerButtonText={isSubmitting ? 'Збереження...' : 'Зберегти'}
+      onHeaderButtonClick={handleSaveTest}
+      isHeaderButtonDisabled={isSubmitting}
+    >
+      <TestQuestionsList {...questionsProps} />
+    </TwoColumnContentLayout>
+  );
 };

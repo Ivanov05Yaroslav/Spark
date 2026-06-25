@@ -1,7 +1,12 @@
 <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M11.3391 8.13965H16.1516" stroke="#202020" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M5.84839 8.13965L6.53589 8.82715L8.59839 6.76465" stroke="#202020" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M11.3391 14.5566H16.1516" stroke="#202020" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M5.84839 14.5566L6.53589 15.2441L8.59839 13.1816" stroke="#202020" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M8.25004 20.1663H13.75C18.3334 20.1663 20.1667 18.333 20.1667 13.7497V8.24967C20.1667 3.66634 18.3334 1.83301 13.75 1.83301H8.25004C3.66671 1.83301 1.83337 3.66634 1.83337 8.24967V13.7497C1.83337 18.333 3.66671 20.1663 8.25004 20.1663Z" stroke="#202020" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M11.3391 8.13965H16.1516" stroke="#202020" stroke-width="1.5" stroke-linecap="round"
+          stroke-linejoin="round"/>
+    <path d="M5.84839 8.13965L6.53589 8.82715L8.59839 6.76465" stroke="#202020" stroke-width="1.5"
+          stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M11.3391 14.5566H16.1516" stroke="#202020" stroke-width="1.5" stroke-linecap="round"
+          stroke-linejoin="round"/>
+    <path d="M5.84839 14.5566L6.53589 15.2441L8.59839 13.1816" stroke="#202020" stroke-width="1.5"
+          stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M8.25004 20.1663H13.75C18.3334 20.1663 20.1667 18.333 20.1667 13.7497V8.24967C20.1667 3.66634 18.3334 1.83301 13.75 1.83301H8.25004C3.66671 1.83301 1.83337 3.66634 1.83337 8.24967V13.7497C1.83337 18.333 3.66671 20.1663 8.25004 20.1663Z"
+          stroke="#202020" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

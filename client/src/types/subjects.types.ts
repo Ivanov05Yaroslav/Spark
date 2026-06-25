@@ -1,14 +1,14 @@
 export interface SubjectDTO {
-    id: string;
-    name: string;
+  id: string;
+  name: string;
 }
 
 export interface MySubjectsResponseDTO {
-    subjects: SubjectDTO[];
+  subjects: SubjectDTO[];
 }
 
 export interface NushGradingGroupDto {
-    id: number;
-    name: string;
-    subjectId: number;
+  id: number;
+  name: string;
+  subjectId: number;
 }

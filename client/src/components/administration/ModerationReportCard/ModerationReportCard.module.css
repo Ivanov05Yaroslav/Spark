@@ -65,6 +65,7 @@
         grid-template-columns: 1fr;
         gap: 24px;
     }
+
     .actionsSection {
         border-left: none;
         padding-left: 0;

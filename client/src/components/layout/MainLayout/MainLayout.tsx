@@ -1,33 +1,33 @@
-import {useState} from "react";
-import styles from "../../../App.module.css";
-import Sidebar from "../Sidebar/Sidebar.tsx";
-import {Outlet} from "react-router-dom";
-import { NotificationsDrawer } from "../../../pages/notifications";
+import { useState } from 'react';
+import styles from '../../../App.module.css';
+import Sidebar from '../Sidebar/Sidebar.tsx';
+import { Outlet } from 'react-router-dom';
+import { NotificationsDrawer } from '../../../pages/notifications';
 
 const MainLayout = () => {
-    const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
-    const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
-    return (
-        <div className={styles.appContainer}>
-            <Sidebar
-                isExpanded={isSidebarExpanded}
-                setIsExpanded={setIsSidebarExpanded}
-                onOpenNotifications={() => setIsNotificationsOpen(true)}
-            />
+  return (
+    <div className={styles.appContainer}>
+      <Sidebar
+        isExpanded={isSidebarExpanded}
+        setIsExpanded={setIsSidebarExpanded}
+        onOpenNotifications={() => setIsNotificationsOpen(true)}
+      />
 
-            <main className={`${styles.mainContent} ${isSidebarExpanded ? styles.shifted : ''}`}>
-                <div className={styles.pageWrapper}>
-                    <Outlet/>
-                </div>
-            </main>
-
-            <NotificationsDrawer
-                isOpen={isNotificationsOpen}
-                onClose={() => setIsNotificationsOpen(false)}
-            />
+      <main className={`${styles.mainContent} ${isSidebarExpanded ? styles.shifted : ''}`}>
+        <div className={styles.pageWrapper}>
+          <Outlet />
         </div>
-    );
+      </main>
+
+      <NotificationsDrawer
+        isOpen={isNotificationsOpen}
+        onClose={() => setIsNotificationsOpen(false)}
+      />
+    </div>
+  );
 };
 
 export default MainLayout;

@@ -1,4 +1,4 @@
 export interface ClassDTO {
-    id: string;
-    name: string;
+  id: string;
+  name: string;
 }

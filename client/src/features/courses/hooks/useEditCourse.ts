@@ -8,192 +8,210 @@ import { formatToInputDate, formatToStrictISO } from '@/libs/utils/date';
 import { DEFAULT_THEME_COLORS } from '@/libs/constants/courses.constants';
 
 export const useEditCourse = () => {
-    const { id } = useParams<{ id: string }>();
-    const queryClient = useQueryClient();
-    const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
-    const [isInitialized, setIsInitialized] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-    const [subject, setSubject] = useState('');
-    const [grade, setGrade] = useState('');
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
-    const [coTeachers, setCoTeachers] = useState<string[]>([]);
+  const [subject, setSubject] = useState('');
+  const [grade, setGrade] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [coTeachers, setCoTeachers] = useState<string[]>([]);
 
-    const [isDivided, setIsDivided] = useState(false);
-    const [groupName, setGroupName] = useState('');
-    const [students, setStudents] = useState<string[]>([]);
+  const [isDivided, setIsDivided] = useState(false);
+  const [groupName, setGroupName] = useState('');
+  const [students, setStudents] = useState<string[]>([]);
 
-    const [themeColor, setThemeColor] = useState('purple');
-    const [backgroundFiles, setBackgroundFiles] = useState<File[]>([]);
-    const [existingBackgroundUrl, setExistingBackgroundUrl] = useState<string | null>(null);
-    const [isHidden, setIsHidden] = useState(false);
+  const [themeColor, setThemeColor] = useState('purple');
+  const [backgroundFiles, setBackgroundFiles] = useState<File[]>([]);
+  const [existingBackgroundUrl, setExistingBackgroundUrl] = useState<string | null>(null);
+  const [isHidden, setIsHidden] = useState(false);
 
-    const { data: courseDetail, isLoading: isCourseLoading } = useQuery({
-        queryKey: ['course', id],
-        queryFn: () => courseService.getCourseById(id!),
-        enabled: !!id,
-    });
+  const { data: courseDetail, isLoading: isCourseLoading } = useQuery({
+    queryKey: ['course', id],
+    queryFn: () => courseService.getCourseById(id!),
+    enabled: !!id,
+  });
 
-    useEffect(() => {
-        if (courseDetail && !isInitialized) {
-            setSubject(courseDetail.subject?.id ? String(courseDetail.subject.id) : '');
-            setGrade(courseDetail.class?.id ? String(courseDetail.class.id) : '');
+  useEffect(() => {
+    if (courseDetail && !isInitialized) {
+      setSubject(courseDetail.subject?.id ? String(courseDetail.subject.id) : '');
+      setGrade(courseDetail.class?.id ? String(courseDetail.class.id) : '');
 
-            if (courseDetail.startDate) setStartDate(formatToInputDate(courseDetail.startDate));
-            if (courseDetail.endDate) setEndDate(formatToInputDate(courseDetail.endDate));
+      if (courseDetail.startDate) setStartDate(formatToInputDate(courseDetail.startDate));
+      if (courseDetail.endDate) setEndDate(formatToInputDate(courseDetail.endDate));
 
-            let resolvedThemeColor = 'purple';
+      let resolvedThemeColor = 'purple';
 
-            if (courseDetail.themeColor) {
-                const serverColor = courseDetail.themeColor.trim();
+      if (courseDetail.themeColor) {
+        const serverColor = courseDetail.themeColor.trim();
 
-                const isNameMatch = DEFAULT_THEME_COLORS.find(c => c.value === serverColor);
+        const isNameMatch = DEFAULT_THEME_COLORS.find((c) => c.value === serverColor);
 
-                if (isNameMatch) {
-                    resolvedThemeColor = isNameMatch.value;
-                } else {
-                    const hexColor = serverColor.startsWith('#') ? serverColor : `#${serverColor}`;
+        if (isNameMatch) {
+          resolvedThemeColor = isNameMatch.value;
+        } else {
+          const hexColor = serverColor.startsWith('#') ? serverColor : `#${serverColor}`;
 
-                    const isHexMatch = DEFAULT_THEME_COLORS.find(
-                        c => c.base.toLowerCase() === hexColor.toLowerCase()
-                    );
+          const isHexMatch = DEFAULT_THEME_COLORS.find(
+            (c) => c.base.toLowerCase() === hexColor.toLowerCase(),
+          );
 
-                    if (isHexMatch) {
-                        resolvedThemeColor = isHexMatch.value;
-                    } else if (hexColor.toUpperCase() === '#702DFF') {
-                        resolvedThemeColor = 'purple';
-                    } else {
-                        resolvedThemeColor = 'purple';
-                    }
-                }
-            }
-            setThemeColor(resolvedThemeColor);
-
-            setIsHidden(courseDetail.isHidden || false);
-            setExistingBackgroundUrl(courseDetail.backgroundUrl || null);
-
-            if (courseDetail.coTeachers && courseDetail.coTeachers.length > 0) {
-                setCoTeachers(courseDetail.coTeachers.map((t: any) => t.id));
-            } else {
-                setCoTeachers([]);
-            }
-
-            if (courseDetail.groupName) {
-                setIsDivided(true);
-                const cleanGroupName = courseDetail.groupName.replace(/^Група\s+/i, '').trim();
-                setGroupName(cleanGroupName);
-
-                if (courseDetail.students && courseDetail.students.length > 0) {
-                    setStudents(courseDetail.students.map((s: any) => s.id));
-                }
-            } else {
-                setIsDivided(false);
-                setGroupName('');
-                setStudents([]);
-            }
-
-            setIsInitialized(true);
+          if (isHexMatch) {
+            resolvedThemeColor = isHexMatch.value;
+          } else if (hexColor.toUpperCase() === '#702DFF') {
+            resolvedThemeColor = 'purple';
+          } else {
+            resolvedThemeColor = 'purple';
+          }
         }
-    }, [courseDetail, isInitialized]);
+      }
+      setThemeColor(resolvedThemeColor);
 
-    const { teachersQuery, studentsQuery } = useCourseData(subject, grade);
+      setIsHidden(courseDetail.isHidden || false);
+      setExistingBackgroundUrl(courseDetail.backgroundUrl || null);
 
-    const handleIsDividedChange = (checked: boolean) => {
-        setIsDivided(checked);
-        if (!checked) {
-            setGroupName('');
-            setStudents([]);
+      if (courseDetail.coTeachers && courseDetail.coTeachers.length > 0) {
+        setCoTeachers(courseDetail.coTeachers.map((t: any) => t.id));
+      } else {
+        setCoTeachers([]);
+      }
+
+      if (courseDetail.groupName) {
+        setIsDivided(true);
+        const cleanGroupName = courseDetail.groupName.replace(/^Група\s+/i, '').trim();
+        setGroupName(cleanGroupName);
+
+        if (courseDetail.students && courseDetail.students.length > 0) {
+          setStudents(courseDetail.students.map((s: any) => s.id));
         }
-    };
+      } else {
+        setIsDivided(false);
+        setGroupName('');
+        setStudents([]);
+      }
 
-    const updateCourseMutation = useMutation({
-        mutationFn: (formData: FormData) => courseService.updateCourse(id!, formData),
-        onSuccess: () => {
-            toast.success("Курс успішно оновлено!");
-            queryClient.invalidateQueries({ queryKey: ['courses'] });
-            queryClient.invalidateQueries({ queryKey: ['course', id] });
-            setTimeout(() => {
-                navigate(-1);
-            }, 1500);
-        },
-        onError: () => {
-            toast.error("Сталася помилка при оновленні курсу");
-        }
-    });
+      setIsInitialized(true);
+    }
+  }, [courseDetail, isInitialized]);
 
-    const handleUpdate = () => {
-        const formData = new FormData();
+  const { teachersQuery, studentsQuery } = useCourseData(subject, grade);
 
-        formData.append('subjectId', subject.trim());
-        formData.append('classId', grade.trim());
-        formData.append('startDate', formatToStrictISO(startDate));
-        formData.append('endDate', formatToStrictISO(endDate));
+  const handleIsDividedChange = (checked: boolean) => {
+    setIsDivided(checked);
+    if (!checked) {
+      setGroupName('');
+      setStudents([]);
+    }
+  };
 
-        formData.append('themeColor', themeColor.trim());
+  const updateCourseMutation = useMutation({
+    mutationFn: (formData: FormData) => courseService.updateCourse(id!, formData),
+    onSuccess: () => {
+      toast.success('Курс успішно оновлено!');
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      queryClient.invalidateQueries({ queryKey: ['course', id] });
+      setTimeout(() => {
+        navigate(-1);
+      }, 1500);
+    },
+    onError: () => {
+      toast.error('Сталася помилка при оновленні курсу');
+    },
+  });
 
-        formData.append('isHidden', String(isHidden));
+  const handleUpdate = () => {
+    const formData = new FormData();
 
-        if (coTeachers && coTeachers.length > 0) {
-            formData.append('coTeacherIds', coTeachers.map(tId => tId.trim()).join(','));
-        }
+    formData.append('subjectId', subject.trim());
+    formData.append('classId', grade.trim());
+    formData.append('startDate', formatToStrictISO(startDate));
+    formData.append('endDate', formatToStrictISO(endDate));
 
-        if (isDivided) {
-            let finalGroupName = groupName.trim();
-            if (!finalGroupName) {
-                finalGroupName = 'Група 1';
-            } else if (!finalGroupName.toLowerCase().includes('груп')) {
-                finalGroupName = `Група ${finalGroupName}`;
-            }
-            formData.append('groupName', finalGroupName);
+    formData.append('themeColor', themeColor.trim());
 
-            if (students && students.length > 0) {
-                formData.append('studentIds', students.map(sId => sId.trim()).join(','));
-            }
-        }
+    formData.append('isHidden', String(isHidden));
 
-        if (backgroundFiles.length > 0) {
-            formData.append('backgroundImage', backgroundFiles[0]);
-        }
+    if (coTeachers && coTeachers.length > 0) {
+      formData.append('coTeacherIds', coTeachers.map((tId) => tId.trim()).join(','));
+    }
 
-        updateCourseMutation.mutate(formData);
-    };
+    if (isDivided) {
+      let finalGroupName = groupName.trim();
+      if (!finalGroupName) {
+        finalGroupName = 'Група 1';
+      } else if (!finalGroupName.toLowerCase().includes('груп')) {
+        finalGroupName = `Група ${finalGroupName}`;
+      }
+      formData.append('groupName', finalGroupName);
 
-    const isBaseValid = !!(subject && grade && startDate && endDate);
-    const isGroupValid = isDivided ? !!(groupName && students.length > 0) : true;
-    const isFormValid = isBaseValid && isGroupValid;
+      if (students && students.length > 0) {
+        formData.append('studentIds', students.map((sId) => sId.trim()).join(','));
+      }
+    }
 
-    return {
-        values: {
-            subject, grade, startDate, endDate, coTeachers,
-            isDivided, groupName, students, themeColor, backgroundFiles,
-            isHidden, existingBackgroundUrl,
-            isEditMode: true
-        },
-        handlers: {
-            setSubject, setGrade, setStartDate, setEndDate, setCoTeachers,
-            setIsDivided, setGroupName, setStudents,
-            handleIsDividedChange, handleUpdate,
-            setThemeColor, setBackgroundFiles,
-            setIsHidden, setExistingBackgroundUrl
-        },
-        data: {
-            subjects: courseDetail?.subject
-                ? [{ id: String(courseDetail.subject.id), name: courseDetail.subject.name }]
-                : courseDetail?.subjectId
-                    ? [{ id: String(courseDetail.subjectId), name: `Предмет` }]
-                    : [],
-            classes: courseDetail?.class
-                ? [{ id: String(courseDetail.class.id), name: courseDetail.class.name }]
-                : courseDetail?.classId
-                    ? [{ id: String(courseDetail.classId), name: `Клас` }]
-                    : [],
-            teachers: teachersQuery?.data || [],
-            students: studentsQuery?.data || [],
-            isLoading: isCourseLoading || teachersQuery?.isLoading || studentsQuery?.isLoading
-        },
-        isFormValid,
-        isCourseLoading,
-        isSubmitting: updateCourseMutation.isPending
-    };
+    if (backgroundFiles.length > 0) {
+      formData.append('backgroundImage', backgroundFiles[0]);
+    }
+
+    updateCourseMutation.mutate(formData);
+  };
+
+  const isBaseValid = !!(subject && grade && startDate && endDate);
+  const isGroupValid = isDivided ? !!(groupName && students.length > 0) : true;
+  const isFormValid = isBaseValid && isGroupValid;
+
+  return {
+    values: {
+      subject,
+      grade,
+      startDate,
+      endDate,
+      coTeachers,
+      isDivided,
+      groupName,
+      students,
+      themeColor,
+      backgroundFiles,
+      isHidden,
+      existingBackgroundUrl,
+      isEditMode: true,
+    },
+    handlers: {
+      setSubject,
+      setGrade,
+      setStartDate,
+      setEndDate,
+      setCoTeachers,
+      setIsDivided,
+      setGroupName,
+      setStudents,
+      handleIsDividedChange,
+      handleUpdate,
+      setThemeColor,
+      setBackgroundFiles,
+      setIsHidden,
+      setExistingBackgroundUrl,
+    },
+    data: {
+      subjects: courseDetail?.subject
+        ? [{ id: String(courseDetail.subject.id), name: courseDetail.subject.name }]
+        : courseDetail?.subjectId
+          ? [{ id: String(courseDetail.subjectId), name: `Предмет` }]
+          : [],
+      classes: courseDetail?.class
+        ? [{ id: String(courseDetail.class.id), name: courseDetail.class.name }]
+        : courseDetail?.classId
+          ? [{ id: String(courseDetail.classId), name: `Клас` }]
+          : [],
+      teachers: teachersQuery?.data || [],
+      students: studentsQuery?.data || [],
+      isLoading: isCourseLoading || teachersQuery?.isLoading || studentsQuery?.isLoading,
+    },
+    isFormValid,
+    isCourseLoading,
+    isSubmitting: updateCourseMutation.isPending,
+  };
 };

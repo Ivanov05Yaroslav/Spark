@@ -101,13 +101,39 @@
     background-color: #EDE9FE;
 }
 
-.statusDot { width: 4px; height: 4px; border-radius: 50%; flex-shrink: 0; }
-.statusTurnedIn { background-color: #ECFDF5; color: #059669; }
-.dotTurnedIn { background-color: #10B981; }
-.statusAssigned { background-color: #F3F4F6; color: #4B5563; }
-.dotAssigned { background-color: #6B7280; }
-.statusMissing { background-color: #FEF2F2; color: #DC2626; }
-.dotMissing { background-color: #EF4444; }
+.statusDot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.statusTurnedIn {
+    background-color: #ECFDF5;
+    color: #059669;
+}
+
+.dotTurnedIn {
+    background-color: #10B981;
+}
+
+.statusAssigned {
+    background-color: #F3F4F6;
+    color: #4B5563;
+}
+
+.dotAssigned {
+    background-color: #6B7280;
+}
+
+.statusMissing {
+    background-color: #FEF2F2;
+    color: #DC2626;
+}
+
+.dotMissing {
+    background-color: #EF4444;
+}
 
 @media (max-width: 640px) {
     .container {
@@ -115,6 +141,7 @@
         align-items: flex-start;
         gap: 12px;
     }
+
     .rightSection {
         width: 100%;
         justify-content: flex-end;
