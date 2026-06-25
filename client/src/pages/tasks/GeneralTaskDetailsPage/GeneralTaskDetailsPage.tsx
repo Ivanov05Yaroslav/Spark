@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { TwoColumnContentLayout } from '@/components/layout/TwoColumnContentLayout/TwoColumnContentLayout.tsx';
 import { TaskInstructionsSection } from '@/features/tasks/components/TaskInstructionsSection/TaskInstructionsSection';
-import { TaskSubmissionSection } from '@/features/tasks/components/TaskSubmissionSection/TaskSubmissionSection';
+// import { TaskSubmissionSection } from '@/features/tasks/components/TaskSubmissionSection/TaskSubmissionSection';
 import { TaskCommentsSection } from '@/features/tasks/components/TaskCommentsSection/TaskCommentsSection';
 import { useTaskInstructions } from '@/features/tasks/hooks/useTaskInstructions';
 
@@ -63,19 +63,20 @@ export const GeneralTaskDetailsPage: React.FC = () => {
             title={task.title}
             onBack={handleBack}
             showHeaderButton={false}
-            sidebarContent={
-                <TaskSubmissionSection
-                    status={submissionStatus}
-                    grade={grade}
-                    maxGrade={12}
-                    submittedFiles={submittedFiles}
-                    onGradeChange={handleGradeChange}
-                    onAddFile={handleAddFile}
-                    onRemoveFile={handleRemoveFile}
-                    onSubmitOrReturn={handleSubmitOrReturn}
-                    isTeacher={false}
-                />
-            }
+            // sidebarContent={
+            //     <TaskSubmissionSection
+            //         status={submissionStatus}
+            //         grade={grade}
+            //         maxGrade={12}
+            //         submittedFiles={submittedFiles}
+            //         onGradeChange={handleGradeChange}
+            //         onAddFile={handleAddFile}
+            //         onRemoveFile={handleRemoveFile}
+            //         onSubmitOrReturn={handleSubmitOrReturn}
+            //         isTeacher={false}
+            //     />
+            // }
+            sidebarContent
         >
             <TaskInstructionsSection />
 

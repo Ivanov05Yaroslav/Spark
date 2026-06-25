@@ -1,177 +1,143 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { ContentCard } from '@/components/ui/ContentCard/ContentCard';
 import { Input } from '@/components/ui/Input/Input';
 import { SelectField } from '@/components/ui/SelectField/SelectField';
 import { TestAnswerInput } from '../TestAnswerInput/TestAnswerInput';
+import { UIQuestion, QuestionType } from '@/types/tests.types';
 import styles from './TestQuestionCard.module.css';
-
 import PlusIcon from '@/assets/plus.svg?react';
 
-export type QuestionType = 'ONE_CHOICE' | 'MULTIPLE_CHOICE';
-
-interface Answer {
-    id: string;
-    text: string;
-    isCorrect: boolean;
-}
-
 interface TestQuestionCardProps {
-    initialType?: QuestionType;
     index: number;
+    question: UIQuestion;
+    onUpdate: (updatedFields: Partial<UIQuestion>) => void;
 }
 
 export const TestQuestionCard: React.FC<TestQuestionCardProps> = ({
-                                                                      initialType = 'ONE_CHOICE',
-                                                                      index
+                                                                      index,
+                                                                      question,
+                                                                      onUpdate
                                                                   }) => {
     const [isActive, setIsActive] = useState<boolean>(false);
     const cardRef = useRef<HTMLDivElement>(null);
 
-    const [questionText, setQuestionText] = useState('');
+    const handleTypeChange = (value: string) => {
+        const newType = value as QuestionType;
+        let updatedAnswers = [...question.answers];
 
-    const [questionPoints, setQuestionPoints] = useState<number | undefined>();
-
-    const [questionType, setQuestionType] = useState<QuestionType>(initialType);
-
-    const [answers, setAnswers] = useState<Answer[]>([
-        { id: '1', text: '', isCorrect: true },
-        { id: '2', text: '', isCorrect: false },
-        { id: '3', text: '', isCorrect: false },
-        { id: '4', text: '', isCorrect: false },
-    ]);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (cardRef.current && !cardRef.current.contains(event.target as Node)) {
-                setIsActive(false);
+        if (newType === 'ONE_CHOICE') {
+            let foundCorrect = false;
+            updatedAnswers = updatedAnswers.map(a => {
+                if (a.isCorrect && !foundCorrect) {
+                    foundCorrect = true;
+                    return a;
+                }
+                return { ...a, isCorrect: false };
+            });
+            if (!foundCorrect && updatedAnswers.length > 0) {
+                updatedAnswers[0].isCorrect = true;
             }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+        }
+
+        onUpdate({ type: newType, answers: updatedAnswers });
+    };
+
+    const handleAnswerTextChange = (answerId: string, text: string) => {
+        const updatedAnswers = question.answers.map(a =>
+            a.id === answerId ? { ...a, content: text } : a
+        );
+        onUpdate({ answers: updatedAnswers });
+    };
 
     const handleToggleCorrect = (answerId: string) => {
-        if (questionType === 'ONE_CHOICE') {
-            setAnswers(prevAnswers =>
-                prevAnswers.map(ans => ({
-                    ...ans,
-                    isCorrect: ans.id === answerId
-                }))
-            );
-        } else {
-            setAnswers(prevAnswers =>
-                prevAnswers.map(ans =>
-                    ans.id === answerId
-                        ? { ...ans, isCorrect: !ans.isCorrect }
-                        : ans
-                )
-            );
-        }
-    };
-
-    const handleAnswerTextChange = (answerId: string, newText: string) => {
-        setAnswers(prevAnswers =>
-            prevAnswers.map(ans =>
-                ans.id === answerId ? { ...ans, text: newText } : ans
-            )
-        );
-    };
-
-    const handleAddAnswer = () => {
-        const newId = Math.random().toString(36).substr(2, 9);
-        setAnswers([...answers, { id: newId, text: '', isCorrect: false }]);
+        const updatedAnswers = question.answers.map(a => {
+            if (question.type === 'ONE_CHOICE') {
+                return { ...a, isCorrect: a.id === answerId };
+            } else {
+                return a.id === answerId ? { ...a, isCorrect: !a.isCorrect } : a;
+            }
+        });
+        onUpdate({ answers: updatedAnswers });
     };
 
     const handleDeleteAnswer = (answerId: string) => {
-        if (answers.length <= 2) return;
-        setAnswers(prevAnswers => prevAnswers.filter(ans => ans.id !== answerId));
+        const updatedAnswers = question.answers.filter(a => a.id !== answerId);
+        onUpdate({ answers: updatedAnswers });
     };
 
-    const typeOptions = [
-        { value: 'ONE_CHOICE', label: 'Одинарний вибір' },
-        { value: 'MULTIPLE_CHOICE', label: 'Множинний вибір' },
-    ];
-
-    const handleTypeChange = (newType: string) => {
-        const typedNewType = newType as QuestionType;
-        setQuestionType(typedNewType);
-
-        if (typedNewType === 'ONE_CHOICE') {
-            setAnswers(prev => {
-                let madeOneCorrect = false;
-                return prev.map(ans => {
-                    if (ans.isCorrect && !madeOneCorrect) {
-                        madeOneCorrect = true;
-                        return ans;
-                    }
-                    return { ...ans, isCorrect: false };
-                });
-            });
-        }
+    const handleAddAnswer = () => {
+        const newAnswerId = Math.random().toString(36).substr(2, 9);
+        const updatedAnswers = [
+            ...question.answers,
+            { id: newAnswerId, content: '', isCorrect: false }
+        ];
+        onUpdate({ answers: updatedAnswers });
     };
 
     return (
         <div
+            className={styles.container}
             ref={cardRef}
             onClick={() => setIsActive(true)}
-            className={`${styles.cardWrapper} ${isActive ? styles.activeCard : ''}`}
+            onFocus={() => setIsActive(true)}
         >
-            <ContentCard title={`Запитання ${index + 1}`} >
-                <div className={styles.container}>
-
-                    <div className={styles.topRow}>
-                        <Input
-                            label={"Текст запитання"}
-                            placeholder="Введіть запитання"
-                            value={questionText}
-                            onChange={(e) => setQuestionText(e.target.value)}
-                            className={styles.questionInput}
-                        />
-
-                        <Input
-                            type="number"
-                            placeholder="Бали"
-                            label={"Кількість балів"}
-                            value={questionPoints === undefined ? '' : questionPoints.toString()}
-                            onChange={(e) => setQuestionPoints(e.target.value ? Number(e.target.value) : undefined)}
-                            className={styles.typeSelect}
-                        />
-
-                        <SelectField
-                            label={"Тип"}
-                            options={typeOptions}
-                            value={questionType}
-                            onChange={handleTypeChange}
-                            className={styles.typeSelect}
-                        />
-                    </div>
-
-                    <div className={styles.answersGrid}>
-                        {answers.map((answer, index) => (
-                            <TestAnswerInput
-                                key={answer.id}
-                                placeholder={`Варіант ${index + 1}`}
-                                value={answer.text}
-                                onChange={(e) => handleAnswerTextChange(answer.id, e.target.value)}
-                                isCorrect={answer.isCorrect}
-                                onToggleCorrect={() => handleToggleCorrect(answer.id)}
-                                onDelete={answers.length > 2 ? () => handleDeleteAnswer(answer.id) : undefined}
-                            />
-                        ))}
-                    </div>
-
-                    {isActive && (
-                        <button
-                            type="button"
-                            className={styles.addOptionBtn}
-                            onClick={handleAddAnswer}
-                        >
-                            <PlusIcon className={styles.plusIcon} />
-                            <span>Додати варіант</span>
-                        </button>
-                    )}
-
+            <ContentCard title={`Запитання ${index + 1}`}>
+                <div className={styles.topRow}>
+                    <Input
+                        label="Текст запитання"
+                        value={question.content}
+                        onChange={(e) => onUpdate({content: e.target.value})}
+                        placeholder="Введіть запитання"
+                        className={styles.questionInput}
+                    />
+                    <Input
+                        label="Бали"
+                        type="number"
+                        min="0"
+                        value={question.points || ''}
+                        onChange={(e) => onUpdate({points: Number(e.target.value) || 0})}
+                        placeholder="1"
+                        className={styles.typeSelect}
+                    />
+                    <SelectField
+                        label="Тип запитання"
+                        options={[
+                            {value: 'ONE_CHOICE', label: 'Одинарний вибір'},
+                            {value: 'MULTIPLE_CHOICE', label: 'Множинний вибір'}
+                        ]}
+                        value={question.type}
+                        onChange={handleTypeChange}
+                        className={styles.typeSelect}
+                    />
                 </div>
+
+                <div className={styles.answersGrid}>
+                    {question.answers.map((answer, idx) => (
+                        <TestAnswerInput
+                            key={answer.id}
+                            placeholder={`Варіант ${idx + 1}`}
+                            value={answer.content}
+                            onChange={(e) => handleAnswerTextChange(answer.id, e.target.value)}
+                            isCorrect={answer.isCorrect}
+                            onToggleCorrect={() => handleToggleCorrect(answer.id)}
+                            onDelete={question.answers.length > 2 ? () => handleDeleteAnswer(answer.id) : undefined}
+                        />
+                    ))}
+                </div>
+
+                {isActive && (
+                    <button
+                        type="button"
+                        className={styles.addOptionBtn}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleAddAnswer();
+                        }}
+                    >
+                        <PlusIcon className={styles.plusIcon}/>
+                        <span>Додати варіант</span>
+                    </button>
+                )}
             </ContentCard>
         </div>
     );

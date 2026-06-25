@@ -1,37 +1,73 @@
 import React from 'react';
-import { useParams } from 'react-router-dom';
 import { ContentCard } from '@/components/ui/ContentCard/ContentCard.tsx';
 import { SelectField } from '@/components/ui/SelectField/SelectField.tsx';
 import { Input } from '@/components/ui/Input/Input.tsx';
 import { CustomCheckbox } from '@/components/ui/CustomCheckbox/CustomCheckbox.tsx';
 import { DurationInput } from '@/components/tests/DurationInput/DurationInput.tsx';
-import styles from './TestSettingsSidebar.module.css';
 import { DatePickerField } from "@/components/ui/DatePickerField/DatePickerField.tsx";
 import { CreatableSelect } from "@/components/ui/CreatableSelect/CreatableSelect.tsx";
+import { ModuleDto } from '@/types/modules.types';
+import { NushGradingGroupDto } from '@/types/subjects.types';
+import styles from './TestSettingsSidebar.module.css';
 
-import { useTestSettingsSidebarData } from '@/features/tests/hooks/useTestSettingsSidebarData';
+interface TestSettingsSidebarProps {
+    modules: ModuleDto[];
+    nusGroups: NushGradingGroupDto[];
+    isLoading: boolean;
+    subjectName?: string;
+    courseClassName?: string;
+    title: string;
+    setTitle: (v: string) => void;
+    moduleId: string;
+    setModuleId: (v: string) => void;
+    nusGroupId: string;
+    setNusGroupId: (v: string) => void;
+    deadline: string;
+    setDeadline: (v: string) => void;
+    hours: string;
+    setHours: (v: string) => void;
+    minutes: string;
+    setMinutes: (v: string) => void;
+    attempts: string;
+    setAttempts: (v: string) => void;
+    isHidden: boolean;
+    setIsHidden: (v: boolean) => void;
+    isResultHidden: boolean;
+    setIsResultHidden: (v: boolean) => void;
+    isAttemptHidden: boolean;
+    setIsAttemptHidden: (v: boolean) => void;
+    isShowCorrectAnswers: boolean;
+    setIsShowCorrectAnswers: (v: boolean) => void;
+    isShuffleQuestions: boolean;
+    setIsShuffleQuestions: (v: boolean) => void;
+    isShuffleAnswers: boolean;
+    setIsShuffleAnswers: (v: boolean) => void;
+}
 
-export const TestSettingsSidebar: React.FC = () => {
-    const { id: courseId } = useParams<{ id: string }>();
-
-    const {
-        modules,
-        nusGroups,
-        isLoading,
-        subjectName,
-        courseClassName,
-
-        title, setTitle,
-        moduleId: module, setModuleId: setModule,
-        nusGroupId: nusGroup, setNusGroupId,
-        deadline, setDeadline,
-        hours, setHours,
-        minutes, setMinutes,
-        attempts, setAttempts,
-        isHidden, setIsHidden,
-        isResultHidden, setIsResultHidden
-    } = useTestSettingsSidebarData(courseId);
-
+export const TestSettingsSidebar: React.FC<TestSettingsSidebarProps> = ({
+                                                                            modules,
+                                                                            nusGroups,
+                                                                            isLoading,
+                                                                            subjectName,
+                                                                            courseClassName,
+                                                                            title, setTitle,
+                                                                            moduleId: module, setModuleId: setModule,
+                                                                            nusGroupId: nusGroup, setNusGroupId,
+                                                                            deadline, setDeadline,
+                                                                            hours, setHours,
+                                                                            minutes, setMinutes,
+                                                                            attempts, setAttempts,
+                                                                            isHidden, setIsHidden,
+                                                                            isResultHidden, setIsResultHidden,
+                                                                            isAttemptHidden,
+                                                                            setIsAttemptHidden,
+                                                                            isShowCorrectAnswers,
+                                                                            setIsShowCorrectAnswers,
+                                                                            isShuffleQuestions,
+                                                                            setIsShuffleQuestions,
+                                                                            isShuffleAnswers,
+                                                                            setIsShuffleAnswers
+                                                                        }) => {
     const moduleOptions = modules.map(m => ({ value: String(m.id), label: m.title }));
     const nusGroupOptions = nusGroups.map(g => ({ value: String(g.id), label: g.name }));
 
@@ -117,8 +153,27 @@ export const TestSettingsSidebar: React.FC = () => {
                             checked={isResultHidden}
                             onChange={(e) => setIsResultHidden(e.target.checked)}
                         />
+                        <CustomCheckbox
+                            label="Приховати спробу"
+                            checked={isAttemptHidden}
+                            onChange={(e) => setIsAttemptHidden(e.target.checked)}
+                        />
+                        <CustomCheckbox
+                            label="Показувати правильні відповіді"
+                            checked={isShowCorrectAnswers}
+                            onChange={(e) => setIsShowCorrectAnswers(e.target.checked)}
+                        />
+                        <CustomCheckbox
+                            label="Перемішати запитання"
+                            checked={isShuffleQuestions}
+                            onChange={(e) => setIsShuffleQuestions(e.target.checked)}
+                        />
+                        <CustomCheckbox
+                            label="Перемішати відповіді"
+                            checked={isShuffleAnswers}
+                            onChange={(e) => setIsShuffleAnswers(e.target.checked)}
+                        />
                     </div>
-
                 </div>
             </ContentCard>
         </div>

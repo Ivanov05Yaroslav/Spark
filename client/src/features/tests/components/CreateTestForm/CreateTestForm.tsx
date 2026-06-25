@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useParams } from 'react-router-dom';
 import { TwoColumnContentLayout } from '@/components/layout/TwoColumnContentLayout/TwoColumnContentLayout.tsx';
-
 import { TestQuestionsList } from '@/features/tests/components/TestQuestionsList/TestQuestionsList.tsx';
 import { TestSettingsSidebar } from '@/features/tests/components/TestSettingsSidebar/TestSettingsSidebar.tsx';
+import { useCreateTestForm } from '@/features/tests/hooks/useCreateTestForm';
 
 interface TestBuilderProps {
     onBack: () => void;
@@ -11,28 +11,24 @@ interface TestBuilderProps {
 
 export const CreateTestForm: React.FC<TestBuilderProps> = ({ onBack }) => {
     const { id: courseId } = useParams<{ id: string }>();
-    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const { isSubmitting, onSubmitForm, sidebarProps, questionsProps } = useCreateTestForm(courseId);
 
     const handleSaveTest = () => {
-        setIsSubmitting(true);
-        console.log('Зберігаємо тест для курсу...', { courseId });
-
-        setTimeout(() => {
-            setIsSubmitting(false);
-        }, 1000);
+        onSubmitForm();
     };
 
     return (
         <TwoColumnContentLayout
             title="Створити тест"
             onBack={onBack}
-            sidebarContent={<TestSettingsSidebar />}
+            sidebarContent={<TestSettingsSidebar {...sidebarProps} />}
             showHeaderButton={true}
             headerButtonText={isSubmitting ? "Збереження..." : "Зберегти"}
             onHeaderButtonClick={handleSaveTest}
             isHeaderButtonDisabled={isSubmitting}
         >
-            <TestQuestionsList />
+            <TestQuestionsList {...questionsProps} />
         </TwoColumnContentLayout>
     );
 };

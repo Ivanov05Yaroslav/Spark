@@ -19,7 +19,7 @@ import {CreateCoursePage} from "@/pages/courses";
 import {CreateTaskPage, EditTaskPage, GeneralTaskDetailsPage} from "@/pages/tasks";
 import {CreateAnnouncementPage, EditAnnouncementPage} from "@/pages/announcements";
 import {AdminUserManagementPage} from "@/pages/administration";
-import {CreateTestPage, EditTestPage, TestExecutionPage} from "@/pages/tests";
+import {CreateTestPage, EditTestPage, TestDetailsPage, TestExecutionPage} from "@/pages/tests";
 
 function App() {
 
@@ -66,6 +66,7 @@ function App() {
                     <Route path="/courses/:id/tasks/:taskId/edit" element={<EditTaskPage />} />
 
                     <Route path="/courses/:id/tests/create" element={<CreateTestPage />} />
+                    <Route path="/courses/:id/tests/:testId" element={<TestDetailsPage />} />
                     <Route path="/courses/:id/tests/:testId/edit" element={<EditTestPage />} />
                     <Route path="/courses/:id/tests/:testId/execution" element={<TestExecutionPage />} />
 

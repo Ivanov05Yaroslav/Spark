@@ -22,7 +22,7 @@ export const TaskCommentsSection: React.FC<TaskCommentsSectionProps> = ({
     return (
         <div className={styles.section}>
             <ContentCard
-                title="Class comments"
+                title="Коментарі класу"
             >
                 <div className={styles.commentsList}>
                     {comments.map((comment, index) => (

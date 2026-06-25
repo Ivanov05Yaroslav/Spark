@@ -22,16 +22,19 @@ export const EditTestForm: React.FC<EditTestFormProps> = ({ onBack }) => {
     };
 
     return (
-        <TwoColumnContentLayout
-            title="Редагувати тест"
-            onBack={onBack}
-            sidebarContent={<TestSettingsSidebar />}
-            showHeaderButton={true}
-            headerButtonText={isSubmitting ? "Збереження..." : "Зберегти зміни"}
-            onHeaderButtonClick={handleUpdateTest}
-            isHeaderButtonDisabled={isSubmitting}
-        >
-            <TestQuestionsList />
-        </TwoColumnContentLayout>
+        <div>
+            {/*<TwoColumnContentLayout*/}
+            {/*    title="Редагувати тест"*/}
+            {/*    onBack={onBack}*/}
+            {/*    sidebarContent={<TestSettingsSidebar />}*/}
+            {/*    showHeaderButton={true}*/}
+            {/*    headerButtonText={isSubmitting ? "Збереження..." : "Зберегти зміни"}*/}
+            {/*    onHeaderButtonClick={handleUpdateTest}*/}
+            {/*    isHeaderButtonDisabled={isSubmitting}*/}
+            {/*>*/}
+            {/*    <TestQuestionsList />*/}
+            {/*</TwoColumnContentLayout>*/}
+        </div>
+
     );
 };

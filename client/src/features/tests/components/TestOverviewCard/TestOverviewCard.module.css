@@ -1,0 +1,33 @@
+.overviewCard {
+    width: 100%;
+    max-width: 360px;
+    box-sizing: border-box;
+}
+
+.content {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+}
+
+.infoList {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.actionBlock {
+    width: 100%;
+}
+
+.actionBlock :global(button) {
+    width: 100%;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.purpleIconItem svg path {
+    fill: #702DFF !important;
+    stroke: none !important;
+}

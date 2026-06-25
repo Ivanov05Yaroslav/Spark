@@ -35,7 +35,7 @@ export const CommentInput: React.FC<CommentInputProps> = ({ currentUserAvatar, o
                 <input
                     type="text"
                     className={styles.input}
-                    placeholder="Add a class comment..."
+                    placeholder="Додати коментар класу..."
                     value={value}
                     onChange={(e) => setValue(e.target.value)}
                     onKeyDown={handleKeyDown}
@@ -44,7 +44,7 @@ export const CommentInput: React.FC<CommentInputProps> = ({ currentUserAvatar, o
                     className={styles.sendButton}
                     onClick={handleSubmit}
                     disabled={!value.trim()}
-                    aria-label="Send comment"
+                    aria-label="Надіслати коментар"
                 >
                     <SendIcon />
                 </button>
