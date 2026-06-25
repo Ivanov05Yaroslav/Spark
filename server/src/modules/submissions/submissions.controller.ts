@@ -128,4 +128,28 @@ export class SubmissionsController {
   ) {
     return this.submissionsService.gradeSubmission(teacherId, id, dto);
   }
+
+  @ApiOperation({ summary: 'Перегляд деталей спроби тесту' })
+  @Roles('TEACHER', 'STUDENT')
+  @Get('/test-attempt/:id/review')
+  async getTestAttemptReview(@GetUser('id') userId: string, @Param('id') submissionId: string) {
+    return this.submissionsService.getTestAttemptReview(userId, submissionId);
+  }
+
+  @ApiOperation({ summary: 'Отримати список своїх спроб конкретного тесту' })
+  @Roles('STUDENT')
+  @Get('/test/:testId/my-attempts')
+  async getMyTestAttempts(@GetUser('id') studentId: string, @Param('testId') testId: string) {
+    return this.submissionsService.getMyTestAttempts(studentId, testId);
+  }
+
+  @ApiOperation({ summary: 'Отримати список учнів з їхніми спробами тесту (Для вчителя)' })
+  @Roles('TEACHER')
+  @Get('/test/:testId/student-attempts')
+  async getStudentAttemptsByTest(
+    @GetUser('id') teacherId: string,
+    @Param('testId') testId: string,
+  ) {
+    return this.submissionsService.getStudentAttemptsByTest(teacherId, testId);
+  }
 }

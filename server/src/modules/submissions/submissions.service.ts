@@ -400,4 +400,188 @@ export class SubmissionsService {
 
     return updated;
   }
+
+  async getTestAttemptReview(userId: string, submissionId: string) {
+    const submission = await this.prisma.submission.findUnique({
+      where: { id: submissionId },
+      include: {
+        test: {
+          include: {
+            course: { include: { coTeachers: true } },
+            questions: { include: { answers: true } },
+          },
+        },
+        testAnswers: true,
+      },
+    });
+
+    if (!submission || !submission.test) {
+      throw new HttpException('Спробу або тест не знайдено', HttpStatus.NOT_FOUND);
+    }
+
+    const test = submission.test;
+    const isTeacher =
+      test.course.creatorId === userId ||
+      test.course.coTeachers.some((ct) => ct.teacherId === userId);
+    const isOwner = submission.studentId === userId;
+
+    if (!isTeacher && !isOwner) {
+      throw new HttpException('У вас немає доступу до цієї спроби', HttpStatus.FORBIDDEN);
+    }
+
+    if (isOwner && !isTeacher) {
+      if (test.isAttemptHidden) {
+        throw new HttpException(
+          'Перегляд деталей спроби заборонено налаштуваннями тесту',
+          HttpStatus.FORBIDDEN,
+        );
+      }
+    }
+
+    const review = {
+      id: submission.id,
+      studentId: submission.studentId,
+      submittedAt: submission.submittedAt,
+      duration: submission.duration,
+      totalScore: isTeacher || !test.isResultHidden ? submission.score : null,
+      questions: test.questions.map((q) => {
+        const studentChoices = submission.testAnswers
+          .filter((ans) => ans.questionId === q.id)
+          .map((ans) => ans.answerId);
+
+        let earnedPoints = 0;
+        if (q.type === 'ONE_CHOICE') {
+          const answer = q.answers.find((a) => a.id === studentChoices[0]);
+          if (answer?.isCorrect) earnedPoints = q.points;
+        } else {
+          const correctAnswers = q.answers.filter((a) => a.isCorrect);
+          const incorrectAnswers = q.answers.filter((a) => !a.isCorrect);
+          let correctHits = 0;
+          let incorrectHits = 0;
+          studentChoices.forEach((id) => {
+            if (correctAnswers.some((a) => a.id === id)) correctHits++;
+            if (incorrectAnswers.some((a) => a.id === id)) incorrectHits++;
+          });
+          const netHits = Math.max(0, correctHits - incorrectHits);
+          if (correctAnswers.length > 0) {
+            earnedPoints = Number(((netHits / correctAnswers.length) * q.points).toFixed(2));
+          }
+        }
+
+        return {
+          id: q.id,
+          content: q.content,
+          type: q.type,
+          maxPoints: q.points,
+          earnedPoints: isTeacher || test.isShowCorrectAnswers ? earnedPoints : null,
+          answers: q.answers.map((a) => ({
+            id: a.id,
+            content: a.content,
+            isSelectedByStudent: studentChoices.includes(a.id),
+            isCorrect: isTeacher || test.isShowCorrectAnswers ? a.isCorrect : undefined,
+          })),
+        };
+      }),
+    };
+
+    return review;
+  }
+
+  async getMyTestAttempts(studentId: string, testId: string) {
+    const test = await this.prisma.test.findUnique({
+      where: { id: testId },
+    });
+
+    if (!test) throw new HttpException('Тест не знайдено', HttpStatus.NOT_FOUND);
+
+    const submissions = await this.prisma.submission.findMany({
+      where: { testId, studentId },
+      orderBy: { submittedAt: 'asc' },
+    });
+
+    return {
+      testTitle: test.title,
+      maxAttempts: test.maxAttempts,
+      usedAttempts: submissions.length,
+      attempts: submissions.map((sub, index) => ({
+        id: sub.id,
+        attemptNumber: index + 1,
+        submittedAt: sub.submittedAt,
+        duration: sub.duration,
+        score: test.isResultHidden ? null : sub.score,
+        canReview: !test.isAttemptHidden,
+      })),
+    };
+  }
+
+  async getStudentAttemptsByTest(teacherId: string, testId: string) {
+    const test = await this.prisma.test.findUnique({
+      where: { id: testId },
+      include: {
+        course: {
+          include: {
+            coTeachers: true,
+            students: { include: { student: true } },
+          },
+        },
+      },
+    });
+
+    if (!test) throw new HttpException('Тест не знайдено', HttpStatus.NOT_FOUND);
+
+    const isTeacher =
+      test.course.creatorId === teacherId ||
+      test.course.coTeachers.some((ct) => ct.teacherId === teacherId);
+
+    if (!isTeacher) {
+      throw new HttpException('У вас немає прав переглядати спроби учнів', HttpStatus.FORBIDDEN);
+    }
+
+    const allSubmissions = await this.prisma.submission.findMany({
+      where: { testId },
+      orderBy: { submittedAt: 'asc' },
+    });
+
+    const studentsWithAttempts = await Promise.all(
+      test.course.students.map(async (studentEnrollment) => {
+        const student = studentEnrollment.student;
+        const studentSubmissions = allSubmissions.filter((sub) => sub.studentId === student.id);
+
+        let avatarUrl = student.avatarUrl;
+        if (avatarUrl && avatarUrl.includes('amazonaws.com')) {
+          avatarUrl = await this.awsS3Service.generatePresignedUrl(avatarUrl);
+        }
+
+        let highestScore: number | null = null;
+        if (studentSubmissions.length > 0) {
+          const scores = studentSubmissions
+            .map(sub => parseFloat(sub.score || '0'))
+            .filter(score => !isNaN(score));
+          if (scores.length > 0) {
+            highestScore = Math.max(...scores);
+          }
+        }
+
+        return {
+          id: student.id,
+          firstName: student.firstName,
+          lastName: student.lastName,
+          middleName: student.middleName,
+          avatarUrl,
+          highestScore: highestScore !== null ? highestScore.toString() : null,
+          attemptsCount: studentSubmissions.length,
+          maxAttempts: test.maxAttempts,
+          attempts: studentSubmissions.map((sub, index) => ({
+            id: sub.id,
+            attemptNumber: index + 1,
+            submittedAt: sub.submittedAt,
+            duration: sub.duration,
+            score: sub.score,
+          })),
+        };
+      })
+    );
+
+    return studentsWithAttempts.sort((a, b) => a.lastName.localeCompare(b.lastName));
+  }
 }

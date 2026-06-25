@@ -324,18 +324,22 @@ model Task {
 }
 
 model Test {
-  id               String    @id @default(uuid())
-  courseId         String
-  creatorId        String
-  nusGroupId       String?
-  courseModuleId   String?
-  title            String
-  timeLimitMinutes Int?
-  deadline         DateTime?
-  maxAttempts      Int       @default(1)
-  isResultHidden   Boolean   @default(false)
-  isHidden         Boolean   @default(false)
-  createdAt        DateTime  @default(now())
+  id                   String    @id @default(uuid())
+  courseId             String
+  creatorId            String
+  nusGroupId           String?
+  courseModuleId       String?
+  title                String
+  timeLimitMinutes     Int?
+  deadline             DateTime?
+  maxAttempts          Int       @default(1)
+  isResultHidden       Boolean   @default(false)
+  isAttemptHidden      Boolean   @default(false)
+  isShowCorrectAnswers Boolean   @default(true)
+  isShuffleQuestions   Boolean   @default(false)
+  isShuffleAnswers     Boolean   @default(false)
+  isHidden             Boolean   @default(false)
+  createdAt            DateTime  @default(now())
 
   course       Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
   creator      User          @relation(fields: [creatorId], references: [id], onDelete: Cascade)
@@ -356,8 +360,9 @@ model Question {
   content String
   points  Float
 
-  test    Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
-  answers Answer[]
+  test             Test               @relation(fields: [testId], references: [id], onDelete: Cascade)
+  answers          Answer[]
+  SubmissionAnswer SubmissionAnswer[]
 
   @@map("questions")
 }
@@ -368,7 +373,8 @@ model Answer {
   content    String
   isCorrect  Boolean @default(false)
 
-  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  question         Question           @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  SubmissionAnswer SubmissionAnswer[]
 
   @@map("answers")
 }
@@ -384,11 +390,25 @@ model Submission {
   duration    Int?
   attachments String[]
 
-  task    Task? @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  test    Test? @relation(fields: [testId], references: [id], onDelete: Cascade)
-  student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  task        Task?              @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  test        Test?              @relation(fields: [testId], references: [id], onDelete: Cascade)
+  student     User               @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  testAnswers SubmissionAnswer[]
 
   @@map("submissions")
+}
+
+model SubmissionAnswer {
+  id           String @id @default(uuid())
+  submissionId String
+  questionId   String
+  answerId     String
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  question   Question   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answer     Answer     @relation(fields: [answerId], references: [id], onDelete: Cascade)
+
+  @@map("submission_answers")
 }
 
 model Comment {
