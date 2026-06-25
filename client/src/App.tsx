@@ -1,7 +1,23 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import React from 'react';
+import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+
 import MainLayout from './components/layout/MainLayout/MainLayout.tsx';
-import { CoursePage, CoursesPage, EditCoursePage } from './pages/courses';
+import { ProtectedRoute } from '@/router/ProtectedRoute';
+import { useStore } from '@/stores/useStore.ts';
+
+import { CoursePage, CoursesPage, EditCoursePage, CreateCoursePage } from './pages/courses';
 import { ProfilePage } from './pages/profile';
+import { AdminUserManagementPage } from '@/pages/administration';
+import { CreateAnnouncementPage, EditAnnouncementPage } from '@/pages/announcements';
+import { CreateTestPage, EditTestPage, TestDetailsPage, TestExecutionPage } from '@/pages/tests';
+import {
+  CreateTaskPage,
+  EditTaskPage,
+  GeneralTaskDetailsPage,
+  // TeacherTaskDetailsPage,
+} from '@/pages/tasks';
+
 import {
   EmailVerificationPage as AuthEmailVerificationPage,
   ForgotPasswordPage,
@@ -11,18 +27,17 @@ import {
   ParentDetailsPage,
   ParentEmailVerificationPage,
   ResetPasswordPage,
+  SchoolSelectionPage,
   SchoolDetailsPage,
   SchoolDocumentsPage,
-  SchoolSelectionPage,
 } from './pages/auth';
-import React from 'react';
-import { ToastContainer } from 'react-toastify';
-import { CreateCoursePage } from '@/pages/courses';
-// import {CreateAnnouncementPage, EditAnnouncementPage} from "@/features/announcements";
-import { CreateTaskPage, EditTaskPage, GeneralTaskDetailsPage } from '@/pages/tasks';
-import { CreateAnnouncementPage, EditAnnouncementPage } from '@/pages/announcements';
-import { AdminUserManagementPage } from '@/pages/administration';
-import { CreateTestPage, EditTestPage, TestDetailsPage, TestExecutionPage } from '@/pages/tests';
+
+const TaskDetailsWrapper: React.FC = () => {
+  const user = useStore((state) => state.user);
+  const isTeacherOrAdmin = user?.roles.some((role) => ['TEACHER', 'ADMIN'].includes(role));
+
+  // return isTeacherOrAdmin ? <TeacherTaskDetailsPage /> : <GeneralTaskDetailsPage />;
+};
 
 function App() {
   return (
@@ -57,43 +72,45 @@ function App() {
         <Route path="/school/register/submit" element={<SchoolDocumentsPage />} />
 
         <Route path="/" element={<MainLayout />}>
-          <Route path="/courses" element={<CoursesPage />} />
-          <Route path="/courses/create" element={<CreateCoursePage />} />
-          <Route path="/courses/:id/edit" element={<EditCoursePage />} />
-          <Route path="/courses/:id" element={<CoursePage />} />
-
-          <Route path="/courses/:id/tasks/create" element={<CreateTaskPage />} />
-          <Route path="/courses/:id/tasks/:taskId" element={<GeneralTaskDetailsPage />} />
-          {/*<Route path="/courses/:id/tasks/:taskId" element={<TeacherTaskDetailsPage />} />*/}
-          <Route path="/courses/:id/tasks/:taskId/edit" element={<EditTaskPage />} />
-
-          <Route path="/courses/:id/tests/create" element={<CreateTestPage />} />
-          <Route path="/courses/:id/tests/:testId" element={<TestDetailsPage />} />
-          <Route path="/courses/:id/tests/:testId/edit" element={<EditTestPage />} />
-          <Route path="/courses/:id/tests/:testId/execution" element={<TestExecutionPage />} />
-
-          <Route path="/courses/:id/announcements/create" element={<CreateAnnouncementPage />} />
           <Route
-            path="/courses/:id/announcements/:announcementId/edit"
-            element={<EditAnnouncementPage />}
-          />
+            element={<ProtectedRoute allowedRoles={['STUDENT', 'PARENT', 'TEACHER', 'ADMIN']} />}
+          >
+            <Route index element={<Navigate to="/courses" replace />} />
 
-          <Route path="/admin" element={<AdminUserManagementPage />} />
+            <Route path="/courses" element={<CoursesPage />} />
+            <Route path="/courses/:id" element={<CoursePage />} />
+            <Route path="/profile" element={<ProfilePage />} />
 
-          {/*<Route path="/chats" element={<Chats />} />*/}
-          <Route path="/profile" element={<ProfilePage />} />
-          {/*<Route path="/statistics" element={<Statistics />} />*/}
-          {/*<Route path="/admin" element={<Admin />} />*/}
-          {/*<Route path="/course" element={<Course />} />*/}
-          {/*<Route path="/create-course" element={<CreateCourse />} />*/}
-          {/*<Route path="/edit-course" element={<EditCoursePage />} />*/}
-          {/*<Route path="/task" element={<Task />} />*/}
-          {/*<Route path="/create-task" element={<CreateTask />} />*/}
-          {/*<Route path="/edit-task" element={<EditTask />} />*/}
-          {/*<Route path="/test" element={<Test />} />*/}
-          {/*<Route path="/create-test" element={<CreateTest />} />*/}
-          {/*<Route path="/edit-test" element={<EditTest />} />*/}
-          {/*<Route path="/take-test" element={<TakeTest />} />*/}
+            <Route path="/courses/:id/tests/:testId" element={<TestDetailsPage />} />
+            <Route path="/courses/:id/tests/:testId/execution" element={<TestExecutionPage />} />
+
+            <Route path="/courses/:id/tasks/:taskId" element={<TaskDetailsWrapper />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={['STUDENT']} />}>
+            <Route path="/courses/:id/tests/:testId/execution" element={<TestExecutionPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={['TEACHER', 'ADMIN']} />}>
+            <Route path="/courses/create" element={<CreateCoursePage />} />
+            <Route path="/courses/:id/edit" element={<EditCoursePage />} />
+
+            <Route path="/courses/:id/tasks/create" element={<CreateTaskPage />} />
+            <Route path="/courses/:id/tasks/:taskId/edit" element={<EditTaskPage />} />
+
+            <Route path="/courses/:id/tests/create" element={<CreateTestPage />} />
+            <Route path="/courses/:id/tests/:testId/edit" element={<EditTestPage />} />
+
+            <Route path="/courses/:id/announcements/create" element={<CreateAnnouncementPage />} />
+            <Route
+              path="/courses/:id/announcements/:announcementId/edit"
+              element={<EditAnnouncementPage />}
+            />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+            <Route path="/admin" element={<AdminUserManagementPage />} />
+          </Route>
         </Route>
       </Routes>
     </BrowserRouter>
