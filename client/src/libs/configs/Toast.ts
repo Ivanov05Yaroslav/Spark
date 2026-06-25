@@ -22,4 +22,14 @@ export const toast = {
       ...options,
     });
   },
+
+  info: (message: string, options?: ToastOptions) => {
+    coolToast.info(message, {
+      ...defaultOptions,
+      icon: () => 'ℹ️',
+      className: 'toast-bg-info',
+      progressClassName: 'toast-progress-info',
+      ...options,
+    });
+  },
 };

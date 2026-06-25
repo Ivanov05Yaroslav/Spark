@@ -86,3 +86,16 @@ button {
 .toast-progress-error {
     background: #9F0712 !important;
 }
+
+.toast-bg-info {
+    background-color: rgba(219, 234, 254) !important;
+}
+
+.Toastify__toast.toast-bg-info,
+.Toastify__toast.toast-bg-info * {
+    color: #1E3A8A !important;
+}
+
+.toast-progress-info {
+    background: #2563EB !important;
+}

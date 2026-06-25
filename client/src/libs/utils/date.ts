@@ -26,9 +26,7 @@ export const formatToInputDate = (dateValue: string | Date | null | undefined): 
   return date.toISOString().split('T')[0];
 };
 
-export const formatToDisplayDeadline = (
-  dateValue: string | Date | null | undefined,
-): string | null => {
+export const formatToDateTime = (dateValue: string | Date | null | undefined): string | null => {
   if (!dateValue) return null;
 
   const date = new Date(dateValue);
@@ -45,5 +43,12 @@ export const formatToDisplayDeadline = (
     minute: '2-digit',
   });
 
-  return `Термін: ${dateString} о ${timeString}`;
+  return `${dateString} о ${timeString}`;
+};
+
+export const formatToDisplayDeadline = (
+  dateValue: string | Date | null | undefined,
+): string | null => {
+  const dateTime = formatToDateTime(dateValue);
+  return dateTime ? `Термін: ${dateTime}` : null;
 };

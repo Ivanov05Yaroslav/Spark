@@ -19,7 +19,11 @@ export const TestButtons: React.FC<TestButtonsProps> = ({
   return (
     <div className={styles.navigationButtons}>
       {!isFirstQuestion ? (
-        <button type="button" className={styles.button && styles.leftButton} onClick={onPrev}>
+        <button
+          type="button"
+          className={`${styles.buttonContainer} ${styles.leftButton}`}
+          onClick={onPrev}
+        >
           <ArrowLeftIcon className={styles.arrowIcon} />
           <p>Попереднє</p>
         </button>
@@ -27,7 +31,11 @@ export const TestButtons: React.FC<TestButtonsProps> = ({
         <div style={{ flex: 1 }} />
       )}
 
-      <button type="button" className={styles.button && styles.rightButton} onClick={onNext}>
+      <button
+        type="button"
+        className={`${styles.buttonContainer} ${styles.rightButton}`}
+        onClick={onNext}
+      >
         <p>
           {isLastQuestion ? (
             <strong style={{ fontWeight: 500 }}>Завершити тест</strong>

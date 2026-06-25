@@ -63,3 +63,29 @@ export interface ApiTestDetailResponse extends Omit<CreateTestPayload, 'newModul
     }>;
   }>;
 }
+
+export interface SubmitTestAnswer {
+  questionId: string;
+  answerId: string;
+}
+
+export interface SubmitTestPayload {
+  answers: SubmitTestAnswer[];
+  duration: number;
+}
+
+export interface ApiTestAttempt {
+  id: string;
+  attemptNumber: number;
+  submittedAt: string;
+  duration: number;
+  score: string;
+  canReview: boolean;
+}
+
+export interface ApiTestAttemptsResponse {
+  testTitle: string;
+  maxAttempts: number;
+  usedAttempts: number;
+  attempts: ApiTestAttempt[];
+}
