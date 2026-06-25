@@ -10,12 +10,14 @@ interface TestQuestionsListProps {
   setQuestions: React.Dispatch<React.SetStateAction<UIQuestion[]>>;
   addQuestion: () => void;
   updateQuestion: (id: string, updatedFields: Partial<UIQuestion>) => void;
+  deleteQuestion: (id: string) => void;
 }
 
 export const TestQuestionsList: React.FC<TestQuestionsListProps> = ({
   questions,
   addQuestion,
   updateQuestion,
+  deleteQuestion,
 }) => {
   return (
     <div className={styles.container}>
@@ -26,6 +28,7 @@ export const TestQuestionsList: React.FC<TestQuestionsListProps> = ({
             index={idx}
             question={question}
             onUpdate={(updatedFields) => updateQuestion(question.id, updatedFields)}
+            onDelete={() => deleteQuestion(question.id)}
           />
         ))}
       </div>

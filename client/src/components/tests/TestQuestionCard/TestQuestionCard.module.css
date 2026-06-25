@@ -1,17 +1,19 @@
-.cardWrapper {
+.questionWrapper {
     width: 100%;
-    transition: all 0.2s ease;
-    border-radius: 12px;
-}
-
-.activeCard {
-    box-shadow: 0 0 0 1px #702DFF;
-}
-
-.container {
     display: flex;
-    flex-direction: column;
-    gap: 20px;
+    align-items: center;
+}
+
+.cardContainer {
+    flex: 1;
+    min-width: 0;
+    transition: all 0.2s ease-in-out;
+    border-radius: 12px;
+    border: 1px solid transparent;
+}
+
+.questionWrapper.activeCard .cardContainer {
+    box-shadow: 0 0 0 1px #6c5ce7;
 }
 
 .topRow {
@@ -35,6 +37,12 @@
     grid-template-columns: repeat(2, 1fr);
     gap: 16px;
     width: 100%;
+}
+
+.cardContent {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
 .addOptionBtn {
@@ -68,6 +76,41 @@
     height: 20px;
     flex-shrink: 0;
     color: inherit;
+}
+
+.deleteButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9CA3AF;
+    border-radius: 8px;
+    max-width: 0;
+    padding: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-width 0.2s ease, padding 0.2s ease, opacity 0.2s ease, margin-left 0.2s ease;
+    margin-left: 0;
+}
+
+.questionWrapper.activeCard .deleteButton {
+    max-width: 40px;
+    padding: 8px;
+    opacity: 1;
+    margin-left: 8px;
+}
+
+.deleteButton:hover {
+    background-color: #FEE2E2;
+    color: #EF4444;
+}
+
+.deleteIcon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
 }
 
 @media (max-width: 768px) {

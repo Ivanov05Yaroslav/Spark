@@ -7,30 +7,17 @@ import { testsService } from '@/api/tests.service';
 import { CourseDetailDto } from '@/types/courses.types';
 import { ModuleDto } from '@/types/modules.types';
 import { NushGradingGroupDto } from '@/types/subjects.types';
-import { UIQuestion, CreateTestPayload } from '@/types/tests.types.ts';
+import { UIQuestion } from '@/types/tests.types.ts';
 
 const UUID_REGEXP = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const createDefaultQuestion = (): UIQuestion => {
-  const questionId = Math.random().toString(36).substr(2, 9);
-  return {
-    id: questionId,
-    type: 'ONE_CHOICE',
-    content: '',
-    points: 1,
-    answers: [
-      { id: `${questionId}-1`, content: '', isCorrect: true },
-      { id: `${questionId}-2`, content: '', isCorrect: false },
-    ],
-  };
-};
-
-export const useCreateTestForm = (courseId: string | undefined) => {
+export const useEditTestForm = (testId: string | undefined, courseId: string | undefined) => {
   const navigate = useNavigate();
 
   const [courseInfo, setCourseInfo] = useState<CourseDetailDto | null>(null);
   const [modules, setModules] = useState<ModuleDto[]>([]);
   const [nusGroups, setNusGroups] = useState<NushGradingGroupDto[]>([]);
+
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
@@ -41,6 +28,7 @@ export const useCreateTestForm = (courseId: string | undefined) => {
   const [attempts, setAttempts] = useState('1');
   const [moduleId, setModuleId] = useState('');
   const [nusGroupId, setNusGroupId] = useState('');
+
   const [isHidden, setIsHidden] = useState(false);
   const [isResultHidden, setIsResultHidden] = useState(false);
   const [isAttemptHidden, setIsAttemptHidden] = useState(false);
@@ -48,17 +36,55 @@ export const useCreateTestForm = (courseId: string | undefined) => {
   const [isShuffleQuestions, setIsShuffleQuestions] = useState(false);
   const [isShuffleAnswers, setIsShuffleAnswers] = useState(false);
 
-  const [questions, setQuestions] = useState<UIQuestion[]>(() =>
-    Array.from({ length: 4 }, createDefaultQuestion),
-  );
+  const [questions, setQuestions] = useState<UIQuestion[]>([]);
 
   useEffect(() => {
-    if (!courseId) return;
+    if (!testId || !courseId) return;
 
     const fetchAllData = async () => {
       try {
         setIsLoading(true);
-        const course = await courseService.getCourseById(courseId);
+
+        const [testData, course] = await Promise.all([
+          testsService.getTestById(testId),
+          courseService.getCourseById(courseId),
+        ]);
+
+        setTitle(testData.title);
+        setNusGroupId(testData.nusGroupId || '');
+        setModuleId(testData.courseModuleId || '');
+        setAttempts(String(testData.maxAttempts || 1));
+
+        setIsHidden(testData.isHidden ?? false);
+        setIsResultHidden(testData.isResultHidden ?? false);
+        setIsAttemptHidden(testData.isAttemptHidden ?? false);
+        setIsShowCorrectAnswers(testData.isShowCorrectAnswers ?? false);
+        setIsShuffleQuestions(testData.isShuffleQuestions ?? false);
+        setIsShuffleAnswers(testData.isShuffleAnswers ?? false);
+
+        if (testData.deadline) {
+          setDeadline(testData.deadline.substring(0, 16));
+        }
+
+        const totalMinutes = testData.timeLimitMinutes || 0;
+        const h = Math.floor(totalMinutes / 60);
+        const m = totalMinutes % 60;
+        setHours(h > 0 ? String(h) : '');
+        setMinutes(m > 0 ? String(m) : '');
+
+        const mappedQuestions: UIQuestion[] = testData.questions.map((q) => ({
+          id: q.id,
+          type: q.type,
+          content: q.content,
+          points: q.points,
+          answers: q.answers.map((a) => ({
+            id: a.id,
+            content: a.content,
+            isCorrect: a.isCorrect,
+          })),
+        }));
+        setQuestions(mappedQuestions);
+
         setCourseInfo(course);
 
         const courseModules = await courseService.getModulesByCourseId(courseId);
@@ -69,17 +95,29 @@ export const useCreateTestForm = (courseId: string | undefined) => {
           setNusGroups(groups);
         }
       } catch (error) {
-        console.error('Помилка при завантаженні даних для сайдбару:', error);
+        console.error('Помилка при завантаженні даних тесту:', error);
+        toast.error('Не вдалося завантажити дані тесту');
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchAllData();
-  }, [courseId]);
+  }, [testId, courseId]);
 
   const addQuestion = () => {
-    setQuestions((prev) => [...prev, createDefaultQuestion()]);
+    const questionId = Math.random().toString(36).substr(2, 9);
+    const newQuestion: UIQuestion = {
+      id: questionId,
+      type: 'ONE_CHOICE',
+      content: '',
+      points: 1,
+      answers: [
+        { id: `${questionId}-1`, content: '', isCorrect: true },
+        { id: `${questionId}-2`, content: '', isCorrect: false },
+      ],
+    };
+    setQuestions((prev) => [...prev, newQuestion]);
   };
 
   const updateQuestion = (id: string, updatedFields: Partial<UIQuestion>) => {
@@ -91,64 +129,64 @@ export const useCreateTestForm = (courseId: string | undefined) => {
   };
 
   const onSubmitForm = async () => {
-    if (!courseId) {
-      toast.error('Курс не знайдено');
-      return;
-    }
+    if (!testId || !courseId) return;
 
     if (!title.trim()) {
       toast.error('Будь ласка, вкажіть назву тесту');
       return;
     }
 
-    const hasInvalidQuestions = questions.some((q) => q.answers.length < 2);
-    if (hasInvalidQuestions) {
-      toast.error('Кожне запитання повинно мати щонайменше 2 варіанти відповіді');
-      return;
-    }
-
-    const isExistingModule = UUID_REGEXP.test(moduleId.trim());
-    const finalCourseModuleId = isExistingModule ? moduleId : null;
-    const finalNewModuleTitle = !isExistingModule && moduleId.trim() ? moduleId.trim() : null;
-
     try {
       setIsSubmitting(true);
 
-      const payload: CreateTestPayload = {
+      const totalTimeLimit = (Number(hours) || 0) * 60 + (Number(minutes) || 0);
+      const isNewModule = moduleId && !UUID_REGEXP.test(moduleId);
+
+      const payload: any = {
         courseId,
         title,
-        timeLimitMinutes: (parseInt(hours, 10) || 0) * 60 + (parseInt(minutes, 10) || 0),
-        deadline: deadline || null,
-        maxAttempts: parseInt(attempts, 10) || 1,
-        courseModuleId: finalCourseModuleId,
-        newModuleTitle: finalNewModuleTitle,
-        nusGroupId: nusGroupId || null,
+        timeLimitMinutes: totalTimeLimit,
+        maxAttempts: Number(attempts) || 1,
+        deadline: deadline ? new Date(deadline).toISOString() : null,
+        nusGroupId: nusGroupId && UUID_REGEXP.test(nusGroupId) ? nusGroupId : null,
+        courseModuleId: moduleId && !isNewModule ? moduleId : null,
+        newModuleTitle: isNewModule ? moduleId : null,
+
         isHidden,
         isResultHidden,
         isAttemptHidden,
         isShowCorrectAnswers,
         isShuffleQuestions,
         isShuffleAnswers,
-        questions: questions.map((q) => ({
-          type: q.type,
-          content: q.content,
-          points: q.points || 0,
-          answers: q.answers.map((a) => ({
-            content: a.content,
-            isCorrect: a.isCorrect,
-          })),
-        })),
+
+        questions: questions.map((q) => {
+          const isRealQuestionUuid = UUID_REGEXP.test(q.id);
+          return {
+            ...(isRealQuestionUuid && { id: q.id }),
+            type: q.type,
+            content: q.content,
+            points: Number(q.points) || 1,
+            answers: q.answers.map((a) => {
+              const isRealAnswerUuid = UUID_REGEXP.test(a.id);
+              return {
+                ...(isRealAnswerUuid && { id: a.id }),
+                content: a.content,
+                isCorrect: a.isCorrect,
+              };
+            }),
+          };
+        }),
       };
 
-      const data = await testsService.createTest(payload);
-      toast.success((data as any)?.message || 'Тест успішно створено!');
+      const data = await testsService.updateTest(testId, payload);
+      toast.success(data?.message || 'Тест успішно оновлено!');
 
       setTimeout(() => {
         navigate(`/courses/${courseId}`);
       }, 1500);
     } catch (error: any) {
-      console.error('Помилка при збереженні тесту:', error);
-      const serverErrorMessage = error?.response?.data?.message || 'Помилка при збереженні тесту';
+      console.error('Помилка при оновленні тесту:', error);
+      const serverErrorMessage = error?.response?.data?.message || 'Помилка при збереженні змін';
       toast.error(serverErrorMessage);
     } finally {
       setIsSubmitting(false);
@@ -156,6 +194,7 @@ export const useCreateTestForm = (courseId: string | undefined) => {
   };
 
   return {
+    isLoading,
     isSubmitting,
     onSubmitForm,
     sidebarProps: {

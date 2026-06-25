@@ -43,3 +43,23 @@ export interface UIQuestion {
   points: number;
   answers: UIAnswer[];
 }
+
+export interface ApiTestDetailResponse extends Omit<CreateTestPayload, 'newModuleTitle'> {
+  id: string;
+  courseId: string;
+  creatorId: string;
+  createdAt: string;
+  questions: Array<{
+    id: string;
+    testId: string;
+    type: 'ONE_CHOICE' | 'MULTIPLE_CHOICE';
+    content: string;
+    points: number;
+    answers: Array<{
+      id: string;
+      questionId: string;
+      content: string;
+      isCorrect: boolean;
+    }>;
+  }>;
+}
