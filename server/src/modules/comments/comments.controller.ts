@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { GetUser } from '../../common/decorators/get-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -12,16 +12,30 @@ import { CreateCommentDto } from './dto/comment.dto';
 export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
 
-  @ApiOperation({ summary: "Додати коментар до зданої роботи (Зворотний зв'язок)" })
+  @ApiOperation({ summary: 'Додати коментар (до завдання або тесту)' })
   @Post()
   async createComment(@GetUser('id') userId: string, @Body() dto: CreateCommentDto) {
     return this.commentsService.createComment(userId, dto);
   }
 
-  @ApiOperation({ summary: 'Отримати історію обговорення зданої роботи' })
-  @Get('/submission/:submissionId')
-  async getComments(@GetUser('id') userId: string, @Param('submissionId') submissionId: string) {
-    return this.commentsService.getCommentsBySubmission(userId, submissionId);
+  @ApiOperation({ summary: 'Отримати приватні коментарі до завдання (Task)' })
+  @Get('/task/:id')
+  async getTaskComments(
+    @GetUser('id') userId: string,
+    @Param('id') id: string,
+    @Query('targetStudentId') targetStudentId?: string,
+  ) {
+    return this.commentsService.getComments(userId, 'task', id, targetStudentId);
+  }
+
+  @ApiOperation({ summary: 'Отримати приватні коментарі до тесту (Test)' })
+  @Get('/test/:id')
+  async getTestComments(
+    @GetUser('id') userId: string,
+    @Param('id') id: string,
+    @Query('targetStudentId') targetStudentId?: string,
+  ) {
+    return this.commentsService.getComments(userId, 'test', id, targetStudentId);
   }
 
   @ApiOperation({ summary: 'Видалити свій коментар' })

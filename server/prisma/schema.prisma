@@ -66,15 +66,16 @@ model User {
   enrolledCourses CourseStudent[]
 
   // Зв'язки: Контент та оцінки
-  announcements  Announcement[]
-  materials      Material[]
-  tasks          Task[]
-  tests          Test[]
-  submissions    Submission[]
-  comments       Comment[]
-  givenGrades    Gradebook[]    @relation("TeacherGrades")
-  receivedGrades Gradebook[]    @relation("StudentGrades")
-  attendances    Attendance[]
+  announcements   Announcement[]
+  materials       Material[]
+  tasks           Task[]
+  tests           Test[]
+  submissions     Submission[]
+  writtenComments Comment[]      @relation("CommentAuthor")
+  targetComments  Comment[]      @relation("CommentTarget")
+  givenGrades     Gradebook[]    @relation("TeacherGrades")
+  receivedGrades  Gradebook[]    @relation("StudentGrades")
+  attendances     Attendance[]
 
   // Зв'язки: Комунікація
   sentNotifications     Notification[] @relation("SentNotifications")
@@ -317,23 +318,28 @@ model Task {
   courseModule CourseModule? @relation(fields: [courseModuleId], references: [id], onDelete: SetNull)
   submissions  Submission[]
   gradebooks   Gradebook[]
+  comments     Comment[]
 
   @@map("tasks")
 }
 
 model Test {
-  id               String    @id @default(uuid())
-  courseId         String
-  creatorId        String
-  nusGroupId       String?
-  courseModuleId   String?
-  title            String
-  timeLimitMinutes Int?
-  deadline         DateTime?
-  maxAttempts      Int       @default(1)
-  isResultHidden   Boolean   @default(false)
-  isHidden         Boolean   @default(false)
-  createdAt        DateTime  @default(now())
+  id                   String    @id @default(uuid())
+  courseId             String
+  creatorId            String
+  nusGroupId           String?
+  courseModuleId       String?
+  title                String
+  timeLimitMinutes     Int?
+  deadline             DateTime?
+  maxAttempts          Int       @default(1)
+  isResultHidden       Boolean   @default(false)
+  isAttemptHidden      Boolean   @default(false)
+  isShowCorrectAnswers Boolean   @default(true)
+  isShuffleQuestions   Boolean   @default(false)
+  isShuffleAnswers     Boolean   @default(false)
+  isHidden             Boolean   @default(false)
+  createdAt            DateTime  @default(now())
 
   course       Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
   creator      User          @relation(fields: [creatorId], references: [id], onDelete: Cascade)
@@ -342,6 +348,7 @@ model Test {
   questions    Question[]
   submissions  Submission[]
   gradebooks   Gradebook[]
+  comments     Comment[]
 
   @@map("tests")
 }
@@ -353,8 +360,9 @@ model Question {
   content String
   points  Float
 
-  test    Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
-  answers Answer[]
+  test             Test               @relation(fields: [testId], references: [id], onDelete: Cascade)
+  answers          Answer[]
+  SubmissionAnswer SubmissionAnswer[]
 
   @@map("questions")
 }
@@ -365,7 +373,8 @@ model Answer {
   content    String
   isCorrect  Boolean @default(false)
 
-  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  question         Question           @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  SubmissionAnswer SubmissionAnswer[]
 
   @@map("answers")
 }
@@ -378,25 +387,43 @@ model Submission {
   submittedAt DateTime  @default(now())
   checkedAt   DateTime?
   score       String?
+  duration    Int?
   attachments String[]
 
-  task     Task?     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  test     Test?     @relation(fields: [testId], references: [id], onDelete: Cascade)
-  student  User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  comments Comment[]
+  task        Task?              @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  test        Test?              @relation(fields: [testId], references: [id], onDelete: Cascade)
+  student     User               @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  testAnswers SubmissionAnswer[]
 
   @@map("submissions")
 }
 
-model Comment {
-  id           String   @id @default(uuid())
+model SubmissionAnswer {
+  id           String @id @default(uuid())
   submissionId String
-  authorId     String
-  content      String
-  createdAt    DateTime @default(now())
+  questionId   String
+  answerId     String
 
   submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-  author     User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  question   Question   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answer     Answer     @relation(fields: [answerId], references: [id], onDelete: Cascade)
+
+  @@map("submission_answers")
+}
+
+model Comment {
+  id              String   @id @default(uuid())
+  authorId        String
+  targetStudentId String
+  content         String
+  createdAt       DateTime @default(now())
+  taskId          String?
+  testId          String?
+
+  author        User  @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  targetStudent User  @relation("CommentTarget", fields: [targetStudentId], references: [id], onDelete: Cascade)
+  task          Task? @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  test          Test? @relation(fields: [testId], references: [id], onDelete: Cascade)
 
   @@map("comments")
 }
