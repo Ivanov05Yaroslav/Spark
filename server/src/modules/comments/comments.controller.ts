@@ -1,9 +1,19 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { GetUser } from '../../common/decorators/get-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CommentsService } from './comments.service';
-import { CreateCommentDto } from './dto/comment.dto';
+import { CreateCommentDto, UpdateCommentDto } from './dto/comment.dto';
 
 @ApiTags('comments')
 @ApiBearerAuth()
@@ -36,6 +46,16 @@ export class CommentsController {
     @Query('targetStudentId') targetStudentId?: string,
   ) {
     return this.commentsService.getComments(userId, 'test', id, targetStudentId);
+  }
+
+  @ApiOperation({ summary: 'Редагувати свій коментар' })
+  @Patch('/:id')
+  async updateComment(
+    @GetUser('id') userId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateCommentDto,
+  ) {
+    return this.commentsService.updateComment(userId, id, dto);
   }
 
   @ApiOperation({ summary: 'Видалити свій коментар' })

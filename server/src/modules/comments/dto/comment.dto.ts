@@ -27,3 +27,10 @@ export class CreateCommentDto {
   @IsString()
   targetStudentId?: string;
 }
+
+export class UpdateCommentDto {
+  @ApiProperty({ example: 'Оновлений текст коментаря' })
+  @IsString()
+  @IsNotEmpty()
+  content!: string;
+}

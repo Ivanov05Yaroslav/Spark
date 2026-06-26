@@ -2,7 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { AwsS3Service } from '../../core/integrations/aws/aws-s3.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { CreateCommentDto } from './dto/comment.dto';
+import { CreateCommentDto, UpdateCommentDto } from './dto/comment.dto';
 
 @Injectable()
 export class CommentsService {
@@ -179,6 +179,47 @@ export class CommentsService {
         };
       }),
     );
+  }
+
+  async updateComment(userId: string, commentId: string, dto: UpdateCommentDto) {
+    const comment = await this.prisma.comment.findUnique({
+      where: { id: commentId },
+    });
+
+    if (!comment) {
+      throw new HttpException('Коментар не знайдено', HttpStatus.NOT_FOUND);
+    }
+
+    if (comment.authorId !== userId) {
+      throw new HttpException('Ви можете редагувати лише власні коментарі', HttpStatus.FORBIDDEN);
+    }
+
+    const updatedComment = await this.prisma.comment.update({
+      where: { id: commentId },
+      data: { content: dto.content },
+      include: {
+        author: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            middleName: true,
+            avatarUrl: true,
+            userRoles: { include: { role: true } },
+          },
+        },
+      },
+    });
+
+    const { userRoles, ...authorRest } = updatedComment.author as any;
+    return {
+      ...updatedComment,
+      author: {
+        ...authorRest,
+        roles: userRoles.map((ur: any) => ur.role.name),
+        avatarUrl: await this.awsS3Service.generatePresignedUrl(authorRest.avatarUrl),
+      },
+    };
   }
 
   async deleteComment(userId: string, commentId: string) {
