@@ -10,7 +10,13 @@ import { CoursePage, CoursesPage, EditCoursePage, CreateCoursePage } from './pag
 import { ProfilePage } from './pages/profile';
 import { AdminUserManagementPage } from '@/pages/administration';
 import { CreateAnnouncementPage, EditAnnouncementPage } from '@/pages/announcements';
-import { CreateTestPage, EditTestPage, TestDetailsPage, TestExecutionPage } from '@/pages/tests';
+import {
+  CreateTestPage,
+  EditTestPage,
+  TeacherTestDetailsPage,
+  TestDetailsPage,
+  TestExecutionPage,
+} from '@/pages/tests';
 import {
   CreateTaskPage,
   EditTaskPage,
@@ -31,6 +37,7 @@ import {
   SchoolDetailsPage,
   SchoolDocumentsPage,
 } from './pages/auth';
+import { TestAttemptReviewPage } from '@/pages/tests/TestAttemptReviewPage/TestAttemptReviewPage.tsx';
 
 const TaskDetailsWrapper: React.FC = () => {
   const user = useStore((state) => state.user);
@@ -81,14 +88,16 @@ function App() {
             <Route path="/courses/:id" element={<CoursePage />} />
             <Route path="/profile" element={<ProfilePage />} />
 
-            <Route path="/courses/:id/tests/:testId" element={<TestDetailsPage />} />
-            <Route path="/courses/:id/tests/:testId/execution" element={<TestExecutionPage />} />
-
-            <Route path="/courses/:id/tasks/:taskId" element={<TaskDetailsWrapper />} />
+            <Route path="/courses/:id/tasks/:taskId" element={<GeneralTaskDetailsPage />} />
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={['STUDENT']} />}>
-            <Route path="/courses/:id/tests/:testId/execution" element={<TestExecutionPage />} />
+          <Route element={<ProtectedRoute allowedRoles={['STUDENT', 'PARENT']} />}>
+            <Route path="/courses/:id/tests/:testId" element={<TestDetailsPage />} />
+            <Route path="/courses/:id/tests/:testId/execute" element={<TestExecutionPage />} />
+            <Route
+              path="/courses/:id/tests/:testId/review/:attemptId"
+              element={<TestAttemptReviewPage />}
+            />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['TEACHER', 'ADMIN']} />}>
@@ -98,6 +107,10 @@ function App() {
             <Route path="/courses/:id/tasks/create" element={<CreateTaskPage />} />
             <Route path="/courses/:id/tasks/:taskId/edit" element={<EditTaskPage />} />
 
+            <Route
+              path="/courses/:id/tests/:testId/submissions"
+              element={<TeacherTestDetailsPage />}
+            />
             <Route path="/courses/:id/tests/create" element={<CreateTestPage />} />
             <Route path="/courses/:id/tests/:testId/edit" element={<EditTestPage />} />
 

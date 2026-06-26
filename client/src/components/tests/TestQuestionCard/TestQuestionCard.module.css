@@ -123,3 +123,89 @@
         grid-template-columns: 1fr;
     }
 }
+
+.reviewHeader {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    font-family: 'Inter', sans-serif;
+    padding-bottom: 12px;
+}
+
+.reviewTitleRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.reviewQuestionNumber {
+    font-weight: 600;
+    font-size: 14px;
+    color: #4B5563;
+}
+
+.reviewPoints {
+    font-size: 13px;
+    font-weight: 500;
+    color: #702DFF;
+    background-color: #F3F0FF;
+    padding: 4px 10px;
+    border-radius: 20px;
+}
+
+.reviewQuestionText {
+    font-size: 14px;
+    font-weight: 400;
+    color: #202020;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.answerWrapper {
+    position: relative;
+    border-radius: 12px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.reviewReadOnly {
+    pointer-events: none;
+}
+
+.answerCorrect {
+    background-color: #E8F5E9 !important;
+    border: 1px solid #4CAF50 !important;
+}
+
+.answerCorrect input {
+    background-color: #E8F5E9 !important;
+    color: #2E7D32 !important;
+    font-weight: 500;
+}
+
+.answerIncorrect {
+    background-color: #FFEBEE !important;
+    border: 1px solid #EF5350 !important;
+}
+
+.answerIncorrect input {
+    background-color: #FFEBEE !important;
+    color: #C62828 !important;
+    font-weight: 500;
+}
+
+.studentChoiceBadge {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 11px;
+    font-weight: 600;
+    background-color: #702DFF;
+    color: #FFFFFF;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-family: 'Inter', sans-serif;
+}

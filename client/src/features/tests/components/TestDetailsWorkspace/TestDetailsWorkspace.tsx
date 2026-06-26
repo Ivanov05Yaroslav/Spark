@@ -1,12 +1,12 @@
 import React from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { TwoColumnContentLayout } from '@/components/layout/TwoColumnContentLayout/TwoColumnContentLayout.tsx';
 import { TestOverviewCard } from '@/features/tests/components/TestOverviewCard/TestOverviewCard';
-import {
-  TestResultsTable,
-  TestAttempt,
-} from '@/features/tests/components/TestResultsTable/TestResultsTable';
-import { TaskCommentsSection } from '@/features/tasks/components/TaskCommentsSection/TaskCommentsSection.tsx';
-import { CommentProps } from '@/components/tasks/CommentItem/CommentItem.tsx';
+import { TestResultsTable } from '@/features/tests/components/TestResultsTable/TestResultsTable';
+import { CommentsSection } from '@/features/comments/components/CommentsSection/CommentsSection.tsx';
+import { useTestOverview } from '@/features/tests/hooks/useTestOverview';
+import { useTestAttempts } from '@/features/tests/hooks/useTestAttempts';
+import { useStore } from '@/stores/useStore';
 
 interface TestDetailsWorkspaceProps {
   onBack: () => void;
@@ -17,90 +17,62 @@ export const TestDetailsWorkspace: React.FC<TestDetailsWorkspaceProps> = ({
   onBack,
   onStartAttempt,
 }) => {
-  const mockAttempts: TestAttempt[] = [
-    {
-      id: '1',
-      number: 1,
-      duration: '15:59',
-      correctAnswers: 10,
-      wrongAnswers: 5,
-      completionDate: 'March 25, 2026 at 23:59',
-      mark: 12,
-      hasDetails: true,
-    },
-    {
-      id: '2',
-      number: 2,
-      duration: '15:59',
-      correctAnswers: null,
-      wrongAnswers: null,
-      completionDate: 'March 25, 2026 at 23:59',
-      mark: null,
-      hasDetails: false,
-    },
-  ];
+  const { id, testId } = useParams<{ id: string; testId: string }>();
+  const navigate = useNavigate();
 
-  const mockComments = [
-    {
-      id: 'c1',
-      author: {
-        name: 'Анна Студентка',
-        avatarUrl: 'https://www.w3schools.com/w3images/avatar6.png',
-      },
-      content: 'Чи буде враховано час на завантаження сторінки?',
-      createdAt: '14:30',
-    },
-    {
-      id: 'c2',
-      author: {
-        name: 'Анна Студентка',
-        avatarUrl: 'https://www.w3schools.com/w3images/avatar6.png',
-      },
-      content: 'Таймер зупиняється лише після натискання кнопки "Завершити тест".',
-      createdAt: '15:00',
-    },
-  ] as unknown as CommentProps[];
+  const { overviewData, isLoading: isOverviewLoading } = useTestOverview(testId);
+  const { attemptsData, formattedAttempts, isLoading: isAttemptsLoading } = useTestAttempts(testId);
 
-  const handleViewOverview = (id: string) => {
-    console.log('Перегляд деталей спроби:', id);
+  const user = useStore((state) => state.user);
+
+  const hasAvailableAttempts = attemptsData
+    ? attemptsData.usedAttempts < attemptsData.maxAttempts
+    : false;
+
+  const handleViewOverview = (attemptId: string) => {
+    navigate(`/courses/${id}/tests/${testId}/review/${attemptId}`);
   };
 
-  const handleAddComment = (content: string) => {
-    console.log('Відправка коментаря:', content);
-  };
+  const isStudent = user?.roles.includes('STUDENT');
+  const targetStudentId = isStudent ? user?.id : undefined;
 
-  const handleEditComment = (id: string) => {
-    console.log('Редагування коментаря:', id);
-  };
+  if (isOverviewLoading) {
+    return <div style={{ padding: '24px' }}>Завантаження деталей тесту...</div>;
+  }
 
-  const handleDeleteComment = (id: string) => {
-    console.log('Видалення коментаря:', id);
-  };
+  if (!overviewData) {
+    return <div style={{ padding: '24px' }}>Тест не знайдено.</div>;
+  }
 
   return (
     <TwoColumnContentLayout
-      title="Назва тесту (Overview)"
+      title={overviewData.title}
       onBack={onBack}
       sidebarContent={
         <TestOverviewCard
-          duration="20 minutes"
-          attemptsAllowed={2}
-          questionsCount={15}
-          dueDate="March 25, 2026 at 23:59"
+          duration={overviewData.duration}
+          attemptsAllowed={overviewData.attemptsAllowed}
+          questionsCount={overviewData.questionsCount}
+          hasAvailableAttempts={hasAvailableAttempts}
+          dueDate={overviewData.dueDate}
           onStart={onStartAttempt}
         />
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        <TestResultsTable attempts={mockAttempts} onViewDetails={handleViewOverview} />
+        {isAttemptsLoading ? (
+          <div>Завантаження спроб...</div>
+        ) : (
+          <TestResultsTable attempts={formattedAttempts} onViewDetails={handleViewOverview} />
+        )}
 
-        <TaskCommentsSection
-          comments={mockComments}
-          currentUserAvatar=""
-          onAddComment={handleAddComment}
-          onEditComment={handleEditComment}
-          onDeleteComment={handleDeleteComment}
-        />
+        {isStudent && (
+          <CommentsSection
+            testId={testId}
+            targetStudentId={targetStudentId}
+            currentUserAvatar={user?.avatarUrl}
+          />
+        )}
       </div>
     </TwoColumnContentLayout>
   );

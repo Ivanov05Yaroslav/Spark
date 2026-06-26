@@ -7,12 +7,14 @@ import ClockIcon from '@/assets/clock.svg?react';
 import HashIcon from '@/assets/hash.svg?react';
 import HelpIcon from '@/assets/questionMark.svg?react';
 import CalendarIcon from '@/assets/calendar.svg?react';
+import { useStore } from '@/stores/useStore';
 
 interface Props {
   duration: string;
   attemptsAllowed: number;
   questionsCount: number;
   dueDate: string;
+  hasAvailableAttempts: boolean;
   onStart: () => void;
 }
 
@@ -21,8 +23,13 @@ export const TestOverviewCard: React.FC<Props> = ({
   attemptsAllowed,
   questionsCount,
   dueDate,
+  hasAvailableAttempts,
   onStart,
 }) => {
+  const user = useStore((state) => state.user);
+
+  const isStudent = user?.roles.includes('STUDENT');
+
   return (
     <ContentCard title="Деталі тесту">
       <div className={styles.container}>
@@ -38,9 +45,11 @@ export const TestOverviewCard: React.FC<Props> = ({
           />
         </div>
 
-        <PrimaryButton onClick={onStart} style={{ marginTop: '24px', width: '100%' }}>
-          РОЗПОЧАТИ ТЕСТ
-        </PrimaryButton>
+        {isStudent && hasAvailableAttempts && (
+          <PrimaryButton onClick={onStart} style={{ marginTop: '24px', width: '100%' }}>
+            РОЗПОЧАТИ ТЕСТ
+          </PrimaryButton>
+        )}
       </div>
     </ContentCard>
   );

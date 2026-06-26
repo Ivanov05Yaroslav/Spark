@@ -144,3 +144,12 @@
 .table tr:last-child td {
     border-bottom: none;
 }
+
+.emptyState{
+    color: #9CA3AF;
+    font-style: italic;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    margin: 0;
+}
+

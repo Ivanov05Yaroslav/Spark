@@ -12,15 +12,11 @@ interface EditTestFormProps {
 export const EditTestForm: React.FC<EditTestFormProps> = ({ onBack }) => {
   const { id: courseId, testId } = useParams<{ id: string; testId: string }>();
 
-  const { isLoading, isSubmitting, onSubmitForm, sidebarProps, questionsProps } = useEditTestForm(
-    testId,
-    courseId,
-  );
+  const { isLoading, isSubmitting, isValid, onSubmitForm, sidebarProps, questionsProps } =
+    useEditTestForm(testId, courseId);
 
   const handleUpdateTest = () => {
-    onSubmitForm(() => {
-      onBack();
-    });
+    onSubmitForm();
   };
 
   if (isLoading) {
@@ -42,7 +38,7 @@ export const EditTestForm: React.FC<EditTestFormProps> = ({ onBack }) => {
         showHeaderButton={true}
         headerButtonText={isSubmitting ? 'Збереження...' : 'Зберегти зміни'}
         onHeaderButtonClick={handleUpdateTest}
-        isHeaderButtonDisabled={isSubmitting}
+        isHeaderButtonDisabled={isSubmitting || !isValid}
       >
         <TestQuestionsList {...questionsProps} />
       </TwoColumnContentLayout>

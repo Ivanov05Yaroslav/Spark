@@ -12,7 +12,8 @@ interface TestBuilderProps {
 export const CreateTestForm: React.FC<TestBuilderProps> = ({ onBack }) => {
   const { id: courseId } = useParams<{ id: string }>();
 
-  const { isSubmitting, onSubmitForm, sidebarProps, questionsProps } = useCreateTestForm(courseId);
+  const { isSubmitting, isValid, onSubmitForm, sidebarProps, questionsProps } =
+    useCreateTestForm(courseId);
 
   const handleSaveTest = () => {
     onSubmitForm();
@@ -26,7 +27,7 @@ export const CreateTestForm: React.FC<TestBuilderProps> = ({ onBack }) => {
       showHeaderButton={true}
       headerButtonText={isSubmitting ? 'Збереження...' : 'Зберегти'}
       onHeaderButtonClick={handleSaveTest}
-      isHeaderButtonDisabled={isSubmitting}
+      isHeaderButtonDisabled={isSubmitting || !isValid}
     >
       <TestQuestionsList {...questionsProps} />
     </TwoColumnContentLayout>

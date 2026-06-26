@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Avatar } from '@/components/ui/Avatar/Avatar';
+import { Avatar } from '@/components/ui/Avatar/Avatar.tsx';
 import SendIcon from '@/assets/send.svg?react';
 import styles from './CommentInput.module.css';
 

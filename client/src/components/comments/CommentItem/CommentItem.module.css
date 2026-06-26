@@ -65,3 +65,52 @@
 .actions {
     flex-shrink: 0;
 }
+
+.isEditing {
+    padding-bottom: 20px;
+}
+
+.editContainer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.editInput {
+    flex-grow: 1;
+}
+
+.editInput input {
+    font-family: 'Inter', sans-serif;
+    border-radius: 12px;
+    background-color: #f8f8fa;
+    border-color: rgba(112, 45, 255, 0.2);
+}
+
+.editInput input:focus {
+    border-color: #702dff;
+}
+
+.saveButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background-color: #702dff;
+    border: 1px solid rgba(112, 45, 255, 0.2);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.saveButton:hover {
+    background-color: #5B21D4;
+}
+
+.saveIcon path{
+    width: 20px;
+    height: 20px;
+    stroke: #ffffff;
+}

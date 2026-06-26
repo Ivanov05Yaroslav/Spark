@@ -89,3 +89,28 @@ export interface ApiTestAttemptsResponse {
   usedAttempts: number;
   attempts: ApiTestAttempt[];
 }
+
+export interface ReviewAnswer {
+  id: string;
+  content: string;
+  isSelectedByStudent: boolean;
+  isCorrect: boolean;
+}
+
+export interface ReviewQuestion {
+  id: string;
+  content: string;
+  type: 'ONE_CHOICE' | 'MULTIPLE_CHOICE';
+  maxPoints: number;
+  earnedPoints: number;
+  answers: ReviewAnswer[];
+}
+
+export interface TestAttemptReviewResponse {
+  id: string;
+  studentId: string;
+  submittedAt: string;
+  duration: number;
+  totalScore: string;
+  questions: ReviewQuestion[];
+}

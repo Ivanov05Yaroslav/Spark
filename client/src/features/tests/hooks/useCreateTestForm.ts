@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/libs/configs/Toast';
 import { courseService } from '@/api/courses.service';
@@ -155,8 +155,37 @@ export const useCreateTestForm = (courseId: string | undefined) => {
     }
   };
 
+  const isValid = useMemo(() => {
+    if (!title?.trim()) return false;
+    if (!nusGroupId) return false;
+    if (!deadline) return false;
+    if (!attempts) return false;
+
+    const hasModule = !!moduleId;
+    if (!hasModule) return false;
+
+    if (!minutes?.trim() && !hours?.trim()) return false;
+
+    if (!questions || questions.length === 0) return false;
+
+    return questions.every((q) => {
+      if (!q.content?.trim()) return false;
+
+      if (!q.answers || q.answers.length < 2) return false;
+
+      const allAnswersFilled = q.answers.every((a) => !!a.content?.trim());
+      if (!allAnswersFilled) return false;
+
+      const hasCorrectAnswer = q.answers.some((a) => a.isCorrect);
+      if (!hasCorrectAnswer) return false;
+
+      return true;
+    });
+  }, [title, moduleId, nusGroupId, deadline, minutes, hours, attempts, questions]);
+
   return {
     isSubmitting,
+    isValid,
     onSubmitForm,
     sidebarProps: {
       modules,

@@ -5,15 +5,16 @@ import { SelectField } from '@/components/ui/SelectField/SelectField';
 import { TestAnswerInput } from '../TestAnswerInput/TestAnswerInput';
 import { QuestionType, UIQuestion } from '@/types/tests.types';
 import styles from './TestQuestionCard.module.css';
-
 import PlusIcon from '@/assets/plus.svg?react';
 import DeleteIcon from '@/assets/delete.svg?react';
 
 interface TestQuestionCardProps {
   index: number;
-  question: UIQuestion;
-  onUpdate: (updatedFields: Partial<UIQuestion>) => void;
+  question: any;
+  onUpdate?: (updatedFields: Partial<UIQuestion>) => void;
   onDelete?: () => void;
+  isReviewMode?: boolean;
+  isTeacherPreviewMode?: boolean;
 }
 
 export const TestQuestionCard: React.FC<TestQuestionCardProps> = ({
@@ -21,11 +22,28 @@ export const TestQuestionCard: React.FC<TestQuestionCardProps> = ({
   question,
   onUpdate,
   onDelete,
+  isReviewMode = false,
+  isTeacherPreviewMode = false,
 }) => {
   const [isActive, setIsActive] = useState<boolean>(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
+  // Спільний прапорець для режимів "тільки для читання"
+  const isReadOnly = isReviewMode || isTeacherPreviewMode;
+
+  // Логіка закриття активного стану картки при кліку ззовні
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (cardRef.current && !cardRef.current.contains(event.target as Node)) {
+        setIsActive(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const handleTypeChange = (value: string) => {
+    if (!onUpdate) return;
     const newType = value as QuestionType;
     let updatedAnswers = [...question.answers];
 
@@ -38,112 +56,144 @@ export const TestQuestionCard: React.FC<TestQuestionCardProps> = ({
         }
         return { ...a, isCorrect: false };
       });
-      if (!foundCorrect && updatedAnswers.length > 0) {
-        updatedAnswers[0].isCorrect = true;
-      }
     }
-
     onUpdate({ type: newType, answers: updatedAnswers });
   };
 
   const handleAnswerTextChange = (answerId: string, text: string) => {
-    const updatedAnswers = question.answers.map((a) =>
+    if (!onUpdate) return;
+    const updatedAnswers = question.answers.map((a: any) =>
       a.id === answerId ? { ...a, content: text } : a,
     );
     onUpdate({ answers: updatedAnswers });
   };
 
   const handleToggleCorrect = (answerId: string) => {
-    const updatedAnswers = question.answers.map((a) => {
-      if (question.type === 'ONE_CHOICE') {
-        return { ...a, isCorrect: a.id === answerId };
-      } else {
-        return a.id === answerId ? { ...a, isCorrect: !a.isCorrect } : a;
-      }
-    });
+    if (!onUpdate) return;
+    let updatedAnswers = [];
+    if (question.type === 'ONE_CHOICE') {
+      updatedAnswers = question.answers.map((a: any) => ({
+        ...a,
+        isCorrect: a.id === answerId,
+      }));
+    } else {
+      updatedAnswers = question.answers.map((a: any) =>
+        a.id === answerId ? { ...a, isCorrect: !a.isCorrect } : a,
+      );
+    }
     onUpdate({ answers: updatedAnswers });
   };
 
   const handleDeleteAnswer = (answerId: string) => {
-    const updatedAnswers = question.answers.filter((a) => a.id !== answerId);
+    if (!onUpdate) return;
+    const updatedAnswers = question.answers.filter((a: any) => a.id !== answerId);
     onUpdate({ answers: updatedAnswers });
   };
 
   const handleAddAnswer = () => {
-    const newAnswerId = Math.random().toString(36).substr(2, 9);
-    const updatedAnswers = [
-      ...question.answers,
-      { id: newAnswerId, content: '', isCorrect: false },
-    ];
-    onUpdate({ answers: updatedAnswers });
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (cardRef.current && !cardRef.current.contains(event.target as Node)) {
-        setIsActive(false);
-      }
+    if (!onUpdate) return;
+    const newAnswer = {
+      id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+      content: '',
+      isCorrect: false,
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    onUpdate({ answers: [...question.answers, newAnswer] });
+  };
 
   return (
     <div
-      className={`${styles.questionWrapper} ${isActive ? styles.activeCard : ''}`}
       ref={cardRef}
-      onClick={() => setIsActive(true)}
-      onFocus={() => setIsActive(true)}
+      className={`${styles.questionWrapper} ${isActive && !isReadOnly ? styles.activeCard : ''}`}
+      onClick={() => !isReadOnly && setIsActive(true)}
     >
       <div className={styles.cardContainer}>
-        <ContentCard title={`Запитання ${index + 1}`}>
+        <ContentCard
+          title={`Запитання ${index + 1}`}
+          headerRightComponent={
+            isReviewMode && (
+              <span className={styles.reviewPoints}>
+                Бал за запитання: {question.earnedPoints ?? 0} / {question.maxPoints ?? 0}
+              </span>
+            )
+          }
+          headerRightText={isTeacherPreviewMode ? `Балів: ${question.maxPoints}` : undefined}
+        >
           <div className={styles.cardContent}>
-            <div className={styles.topRow}>
-              <Input
-                label="Текст запитання"
-                value={question.content}
-                onChange={(e) => onUpdate({ content: e.target.value })}
-                placeholder="Введіть запитання"
-                className={styles.questionInput}
-              />
-              <Input
-                label="Бали"
-                type="number"
-                min="0"
-                value={question.points || ''}
-                onChange={(e) => onUpdate({ points: Number(e.target.value) || 0 })}
-                placeholder="1"
-                className={styles.typeSelect}
-              />
-              <SelectField
-                label="Тип запитання"
-                options={[
-                  { value: 'ONE_CHOICE', label: 'Одинарний вибір' },
-                  { value: 'MULTIPLE_CHOICE', label: 'Множинний вибір' },
-                ]}
-                value={question.type}
-                onChange={handleTypeChange}
-                className={styles.typeSelect}
-              />
-            </div>
+            {isReadOnly ? (
+              <div className={styles.reviewHeader}>
+                <div className={styles.reviewQuestionText}>{question.content}</div>
+              </div>
+            ) : (
+              <div className={styles.topRow}>
+                <Input
+                  label={`Запитання`}
+                  placeholder={'Введіть запитання'}
+                  value={question.content}
+                  onChange={(e) => onUpdate && onUpdate({ content: e.target.value })}
+                  className={styles.questionInput}
+                />
+                <Input
+                  label="Бали"
+                  type="number"
+                  min="0"
+                  value={question.points || ''}
+                  onChange={(e) => onUpdate && onUpdate({ points: Number(e.target.value) || 0 })}
+                  placeholder="1"
+                  className={styles.typeSelect}
+                />
+                <SelectField
+                  label="Тип запитання"
+                  value={question.type}
+                  onChange={handleTypeChange}
+                  options={[
+                    { value: 'ONE_CHOICE', label: 'Одна правильна відповідь' },
+                    { value: 'MULTIPLE_CHOICE', label: 'Кілька правильних відповідей' },
+                  ]}
+                  className={styles.typeSelect}
+                />
+              </div>
+            )}
 
             <div className={styles.answersGrid}>
-              {question.answers.map((answer, idx) => (
-                <TestAnswerInput
-                  key={answer.id}
-                  placeholder={`Варіант ${idx + 1}`}
-                  value={answer.content}
-                  onChange={(e) => handleAnswerTextChange(answer.id, e.target.value)}
-                  isCorrect={answer.isCorrect}
-                  onToggleCorrect={() => handleToggleCorrect(answer.id)}
-                  onDelete={
-                    question.answers.length > 2 ? () => handleDeleteAnswer(answer.id) : undefined
+              {question.answers.map((answer: any, idx: number) => {
+                let reviewClass = '';
+
+                if (isReviewMode) {
+                  if (answer.isCorrect) {
+                    reviewClass = styles.answerCorrect;
+                  } else if (answer.isSelectedByStudent && !answer.isCorrect) {
+                    reviewClass = styles.answerIncorrect;
                   }
-                />
-              ))}
+                }
+
+                return (
+                  <div
+                    key={answer.id}
+                    className={`${styles.answerWrapper} ${reviewClass} ${
+                      isReadOnly ? styles.reviewReadOnly : ''
+                    }`}
+                    style={isReadOnly ? { pointerEvents: 'none' } : undefined}
+                  >
+                    <TestAnswerInput
+                      placeholder={`Варіант ${idx + 1}`}
+                      value={answer.content}
+                      onChange={(e) =>
+                        !isReadOnly && handleAnswerTextChange(answer.id, e.target.value)
+                      }
+                      isCorrect={answer.isCorrect}
+                      onToggleCorrect={() => !isReadOnly && handleToggleCorrect(answer.id)}
+                      onDelete={
+                        question.answers.length > 2 && !isReadOnly
+                          ? () => handleDeleteAnswer(answer.id)
+                          : undefined
+                      }
+                    />
+                  </div>
+                );
+              })}
             </div>
 
-            {isActive && (
+            {isActive && !isReadOnly && (
               <button
                 type="button"
                 className={styles.addOptionBtn}
@@ -160,7 +210,7 @@ export const TestQuestionCard: React.FC<TestQuestionCardProps> = ({
         </ContentCard>
       </div>
 
-      {onDelete && (
+      {onDelete && !isReadOnly && (
         <button
           type="button"
           className={styles.deleteButton}
