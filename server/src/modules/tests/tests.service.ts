@@ -55,8 +55,12 @@ export class TestsService {
         timeLimitMinutes: dto.timeLimitMinutes,
         deadline: dto.deadline ? new Date(dto.deadline) : null,
         maxAttempts: dto.maxAttempts || 1,
-        isResultHidden: dto.isResultHidden || false,
-        isHidden: dto.isHidden || false,
+        isResultHidden: dto.isResultHidden ?? false,
+        isAttemptHidden: dto.isAttemptHidden ?? false,
+        isShowCorrectAnswers: dto.isShowCorrectAnswers ?? true,
+        isShuffleQuestions: dto.isShuffleQuestions ?? false,
+        isShuffleAnswers: dto.isShuffleAnswers ?? false,
+        isHidden: dto.isHidden ?? false,
         questions: {
           create:
             dto.questions?.map((q) => ({
@@ -113,6 +117,10 @@ export class TestsService {
         deadline: dto.deadline ? new Date(dto.deadline) : undefined,
         maxAttempts: dto.maxAttempts,
         isResultHidden: dto.isResultHidden,
+        isAttemptHidden: dto.isAttemptHidden,
+        isShowCorrectAnswers: dto.isShowCorrectAnswers,
+        isShuffleQuestions: dto.isShuffleQuestions,
+        isShuffleAnswers: dto.isShuffleAnswers,
         isHidden: dto.isHidden,
       },
     });
