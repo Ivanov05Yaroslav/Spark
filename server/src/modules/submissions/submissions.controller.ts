@@ -45,11 +45,15 @@ export class SubmissionsController {
     return this.submissionsService.submitTask(studentId, dto, files);
   }
 
-  @ApiOperation({ summary: 'Отримати мою здану роботу для конкретного завдання' })
-  @Roles('STUDENT')
-  @Get('/task/:taskId/my')
-  async getMySubmission(@GetUser('id') studentId: string, @Param('taskId') taskId: string) {
-    return this.submissionsService.getMySubmissionForTask(studentId, taskId);
+  @ApiOperation({ summary: 'Отримати здану роботу учня (Для самого учня, батьків або вчителя)' })
+  @Roles('STUDENT', 'PARENT', 'TEACHER')
+  @Get('/task/:taskId/student/:studentId')
+  async getSubmissionForTask(
+    @GetUser('id') userId: string,
+    @Param('taskId') taskId: string,
+    @Param('studentId') studentId: string,
+  ) {
+    return this.submissionsService.getSubmissionForTask(userId, taskId, studentId);
   }
 
   @ApiOperation({ summary: 'Отримати всі здані роботи до ЗАВДАННЯ (Тільки Вчитель)' })
@@ -130,17 +134,21 @@ export class SubmissionsController {
   }
 
   @ApiOperation({ summary: 'Перегляд деталей спроби тесту' })
-  @Roles('TEACHER', 'STUDENT')
+  @Roles('TEACHER', 'STUDENT', 'PARENT')
   @Get('/test-attempt/:id/review')
   async getTestAttemptReview(@GetUser('id') userId: string, @Param('id') submissionId: string) {
     return this.submissionsService.getTestAttemptReview(userId, submissionId);
   }
 
-  @ApiOperation({ summary: 'Отримати список своїх спроб конкретного тесту' })
-  @Roles('STUDENT')
-  @Get('/test/:testId/my-attempts')
-  async getMyTestAttempts(@GetUser('id') studentId: string, @Param('testId') testId: string) {
-    return this.submissionsService.getMyTestAttempts(studentId, testId);
+  @ApiOperation({ summary: 'Отримати список спроб конкретного тесту для учня' })
+  @Roles('STUDENT', 'PARENT', 'TEACHER')
+  @Get('/test/:testId/student/:studentId/attempts')
+  async getTestAttempts(
+    @GetUser('id') userId: string,
+    @Param('testId') testId: string,
+    @Param('studentId') studentId: string,
+  ) {
+    return this.submissionsService.getTestAttempts(userId, testId, studentId);
   }
 
   @ApiOperation({ summary: 'Отримати список учнів з їхніми спробами тесту (Для вчителя)' })
