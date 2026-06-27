@@ -28,6 +28,13 @@ export class TestsService {
   async createTest(teacherId: string, dto: CreateTestDto) {
     await this.verifyTeacherWriteAccess(dto.courseId, teacherId);
 
+    if (!dto.courseModuleId && (!dto.newModuleTitle || dto.newModuleTitle.trim() === '')) {
+      throw new HttpException(
+        "Тест обов'язково має належати до модуля (теми)",
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     let finalModuleId = dto.courseModuleId || null;
     if (dto.newModuleTitle && dto.newModuleTitle.trim() !== '') {
       const cleanedTitle = dto.newModuleTitle.trim();
@@ -89,6 +96,13 @@ export class TestsService {
     if (!test) throw new HttpException('Тест не знайдено', HttpStatus.NOT_FOUND);
 
     await this.verifyTeacherWriteAccess(test.courseId, teacherId);
+
+    if (!dto.courseModuleId && (!dto.newModuleTitle || dto.newModuleTitle.trim() === '')) {
+      throw new HttpException(
+        "Тест обов'язково має належати до модуля (теми)",
+        HttpStatus.BAD_REQUEST,
+      );
+    }
 
     let finalModuleId = dto.courseModuleId !== undefined ? dto.courseModuleId : test.courseModuleId;
     if (dto.newModuleTitle && dto.newModuleTitle.trim() !== '') {

@@ -63,8 +63,8 @@ export class CoursesController {
   @ApiOperation({ summary: 'Отримати повну інформацію про конкретний курс за ID' })
   @Roles('STUDENT', 'TEACHER', 'PARENT', 'ADMIN', 'SUPER_ADMIN')
   @Get('/:id')
-  async getCourseById(@Param('id') courseId: string) {
-    return this.coursesService.getCourseById(courseId);
+  async getCourseById(@GetUser('id') userId: string, @Param('id') courseId: string) {
+    return this.coursesService.getCourseById(userId, courseId);
   }
 
   @ApiOperation({ summary: 'Адміністрування: Редагувати курс / Архівувати' })
@@ -124,10 +124,7 @@ export class CoursesController {
   @ApiOperation({ summary: 'Отримати всі модулі (теми) конкретного курсу' })
   @Roles('STUDENT', 'TEACHER', 'PARENT', 'ADMIN', 'SUPER_ADMIN')
   @Get('/:id/modules')
-  async getCourseModules(
-    @GetUser('id') userId: string,
-    @Param('id') courseId: string,
-  ) {
+  async getCourseModules(@GetUser('id') userId: string, @Param('id') courseId: string) {
     return this.coursesService.getCourseModules(userId, courseId);
   }
 
@@ -145,10 +142,7 @@ export class CoursesController {
   @ApiOperation({ summary: 'Видалити модуль (тему)' })
   @Roles('TEACHER')
   @Delete('/modules/:moduleId')
-  async deleteModule(
-    @GetUser('id') teacherId: string,
-    @Param('moduleId') moduleId: string,
-  ) {
+  async deleteModule(@GetUser('id') teacherId: string, @Param('moduleId') moduleId: string) {
     return this.coursesService.deleteModule(teacherId, moduleId);
   }
 }
