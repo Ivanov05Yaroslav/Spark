@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Put,
   Query,
@@ -26,6 +27,7 @@ import {
   GetCoursesQueryDto,
   UpdateCourseDto,
   UpdateCourseModuleDto,
+  UpdateVideoLinksDto,
 } from './dto/course.dto';
 
 @ApiTags('courses')
@@ -144,5 +146,16 @@ export class CoursesController {
   @Delete('/modules/:moduleId')
   async deleteModule(@GetUser('id') teacherId: string, @Param('moduleId') moduleId: string) {
     return this.coursesService.deleteModule(teacherId, moduleId);
+  }
+
+  @ApiOperation({ summary: 'Оновлення посилань на відеоконференції' })
+  @Roles('TEACHER')
+  @Patch('/:id/video-links')
+  async updateVideoLinks(
+    @GetUser('id') teacherId: string,
+    @Param('id') courseId: string,
+    @Body() dto: UpdateVideoLinksDto,
+  ) {
+    return this.coursesService.updateVideoLinks(teacherId, courseId, dto.videoLinks);
   }
 }
