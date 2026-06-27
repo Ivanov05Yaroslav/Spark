@@ -125,6 +125,7 @@ export class AuthService {
         avatarUrl: user.avatarUrl,
         roles: user.userRoles.map((ur) => ur.role.name),
         schoolId: user.schoolId,
+        commentsBlockedUntil: user.commentsBlockedUntil,
         children:
           user.parentRelations?.map((rel) => ({
             id: rel.student.id,
@@ -180,6 +181,7 @@ export class AuthService {
           avatarUrl: user.avatarUrl,
           roles: user.userRoles.map((ur) => ur.role.name),
           schoolId: user.schoolId,
+          commentsBlockedUntil: user.commentsBlockedUntil,
           children:
             user.parentRelations?.map((rel) => ({
               id: rel.student.id,
