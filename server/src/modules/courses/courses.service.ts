@@ -76,19 +76,50 @@ export class CoursesService {
     }));
   }
 
-  async getCourseById(courseId: string) {
+  async getCourseById(userId: string, courseId: string) {
     const course = await this.prisma.course.findUnique({
       where: { id: courseId },
       include: {
         subject: { select: { id: true, name: true } },
-        class: { select: { id: true, name: true } },
+        class: { select: { id: true, name: true, homeroomTeacher: true } },
         modules: {
           select: {
             id: true,
             title: true,
             createdAt: true,
+            materials: {
+              where: { isHidden: false },
+              select: { id: true, title: true, fileUrl: true, linkUrl: true },
+            },
+            tasks: {
+              where: { isHidden: false },
+              select: { id: true, title: true, deadline: true },
+            },
+            tests: {
+              where: { isHidden: false },
+              select: { id: true, title: true, deadline: true },
+            },
           },
           orderBy: { createdAt: 'asc' },
+        },
+        materials: {
+          where: { courseModuleId: null, isHidden: false },
+          select: { id: true, title: true, fileUrl: true, linkUrl: true },
+        },
+        tasks: {
+          where: { courseModuleId: null, isHidden: false },
+          select: { id: true, title: true, deadline: true },
+        },
+        tests: {
+          where: { courseModuleId: null, isHidden: false },
+          select: { id: true, title: true, deadline: true },
+        },
+        announcements: {
+          orderBy: { createdAt: 'desc' },
+          include: {
+            creator: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
+            reads: { where: { userId: userId } },
+          },
         },
         creator: {
           select: {
@@ -136,10 +167,114 @@ export class CoursesService {
       throw new HttpException('Курс не знайдено', HttpStatus.NOT_FOUND);
     }
 
+    const signAvatar = async (url: string | null) => {
+      if (url && url.includes('amazonaws.com'))
+        return await this.awsS3Service.generatePresignedUrl(url);
+      return url;
+    };
+
+    const creatorAvatar = await signAvatar(course.creator.avatarUrl);
+    const creatorClean = {
+      id: course.creator.id,
+      firstName: course.creator.firstName,
+      lastName: course.creator.lastName,
+      middleName: course.creator.middleName,
+      avatarUrl: creatorAvatar,
+      email: course.creator.email,
+    };
+
+    const coTeachersClean = await Promise.all(
+      course.coTeachers.map(async (ct) => ({
+        id: ct.teacher.id,
+        firstName: ct.teacher.firstName,
+        lastName: ct.teacher.lastName,
+        middleName: ct.teacher.middleName,
+        avatarUrl: await signAvatar(ct.teacher.avatarUrl),
+        email: ct.teacher.email,
+      })),
+    );
+    let homeroomTeacherClean: any = null;
+    if (course.class.homeroomTeacher) {
+      homeroomTeacherClean = {
+        id: course.class.homeroomTeacher.id,
+        firstName: course.class.homeroomTeacher.firstName,
+        lastName: course.class.homeroomTeacher.lastName,
+        middleName: course.class.homeroomTeacher.middleName,
+        avatarUrl: await signAvatar(course.class.homeroomTeacher.avatarUrl),
+        email: course.class.homeroomTeacher.email,
+      };
+    }
+
+    const students = await Promise.all(
+      course.students.map(async (cs) => ({
+        ...cs.student,
+        avatarUrl: await signAvatar(cs.student.avatarUrl),
+      })),
+    );
+
+    const announcements = await Promise.all(
+      course.announcements.map(async (ann) => ({
+        id: ann.id,
+        title: ann.title,
+        content: ann.content,
+        createdAt: ann.createdAt,
+        isNew: ann.reads.length === 0,
+        creator: {
+          ...ann.creator,
+          avatarUrl: await signAvatar(ann.creator.avatarUrl),
+        },
+      })),
+    );
+    const unreadAnnouncementsCount = announcements.filter((a) => a.isNew).length;
+
+    const allTasks = [...course.tasks, ...course.modules.flatMap((m) => m.tasks)];
+    const allTests = [...course.tests, ...course.modules.flatMap((m) => m.tests)];
+
+    const now = new Date();
+    const nextWeek = new Date();
+    nextWeek.setDate(now.getDate() + 7);
+
+    const upcomingTasks = allTasks
+      .filter((t) => t.deadline && t.deadline > now && t.deadline <= nextWeek)
+      .map((t) => ({ ...t, type: 'task' }));
+    const upcomingTests = allTests
+      .filter((t) => t.deadline && t.deadline > now && t.deadline <= nextWeek)
+      .map((t) => ({ ...t, type: 'test' }));
+
+    const upcomingDeadlines = [...upcomingTasks, ...upcomingTests].sort(
+      (a, b) => a.deadline!.getTime() - b.deadline!.getTime(),
+    );
+
     return {
-      ...course,
-      coTeachers: course.coTeachers.map((ct) => ct.teacher),
-      students: course.students.map((cs) => cs.student),
+      id: course.id,
+      subject: course.subject,
+      class: {
+        id: course.class.id,
+        name: course.class.name,
+      },
+      startDate: course.startDate,
+      endDate: course.endDate,
+      groupName: course.groupName,
+      videoLinks: course.videoLinks,
+      themeColor: course.themeColor,
+      backgroundUrl: course.backgroundUrl
+        ? await this.awsS3Service.generatePresignedUrl(course.backgroundUrl)
+        : null,
+
+      participants: {
+        creator: creatorClean,
+        coTeachers: coTeachersClean,
+        homeroomTeacher: homeroomTeacherClean,
+        students,
+        totalStudentsCount: course._count.students,
+      },
+
+      modules: course.modules,
+
+      upcomingDeadlines,
+
+      announcements,
+      unreadAnnouncementsCount,
     };
   }
 
@@ -218,7 +353,7 @@ export class CoursesService {
       },
     });
 
-    return this.getCourseById(course.id);
+    return this.getCourseById(teacherId, course.id);
   }
 
   async updateCourse(
@@ -287,7 +422,7 @@ export class CoursesService {
       },
     });
 
-    return this.getCourseById(courseId);
+    return this.getCourseById(teacherId, courseId);
   }
 
   async deleteCourse(userId: string, courseId: string) {
@@ -319,7 +454,7 @@ export class CoursesService {
     await this.prisma.courseTeacher.create({
       data: { courseId, teacherId: targetTeacherId },
     });
-    return this.getCourseById(courseId);
+    return this.getCourseById(teacherId, courseId);
   }
 
   async removeCoTeacher(teacherId: string, courseId: string, targetTeacherId: string) {
@@ -327,7 +462,7 @@ export class CoursesService {
     await this.prisma.courseTeacher.delete({
       where: { courseId_teacherId: { courseId, teacherId: targetTeacherId } },
     });
-    return this.getCourseById(courseId);
+    return this.getCourseById(teacherId, courseId);
   }
 
   // private getCurrentAcademicYear(): string {

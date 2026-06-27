@@ -50,4 +50,11 @@ export class AnnouncementsController {
   async delete(@GetUser('id') userId: string, @Param('id') id: string) {
     return this.announcementsService.delete(userId, id);
   }
+
+  @ApiOperation({ summary: 'Позначити оголошення як прочитане' })
+  @Roles('STUDENT', 'TEACHER', 'PARENT', 'ADMIN', 'SUPER_ADMIN', 'MODERATOR')
+  @Patch('/:id/read')
+  async markAsRead(@GetUser('id') userId: string, @Param('id') id: string) {
+    return this.announcementsService.markAsRead(userId, id);
+  }
 }

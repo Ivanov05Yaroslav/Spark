@@ -38,6 +38,11 @@ export class AnnouncementsService {
         creatorId: teacherId,
         title: dto.title,
         content: dto.content,
+        reads: {
+          create: {
+            userId: teacherId,
+          }
+        }
       },
       include: {
         creator: {
@@ -183,5 +188,20 @@ export class AnnouncementsService {
 
     await this.prisma.announcement.delete({ where: { id: announcementId } });
     return { message: 'Оголошення успішно видалено' };
+  }
+
+  async markAsRead(userId: string, announcementId: string) {
+    const announcement = await this.prisma.announcement.findUnique({
+      where: { id: announcementId },
+    });
+    if (!announcement) throw new HttpException('Оголошення не знайдено', HttpStatus.NOT_FOUND);
+
+    await this.prisma.announcementRead
+      .create({
+        data: { announcementId, userId },
+      })
+      .catch(() => {});
+
+    return { success: true };
   }
 }

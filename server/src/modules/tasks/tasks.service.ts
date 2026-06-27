@@ -47,6 +47,13 @@ export class TasksService {
       }
     }
 
+    if (!dto.courseModuleId && (!dto.newModuleTitle || dto.newModuleTitle.trim() === '')) {
+      throw new HttpException(
+        "Завдання обов'язково має належати до модуля (теми)",
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     let finalModuleId = dto.courseModuleId || null;
 
     if (dto.newModuleTitle && dto.newModuleTitle.trim() !== '') {
@@ -185,6 +192,13 @@ export class TasksService {
           HttpStatus.BAD_REQUEST,
         );
       }
+    }
+
+    if (!dto.courseModuleId && (!dto.newModuleTitle || dto.newModuleTitle.trim() === '')) {
+      throw new HttpException(
+        "Завдання обов'язково має належати до модуля (теми)",
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     let finalModuleId = dto.courseModuleId !== undefined ? dto.courseModuleId : task.courseModuleId;

@@ -79,10 +79,11 @@ model User {
   attendances     Attendance[]
 
   // Зв'язки: Комунікація
-  sentNotifications     Notification[] @relation("SentNotifications")
-  receivedNotifications Notification[] @relation("ReceivedNotifications")
-  madeComplaints        Complaint[]    @relation("ReporterRelation")
-  receivedComplaints    Complaint[]    @relation("ReportedRelation")
+  sentNotifications     Notification[]     @relation("SentNotifications")
+  receivedNotifications Notification[]     @relation("ReceivedNotifications")
+  madeComplaints        Complaint[]        @relation("ReporterRelation")
+  receivedComplaints    Complaint[]        @relation("ReportedRelation")
+  readAnnouncements     AnnouncementRead[]
   chats                 ChatMember[]
   messages              Message[]
 
@@ -275,10 +276,23 @@ model Announcement {
   content   String
   createdAt DateTime @default(now())
 
-  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  creator User   @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  course  Course             @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  creator User               @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  reads   AnnouncementRead[]
 
   @@map("announcements")
+}
+
+model AnnouncementRead {
+  announcementId String
+  userId         String
+  readAt         DateTime @default(now())
+
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([announcementId, userId])
+  @@map("announcement_reads")
 }
 
 model Material {

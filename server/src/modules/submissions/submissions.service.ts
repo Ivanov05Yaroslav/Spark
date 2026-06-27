@@ -556,6 +556,80 @@ export class SubmissionsService {
     };
   }
 
+  async getStudentSubmissionsByTask(teacherId: string, taskId: string) {
+    const task = await this.prisma.task.findUnique({
+      where: { id: taskId },
+      include: {
+        course: {
+          include: {
+            coTeachers: true,
+            students: { include: { student: true } },
+          },
+        },
+      },
+    });
+
+    if (!task) throw new HttpException('Завдання не знайдено', HttpStatus.NOT_FOUND);
+
+    const isTeacher =
+      task.course.creatorId === teacherId ||
+      task.course.coTeachers.some((ct) => ct.teacherId === teacherId);
+
+    if (!isTeacher) {
+      throw new HttpException('У вас немає прав переглядати роботи учнів', HttpStatus.FORBIDDEN);
+    }
+
+    const allSubmissions = await this.prisma.submission.findMany({
+      where: { taskId },
+      orderBy: { submittedAt: 'desc' },
+    });
+
+    const studentsWithSubmissions = await Promise.all(
+      task.course.students.map(async (studentEnrollment) => {
+        const student = studentEnrollment.student;
+        const studentSubmissions = allSubmissions.filter((sub) => sub.studentId === student.id);
+        const latestSubmission = studentSubmissions.length > 0 ? studentSubmissions[0] : null;
+
+        let avatarUrl = student.avatarUrl;
+        if (avatarUrl && avatarUrl.includes('amazonaws.com')) {
+          avatarUrl = await this.awsS3Service.generatePresignedUrl(avatarUrl);
+        }
+
+        let signedAttachments: string[] = [];
+        if (latestSubmission && latestSubmission.attachments.length > 0) {
+          signedAttachments = await Promise.all(
+            latestSubmission.attachments.map(async (url) => {
+              if (url.includes('amazonaws.com')) {
+                return await this.awsS3Service.generatePresignedUrl(url);
+              }
+              return url;
+            }),
+          );
+        }
+
+        return {
+          id: student.id,
+          firstName: student.firstName,
+          lastName: student.lastName,
+          middleName: student.middleName,
+          avatarUrl,
+          submissionId: latestSubmission?.id || null,
+          submittedAt: latestSubmission?.submittedAt || null,
+          checkedAt: latestSubmission?.checkedAt || null,
+          score: latestSubmission?.score || null,
+          attachments: signedAttachments,
+          status: latestSubmission
+            ? latestSubmission.checkedAt
+              ? 'GRADED'
+              : 'SUBMITTED'
+            : 'NOT_SUBMITTED',
+        };
+      }),
+    );
+
+    return studentsWithSubmissions.sort((a, b) => a.lastName.localeCompare(b.lastName));
+  }
+
   async getStudentAttemptsByTest(teacherId: string, testId: string) {
     const test = await this.prisma.test.findUnique({
       where: { id: testId },
