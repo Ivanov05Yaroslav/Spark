@@ -74,31 +74,45 @@ export class SubmissionsService {
     };
   }
 
-  async getMySubmissionForTask(studentId: string, taskId: string) {
+  async getSubmissionForTask(userId: string, taskId: string, targetStudentId: string) {
     const task = await this.prisma.task.findUnique({
       where: { id: taskId },
-      include: { course: { include: { students: true } } },
+      include: { course: { include: { students: true, coTeachers: true } } },
     });
 
-    if (!task) {
-      throw new HttpException('Завдання не знайдено', HttpStatus.NOT_FOUND);
+    if (!task) throw new HttpException('Завдання не знайдено', HttpStatus.NOT_FOUND);
+
+    let hasAccess = false;
+    if (userId === targetStudentId) {
+      hasAccess = true;
+    } else {
+      const isTeacher =
+        task.course.creatorId === userId ||
+        task.course.coTeachers.some((ct) => ct.teacherId === userId);
+      if (isTeacher) {
+        hasAccess = true;
+      } else {
+        const parentRel = await this.prisma.studentParent.findUnique({
+          where: { studentId_parentId: { studentId: targetStudentId, parentId: userId } },
+        });
+        if (parentRel) hasAccess = true;
+      }
     }
 
-    const isStudent = task.course.students.some((s) => s.studentId === studentId);
-    if (!isStudent) {
-      throw new HttpException('Ви не є учасником цього курсу', HttpStatus.FORBIDDEN);
+    if (!hasAccess) {
+      throw new HttpException('У вас немає доступу до цієї роботи', HttpStatus.FORBIDDEN);
+    }
+
+    const isStudentEnrolled = task.course.students.some((s) => s.studentId === targetStudentId);
+    if (!isStudentEnrolled) {
+      throw new HttpException('Учень не є учасником цього курсу', HttpStatus.FORBIDDEN);
     }
 
     const submission = await this.prisma.submission.findFirst({
-      where: {
-        taskId: taskId,
-        studentId: studentId,
-      },
+      where: { taskId, studentId: targetStudentId },
     });
 
-    if (!submission) {
-      return null;
-    }
+    if (!submission) return null;
 
     const signedAttachments = await Promise.all(
       submission.attachments.map(async (url) => {
@@ -109,10 +123,7 @@ export class SubmissionsService {
       }),
     );
 
-    return {
-      ...submission,
-      attachments: signedAttachments,
-    };
+    return { ...submission, attachments: signedAttachments };
   }
 
   async getSubmissionsByTask(teacherId: string, taskId: string, query: GetSubmissionsQueryDto) {
@@ -425,11 +436,21 @@ export class SubmissionsService {
       test.course.coTeachers.some((ct) => ct.teacherId === userId);
     const isOwner = submission.studentId === userId;
 
-    if (!isTeacher && !isOwner) {
+    let hasAccess = false;
+    if (isTeacher || isOwner) {
+      hasAccess = true;
+    } else {
+      const parentRel = await this.prisma.studentParent.findUnique({
+        where: { studentId_parentId: { studentId: submission.studentId, parentId: userId } },
+      });
+      if (parentRel) hasAccess = true;
+    }
+
+    if (!hasAccess) {
       throw new HttpException('У вас немає доступу до цієї спроби', HttpStatus.FORBIDDEN);
     }
 
-    if (isOwner && !isTeacher) {
+    if (!isTeacher) {
       if (test.isAttemptHidden) {
         throw new HttpException(
           'Перегляд деталей спроби заборонено налаштуваннями тесту',
@@ -487,15 +508,36 @@ export class SubmissionsService {
     return review;
   }
 
-  async getMyTestAttempts(studentId: string, testId: string) {
+  async getTestAttempts(userId: string, testId: string, targetStudentId: string) {
     const test = await this.prisma.test.findUnique({
       where: { id: testId },
+      include: { course: { include: { coTeachers: true } } },
     });
 
     if (!test) throw new HttpException('Тест не знайдено', HttpStatus.NOT_FOUND);
 
+    let hasAccess = false;
+    const isTeacher =
+      test.course.creatorId === userId ||
+      test.course.coTeachers.some((ct) => ct.teacherId === userId);
+
+    if (userId === targetStudentId) {
+      hasAccess = true;
+    } else if (isTeacher) {
+      hasAccess = true;
+    } else {
+      const parentRel = await this.prisma.studentParent.findUnique({
+        where: { studentId_parentId: { studentId: targetStudentId, parentId: userId } },
+      });
+      if (parentRel) hasAccess = true;
+    }
+
+    if (!hasAccess) {
+      throw new HttpException('У вас немає доступу до спроб цього учня', HttpStatus.FORBIDDEN);
+    }
+
     const submissions = await this.prisma.submission.findMany({
-      where: { testId, studentId },
+      where: { testId, studentId: targetStudentId },
       orderBy: { submittedAt: 'asc' },
     });
 
@@ -508,8 +550,8 @@ export class SubmissionsService {
         attemptNumber: index + 1,
         submittedAt: sub.submittedAt,
         duration: sub.duration,
-        score: test.isResultHidden ? null : sub.score,
-        canReview: !test.isAttemptHidden,
+        score: !isTeacher && test.isResultHidden ? null : sub.score,
+        canReview: isTeacher || !test.isAttemptHidden,
       })),
     };
   }
@@ -555,8 +597,8 @@ export class SubmissionsService {
         let highestScore: number | null = null;
         if (studentSubmissions.length > 0) {
           const scores = studentSubmissions
-            .map(sub => parseFloat(sub.score || '0'))
-            .filter(score => !isNaN(score));
+            .map((sub) => parseFloat(sub.score || '0'))
+            .filter((score) => !isNaN(score));
           if (scores.length > 0) {
             highestScore = Math.max(...scores);
           }
@@ -579,7 +621,7 @@ export class SubmissionsService {
             score: sub.score,
           })),
         };
-      })
+      }),
     );
 
     return studentsWithAttempts.sort((a, b) => a.lastName.localeCompare(b.lastName));

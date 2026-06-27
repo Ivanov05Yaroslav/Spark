@@ -19,7 +19,7 @@ export class EmailService {
     } as any);
   }
 
-  private async sendMail(to: string, subject: string, htmlContent: string) {
+  public async sendMail(to: string, subject: string, htmlContent: string) {
     const fullHtml = `
       <!DOCTYPE html>
       <html>
