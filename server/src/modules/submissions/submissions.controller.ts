@@ -150,6 +150,16 @@ export class SubmissionsController {
   ) {
     return this.submissionsService.getTestAttempts(userId, testId, studentId);
   }
+  
+  @ApiOperation({ summary: 'Отримати список учнів з їхніми зданими роботами для завдання (Для вчителя)' })
+  @Roles('TEACHER')
+  @Get('/task/:taskId/student-submissions')
+  async getStudentSubmissionsByTask(
+    @GetUser('id') teacherId: string,
+    @Param('taskId') taskId: string,
+  ) {
+    return this.submissionsService.getStudentSubmissionsByTask(teacherId, taskId);
+  }
 
   @ApiOperation({ summary: 'Отримати список учнів з їхніми спробами тесту (Для вчителя)' })
   @Roles('TEACHER')
