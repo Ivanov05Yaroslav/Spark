@@ -732,4 +732,15 @@ export class CoursesService {
 
     return { message: 'Модуль успішно видалено' };
   }
+
+  async updateVideoLinks(teacherId: string, courseId: string, videoLinks: string[]) {
+    await this.ensureCourseCreator(courseId, teacherId);
+
+    await this.prisma.course.update({
+      where: { id: courseId },
+      data: { videoLinks },
+    });
+
+    return this.getCourseById(teacherId, courseId);
+  }
 }

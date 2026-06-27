@@ -348,11 +348,22 @@ export class GetCoursesQueryDto {
   @ApiProperty({
     required: false,
     description: 'Кількість елементів на сторінку (за замовчуванням 8)',
-    default: 8
+    default: 8,
   })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   limit?: number = 8;
+}
+
+export class UpdateVideoLinksDto {
+  @ApiProperty({
+    example: ['https://zoom.us/j/123456789', 'https://meet.google.com/abc'],
+    description:
+      'Актуальний масив посилань. Для видалення/зміни/додавання просто передайте повністю новий масив.',
+  })
+  @IsArray()
+  @IsString({ each: true })
+  videoLinks!: string[];
 }
