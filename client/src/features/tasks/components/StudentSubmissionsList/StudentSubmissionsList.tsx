@@ -15,13 +15,13 @@ export interface Submission {
 
 interface StudentSubmissionsListProps {
   submissions: Submission[];
-  selectedId?: string; // ← Добавили проп для id выбранного студента
+  selectedId?: string;
   onItemClick?: (id: string) => void;
 }
 
 export const StudentSubmissionsList: React.FC<StudentSubmissionsListProps> = ({
   submissions,
-  selectedId, // ← Деструктуризируем
+  selectedId,
   onItemClick,
 }) => {
   if (!submissions || submissions.length === 0) {

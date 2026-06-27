@@ -21,7 +21,7 @@ import {
   CreateTaskPage,
   EditTaskPage,
   GeneralTaskDetailsPage,
-  // TeacherTaskDetailsPage,
+  TeacherTaskDetailsPage,
 } from '@/pages/tasks';
 
 import {
@@ -38,13 +38,6 @@ import {
   SchoolDocumentsPage,
 } from './pages/auth';
 import { TestAttemptReviewPage } from '@/pages/tests/TestAttemptReviewPage/TestAttemptReviewPage.tsx';
-
-const TaskDetailsWrapper: React.FC = () => {
-  const user = useStore((state) => state.user);
-  const isTeacherOrAdmin = user?.roles.some((role) => ['TEACHER', 'ADMIN'].includes(role));
-
-  // return isTeacherOrAdmin ? <TeacherTaskDetailsPage /> : <GeneralTaskDetailsPage />;
-};
 
 function App() {
   return (
@@ -104,6 +97,7 @@ function App() {
             <Route path="/courses/create" element={<CreateCoursePage />} />
             <Route path="/courses/:id/edit" element={<EditCoursePage />} />
 
+            <Route path="/courses/:id/tasks/:taskId" element={<TeacherTaskDetailsPage />} />
             <Route path="/courses/:id/tasks/create" element={<CreateTaskPage />} />
             <Route path="/courses/:id/tasks/:taskId/edit" element={<EditTaskPage />} />
 

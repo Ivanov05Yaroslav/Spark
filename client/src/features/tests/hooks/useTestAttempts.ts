@@ -4,18 +4,27 @@ import { ApiTestAttemptsResponse } from '@/types/tests.types';
 import { toast } from '@/libs/configs/Toast';
 import { TestAttempt } from '@/features/tests/components/TestResultsTable/TestResultsTable';
 import { formatToDateTime } from '@/libs/utils/date';
+import { useStore } from '@/stores/useStore';
 
-export const useTestAttempts = (testId: string | undefined) => {
+export const useTestAttempts = (testId: string | undefined, targetStudentId?: string) => {
   const [attemptsData, setAttemptsData] = useState<ApiTestAttemptsResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  const user = useStore((state) => state.user);
+  const isStudent = user?.roles.includes('STUDENT');
+
+  const studentIdToFetch = isStudent ? user?.id : targetStudentId;
+
   useEffect(() => {
-    if (!testId) return;
+    if (!testId || !studentIdToFetch) {
+      setIsLoading(false);
+      return;
+    }
 
     const fetchAttempts = async () => {
       try {
         setIsLoading(true);
-        const data = await submissionsService.getMyAttempts(testId);
+        const data = await submissionsService.getAttempts(testId, studentIdToFetch);
         setAttemptsData(data);
       } catch (error: any) {
         toast.error(error?.response?.data?.message || 'Не вдалося завантажити спроби');
@@ -25,10 +34,10 @@ export const useTestAttempts = (testId: string | undefined) => {
     };
 
     fetchAttempts();
-  }, [testId]);
+  }, [testId, studentIdToFetch]);
 
   const formattedAttempts: TestAttempt[] = useMemo(() => {
-    if (!attemptsData) return [];
+    if (!attemptsData || !attemptsData.attempts) return [];
 
     return attemptsData.attempts.map((attempt) => {
       const minutes = Math.floor(attempt.duration / 60);
@@ -50,5 +59,14 @@ export const useTestAttempts = (testId: string | undefined) => {
     });
   }, [attemptsData]);
 
-  return { attemptsData, formattedAttempts, isLoading };
+  return {
+    attemptsData: attemptsData
+      ? {
+          ...attemptsData,
+          attempts: formattedAttempts,
+        }
+      : null,
+    formattedAttempts,
+    isLoading,
+  };
 };

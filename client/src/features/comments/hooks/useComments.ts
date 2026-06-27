@@ -33,22 +33,30 @@ export const useComments = ({ testId, taskId, targetStudentId }: UseCommentsProp
         data = await commentsService.getTaskComments(taskId, params);
       }
 
-      const formattedComments: CommentProps[] = data.map((comment) => ({
-        id: comment.id,
-        isOwner: currentUser?.id === comment.authorId,
-        author: {
-          name: `${comment.author.firstName} ${comment.author.lastName}`,
-          avatarUrl: comment.author.avatarUrl || 'https://www.w3schools.com/w3images/avatar2.png',
-        },
-        content: comment.content,
-        timestamp: formatToDateTime(comment.createdAt) || '',
-      }));
+      const now = Date.now();
+      const EDIT_WINDOW_MS = 30 * 60 * 1000; // 30 хвилин у мілісекундах
+
+      const formattedComments: CommentProps[] = data.map((comment) => {
+        const isOwner = currentUser?.id === comment.authorId;
+        const commentTime = new Date(comment.createdAt).getTime();
+        const isEditable = isOwner && now - commentTime < EDIT_WINDOW_MS;
+
+        return {
+          id: comment.id,
+          isOwner,
+          isEditable,
+          author: {
+            name: `${comment.author.firstName} ${comment.author.lastName}`,
+            avatarUrl: comment.author.avatarUrl || '',
+          },
+          timestamp: formatToDateTime(comment.createdAt) || '',
+          content: comment.content,
+        };
+      });
 
       setComments(formattedComments);
-    } catch (error: any) {
-      console.error('Помилка при завантаженні коментарів:', error);
-      toast.error(error?.response?.data?.message || 'Не вдалося завантажити коментарі');
-      setComments([]);
+    } catch (error) {
+      console.error('Помилка завантаження коментарів:', error);
     } finally {
       setIsFetching(false);
     }
@@ -73,7 +81,6 @@ export const useComments = ({ testId, taskId, targetStudentId }: UseCommentsProp
 
       await commentsService.createComment(payload);
       toast.success('Коментар додано');
-
       await fetchComments();
     } catch (error: any) {
       console.error('Помилка при відправці коментаря:', error);
@@ -95,13 +102,21 @@ export const useComments = ({ testId, taskId, targetStudentId }: UseCommentsProp
   };
 
   const editComment = async (id: string, content: string) => {
-    console.log('Редагування коментаря:', id, 'Новий текст:', content);
-    // TODO: Додати виклик API для редагування та зробити await fetchComments()
+    if (!content.trim()) return;
+
+    try {
+      await commentsService.updateComment(id, content);
+      toast.success('Коментар успішно відредаговано');
+      await fetchComments();
+    } catch (error: any) {
+      console.error('Помилка при редагуванні коментаря:', error);
+      toast.error(error?.response?.data?.message || 'Не вдалося відредагувати коментар');
+    }
   };
 
   const complainComment = async (id: string) => {
     console.log('Скарга на коментар:', id);
-    // TODO: Додати виклик API для скарги
+    // TODO: Додати виклик API скарги
   };
 
   return {
@@ -109,8 +124,8 @@ export const useComments = ({ testId, taskId, targetStudentId }: UseCommentsProp
     isLoading,
     isFetching,
     addComment,
-    deleteComment,
     editComment,
+    deleteComment,
     complainComment,
   };
 };

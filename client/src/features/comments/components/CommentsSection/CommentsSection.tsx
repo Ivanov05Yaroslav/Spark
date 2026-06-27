@@ -32,8 +32,8 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({
             <React.Fragment key={comment.id}>
               <CommentItem
                 {...comment}
-                onSaveEdit={comment.isOwner ? editComment : undefined}
-                onDelete={comment.isOwner ? deleteComment : undefined}
+                onSaveEdit={comment.isEditable ? editComment : undefined}
+                onDelete={comment.isEditable ? deleteComment : undefined}
                 onComplaint={!comment.isOwner ? complainComment : undefined}
               />
               {index < comments.length - 1 && <div className={styles.divider} />}

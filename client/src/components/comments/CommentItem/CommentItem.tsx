@@ -8,6 +8,7 @@ import CheckIcon from '@/assets/tick.svg?react';
 export interface CommentProps {
   id: string;
   isOwner?: boolean;
+  isEditable?: boolean;
   author: {
     name: string;
     avatarUrl: string;
@@ -23,6 +24,7 @@ export interface CommentProps {
 export const CommentItem: React.FC<CommentProps> = ({
   id,
   isOwner,
+  isEditable,
   author,
   timestamp,
   content,
@@ -34,6 +36,8 @@ export const CommentItem: React.FC<CommentProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(content);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const hasActions = Boolean(onSaveEdit || onDelete || onComplaint);
 
   useEffect(() => {
     setEditedContent(content);
@@ -49,23 +53,21 @@ export const CommentItem: React.FC<CommentProps> = ({
   }, [isEditing]);
 
   const handleEditClick = () => {
-    onEdit?.(id);
     setIsEditing(true);
-    setEditedContent(content);
+    if (onEdit) onEdit(id);
+  };
+
+  const handleSave = () => {
+    if (editedContent.trim() !== content && onSaveEdit) {
+      onSaveEdit(id, editedContent);
+    } else {
+      setIsEditing(false);
+    }
   };
 
   const handleCancel = () => {
     setIsEditing(false);
     setEditedContent(content);
-  };
-
-  const handleSave = () => {
-    if (!editedContent.trim()) {
-      handleCancel();
-      return;
-    }
-    onSaveEdit?.(id, editedContent);
-    setIsEditing(false);
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -110,7 +112,7 @@ export const CommentItem: React.FC<CommentProps> = ({
       </div>
 
       <div className={styles.actions}>
-        {!isEditing && (
+        {!isEditing && hasActions && (
           <MoreButton
             onEdit={onSaveEdit ? handleEditClick : undefined}
             onDelete={onDelete ? () => onDelete(id) : undefined}
