@@ -32,20 +32,21 @@ model UserRole {
 }
 
 model User {
-  id               String    @id @default(uuid())
-  schoolId         String?
-  email            String    @unique
-  password         String
-  firstName        String
-  middleName       String?
-  lastName         String
-  avatarUrl        String?   @default("https://spark-school-system-bucket.s3.eu-central-1.amazonaws.com/assets/default-avatar.svg")
-  createdAt        DateTime  @default(now())
-  isEmailVerified  Boolean   @default(false)
-  isPasswordCustom Boolean   @default(false)
-  lastLoginAt      DateTime?
-  parentsCode      String?   @unique
-  themePreference  String?   @default("light")
+  id                   String    @id @default(uuid())
+  schoolId             String?
+  email                String    @unique
+  password             String
+  firstName            String
+  middleName           String?
+  lastName             String
+  avatarUrl            String?   @default("https://spark-school-system-bucket.s3.eu-central-1.amazonaws.com/assets/default-avatar.svg")
+  createdAt            DateTime  @default(now())
+  isEmailVerified      Boolean   @default(false)
+  isPasswordCustom     Boolean   @default(false)
+  lastLoginAt          DateTime?
+  parentsCode          String?   @unique
+  themePreference      String?   @default("light")
+  commentsBlockedUntil DateTime?
 
   // Зв'язки: Базові
   school         School?    @relation("SchoolUsers", fields: [schoolId], references: [id])
@@ -420,10 +421,11 @@ model Comment {
   taskId          String?
   testId          String?
 
-  author        User  @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
-  targetStudent User  @relation("CommentTarget", fields: [targetStudentId], references: [id], onDelete: Cascade)
-  task          Task? @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  test          Test? @relation(fields: [testId], references: [id], onDelete: Cascade)
+  author        User        @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  targetStudent User        @relation("CommentTarget", fields: [targetStudentId], references: [id], onDelete: Cascade)
+  task          Task?       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  test          Test?       @relation(fields: [testId], references: [id], onDelete: Cascade)
+  complaints    Complaint[]
 
   @@map("comments")
 }
@@ -491,19 +493,22 @@ model Complaint {
   id             String   @id @default(uuid())
   reporterId     String
   reportedUserId String
+  commentId      String?
   reason         String
-  status         String   @default("PENDING") // "PENDING", "RESOLVED", "REJECTED"
+  status         String   @default("PENDING") // "PENDING", "RESOLVED" (Схвалено), "REJECTED" (Відхилено), "BLOCKED" (Заблоковано)
   createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  reporter     User @relation("ReporterRelation", fields: [reporterId], references: [id], onDelete: Cascade)
-  reportedUser User @relation("ReportedRelation", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  reporter     User     @relation("ReporterRelation", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUser User     @relation("ReportedRelation", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  comment      Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade) // <--- ДОДАТИ ЗВ'ЯЗОК
 
   @@map("complaints")
 }
 
 model Chat {
   id   String @id @default(uuid())
-  type String // "PRIVATE", "GROUP"
+  type String
 
   members  ChatMember[]
   messages Message[]

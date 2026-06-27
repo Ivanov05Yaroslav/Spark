@@ -1,15 +1,23 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { AwsS3Service } from '../../core/integrations/aws/aws-s3.service';
+import { EmailService } from '../../core/integrations/email/email.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { CreateCommentDto, UpdateCommentDto } from './dto/comment.dto';
+import {
+  CreateCommentDto,
+  ReportAction,
+  ReportCommentDto,
+  ResolveReportDto,
+  UpdateCommentDto,
+} from './dto/comment.dto';
 
 @Injectable()
 export class CommentsService {
   constructor(
+    private readonly awsS3Service: AwsS3Service,
+    private readonly emailService: EmailService,
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
-    private readonly awsS3Service: AwsS3Service,
   ) {}
 
   private async getContext(dto: { taskId?: string; testId?: string }) {
@@ -42,6 +50,14 @@ export class CommentsService {
   }
 
   async createComment(userId: string, dto: CreateCommentDto) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+
+    if (user?.commentsBlockedUntil && new Date() < user.commentsBlockedUntil) {
+      throw new HttpException(
+        'Ваша можливість залишати коментарі тимчасово заблокована за порушення правил.',
+        HttpStatus.FORBIDDEN,
+      );
+    }
     const { course, title } = await this.getContext(dto);
 
     const isTeacher =
@@ -234,5 +250,273 @@ export class CommentsService {
 
     await this.prisma.comment.delete({ where: { id: commentId } });
     return { message: 'Коментар успішно видалено' };
+  }
+
+  async reportComment(userId: string, commentId: string, dto: ReportCommentDto) {
+    const comment = await this.prisma.comment.findUnique({
+      where: { id: commentId },
+      include: { author: true },
+    });
+
+    if (!comment) throw new HttpException('Коментар не знайдено', HttpStatus.NOT_FOUND);
+    if (comment.authorId === userId) {
+      throw new HttpException(
+        'Ви не можете поскаржитися на власний коментар',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const existing = await this.prisma.complaint.findFirst({
+      where: { reporterId: userId, commentId: commentId },
+    });
+    if (existing) {
+      throw new HttpException('Ви вже надіслали скаргу на цей коментар', HttpStatus.BAD_REQUEST);
+    }
+
+    await this.prisma.complaint.create({
+      data: {
+        reporterId: userId,
+        reportedUserId: comment.authorId,
+        commentId: commentId,
+        reason: dto.reason,
+      },
+    });
+
+    return { message: 'Вашу скаргу успішно надіслано на розгляд модераторам' };
+  }
+
+  async getReports(moderatorId: string, query: any) {
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      status,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+    } = query;
+    const skip = (page - 1) * limit;
+
+    const where: any = { commentId: { not: null } };
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (search) {
+      where.OR = [
+        { reason: { contains: search, mode: 'insensitive' } },
+        { comment: { content: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [total, data] = await Promise.all([
+      this.prisma.complaint.count({ where }),
+      this.prisma.complaint.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { [sortBy]: sortOrder },
+        include: {
+          reporter: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              middleName: true,
+              avatarUrl: true,
+              userRoles: { include: { role: true } },
+            },
+          },
+          reportedUser: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              middleName: true,
+              avatarUrl: true,
+              userRoles: { include: { role: true } },
+            },
+          },
+          comment: {
+            select: { id: true, content: true, createdAt: true },
+          },
+        },
+      }),
+    ]);
+
+    const formattedData = await Promise.all(
+      data.map(async (report) => {
+        let reporterAvatar = report.reporter.avatarUrl;
+        let reportedUserAvatar = report.reportedUser.avatarUrl;
+
+        if (reporterAvatar && reporterAvatar.includes('amazonaws.com')) {
+          reporterAvatar = await this.awsS3Service.generatePresignedUrl(reporterAvatar);
+        }
+        if (reportedUserAvatar && reportedUserAvatar.includes('amazonaws.com')) {
+          reportedUserAvatar = await this.awsS3Service.generatePresignedUrl(reportedUserAvatar);
+        }
+
+        const { userRoles: reporterRolesRaw, ...reporterRest } = report.reporter as any;
+        const reporterRoles = reporterRolesRaw.map((ur: any) => ur.role.name);
+
+        const { userRoles: reportedUserRolesRaw, ...reportedUserRest } = report.reportedUser as any;
+        const reportedUserRoles = reportedUserRolesRaw.map((ur: any) => ur.role.name);
+
+        return {
+          id: report.id,
+          reporterId: report.reporterId,
+          reportedUserId: report.reportedUserId,
+          commentId: report.commentId,
+          reason: report.reason,
+          status: report.status,
+          createdAt: report.createdAt,
+          updatedAt: report.updatedAt,
+          reporter: {
+            ...reporterRest,
+            avatarUrl: reporterAvatar,
+            roles: reporterRoles,
+          },
+          reportedUser: {
+            ...reportedUserRest,
+            avatarUrl: reportedUserAvatar,
+            roles: reportedUserRoles,
+          },
+          comment: report.comment,
+        };
+      }),
+    );
+
+    return {
+      data: formattedData,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async resolveReport(moderatorId: string, complaintId: string, dto: ResolveReportDto) {
+    const complaint = await this.prisma.complaint.findUnique({
+      where: { id: complaintId },
+      include: { reporter: true, reportedUser: true, comment: true },
+    });
+
+    if (!complaint) throw new HttpException('Скаргу не знайдено', HttpStatus.NOT_FOUND);
+    if (complaint.status !== 'PENDING')
+      throw new HttpException('Цю скаргу вже було оброблено', HttpStatus.BAD_REQUEST);
+
+    const commentIdToDelete = complaint.commentId;
+
+    if (dto.action === ReportAction.RESOLVE) {
+      await this.prisma.complaint.update({
+        where: { id: complaintId },
+        data: {
+          status: 'RESOLVED',
+          commentId: null,
+        },
+      });
+
+      if (commentIdToDelete) {
+        await this.prisma.comment.delete({ where: { id: commentIdToDelete } }).catch(() => {});
+      }
+
+      await this.notificationsService.create({
+        senderId: moderatorId,
+        receiverId: complaint.reportedUserId,
+        type: 'WARNING',
+        title: 'Попередження про порушення',
+        content:
+          'Ваш коментар було видалено через порушення правил платформи. У разі повторних порушень вас може бути заблоковано.',
+      });
+      await this.emailService.sendMail(
+        complaint.reportedUser.email,
+        'Попередження про порушення',
+        'Ваш коментар було видалено через порушення правил платформи.',
+      );
+
+      await this.notificationsService.create({
+        senderId: moderatorId,
+        receiverId: complaint.reporterId,
+        type: 'INFO',
+        title: 'Скаргу розглянуто',
+        content:
+          'Вашу скаргу було ухвалено. Порушника попереджено, а коментар видалено. Дякуємо за допомогу!',
+      });
+      await this.emailService.sendMail(
+        complaint.reporter.email,
+        'Скаргу розглянуто',
+        'Вашу скаргу було ухвалено. Порушника попереджено.',
+      );
+    } else if (dto.action === ReportAction.REJECT) {
+      await this.prisma.complaint.update({
+        where: { id: complaintId },
+        data: { status: 'REJECTED' },
+      });
+
+      await this.notificationsService.create({
+        senderId: moderatorId,
+        receiverId: complaint.reporterId,
+        type: 'INFO',
+        title: 'Скаргу відхилено',
+        content: 'Модератори переглянули вашу скаргу і не знайшли порушень правил платформи.',
+      });
+      await this.emailService.sendMail(
+        complaint.reporter.email,
+        'Скаргу відхилено',
+        'Модератори переглянули вашу скаргу і не знайшли порушень правил платформи.',
+      );
+    } else if (dto.action === ReportAction.BLOCK) {
+      const blockUntil = new Date();
+      blockUntil.setDate(blockUntil.getDate() + 7);
+
+      await this.prisma.user.update({
+        where: { id: complaint.reportedUserId },
+        data: { commentsBlockedUntil: blockUntil },
+      });
+
+      await this.prisma.complaint.update({
+        where: { id: complaintId },
+        data: {
+          status: 'BLOCKED',
+          commentId: null,
+        },
+      });
+
+      if (commentIdToDelete) {
+        await this.prisma.comment.delete({ where: { id: commentIdToDelete } }).catch(() => {});
+      }
+
+      await this.notificationsService.create({
+        senderId: moderatorId,
+        receiverId: complaint.reportedUserId,
+        type: 'WARNING',
+        title: 'Блокування коментарів',
+        content:
+          'Через грубе порушення правил вам заблоковано можливість залишати коментарі на 7 днів.',
+      });
+      await this.emailService.sendMail(
+        complaint.reportedUser.email,
+        'Блокування коментарів',
+        'Вам заблоковано можливість залишати коментарі на 7 днів.',
+      );
+
+      await this.notificationsService.create({
+        senderId: moderatorId,
+        receiverId: complaint.reporterId,
+        type: 'INFO',
+        title: 'Порушника покарано',
+        content:
+          'За вашою скаргою порушнику було заблоковано можливість писати коментарі на тиждень.',
+      });
+      await this.emailService.sendMail(
+        complaint.reporter.email,
+        'Порушника покарано',
+        'За вашою скаргою порушнику було заблоковано можливість писати коментарі на тиждень.',
+      );
+    }
+
+    return { message: 'Рішення по скарзі успішно застосовано' };
   }
 }

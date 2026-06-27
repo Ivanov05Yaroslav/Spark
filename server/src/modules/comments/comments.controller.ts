@@ -11,9 +11,16 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { GetUser } from '../../common/decorators/get-user.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CommentsService } from './comments.service';
-import { CreateCommentDto, UpdateCommentDto } from './dto/comment.dto';
+import {
+  CreateCommentDto,
+  GetReportsQueryDto,
+  ReportCommentDto,
+  ResolveReportDto,
+  UpdateCommentDto,
+} from './dto/comment.dto';
 
 @ApiTags('comments')
 @ApiBearerAuth()
@@ -62,5 +69,33 @@ export class CommentsController {
   @Delete('/:id')
   async deleteComment(@GetUser('id') userId: string, @Param('id') id: string) {
     return this.commentsService.deleteComment(userId, id);
+  }
+
+  @ApiOperation({ summary: 'Поскаржитися на коментар' })
+  @Post('/:id/report')
+  async reportComment(
+    @GetUser('id') userId: string,
+    @Param('id') commentId: string,
+    @Body() dto: ReportCommentDto,
+  ) {
+    return this.commentsService.reportComment(userId, commentId, dto);
+  }
+
+  @ApiOperation({ summary: 'Отримати список скарг на коментарі з пагінацією та пошуком' })
+  @Roles('MODERATOR', 'ADMIN', 'SUPER_ADMIN')
+  @Get('/reports/list')
+  async getReports(@GetUser('id') moderatorId: string, @Query() query: GetReportsQueryDto) {
+    return this.commentsService.getReports(moderatorId, query);
+  }
+
+  @ApiOperation({ summary: 'Ухвалити рішення по скарзі (Схвалити/Відхилити/Заблокувати)' })
+  @Roles('MODERATOR', 'ADMIN', 'SUPER_ADMIN')
+  @Patch('/reports/:reportId/resolve')
+  async resolveReport(
+    @GetUser('id') moderatorId: string,
+    @Param('reportId') reportId: string,
+    @Body() dto: ResolveReportDto,
+  ) {
+    return this.commentsService.resolveReport(moderatorId, reportId, dto);
   }
 }
