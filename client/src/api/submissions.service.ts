@@ -32,4 +32,21 @@ export const submissionsService = {
     });
     return response.data;
   },
+
+  getStudentSubmissionsList: async (taskId: string): Promise<any[]> => {
+    const response = await apiClient.get(`/submissions/task/${taskId}/student-submissions`);
+    return response.data;
+  },
+
+  getStudentSubmissionDetail: async (taskId: string, studentId: string): Promise<any> => {
+    const response = await apiClient.get(`/submissions/task/${taskId}/student/${studentId}`);
+    return response.data;
+  },
+
+  gradeSubmission: async (submissionId: string, score: string | number): Promise<any> => {
+    const response = await apiClient.patch(`/submissions/${submissionId}/grade`, {
+      score: score.toString(),
+    });
+    return response.data;
+  },
 };

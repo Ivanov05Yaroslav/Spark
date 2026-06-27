@@ -1,8 +1,30 @@
-.container {
+.contentGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 40px;
+    align-items: start;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.leftColumn {
+    min-width: 0;
+    gap: 24px;
+}
+
+.rightColumn {
     display: flex;
     flex-direction: column;
     gap: 24px;
     width: 100%;
+    min-width: 0;
+}
+
+@media (min-width: 769px) {
+    .contentGrid {
+        grid-template-columns: minmax(300px, 450px) 1fr;
+        gap: 24px;
+    }
 }
 
 .gradingHeader {

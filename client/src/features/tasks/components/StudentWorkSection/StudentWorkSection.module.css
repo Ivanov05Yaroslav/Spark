@@ -10,6 +10,11 @@
     color: inherit;
     display: block;
     transition: opacity 0.2s ease;
+    min-width: 0;
+}
+
+.attachmentLink:only-child {
+    grid-column: 1 / -1;
 }
 
 .attachmentLink:hover {
@@ -24,8 +29,29 @@
     margin: 0;
 }
 
+.gradeSection {
+    display: flex;
+    gap: 16px;
+    justify-content: flex-end;
+    align-items: center;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #E5E7EB;
+    width: 100%;
+}
+
+.gradeButton {
+    width: max-content !important;
+    padding: 0 12px;
+}
+
 @media (max-width: 600px) {
     .attachmentsGrid {
         grid-template-columns: 1fr;
+    }
+
+    .gradeSection {
+        flex-direction: column;
+        align-items: stretch;
     }
 }

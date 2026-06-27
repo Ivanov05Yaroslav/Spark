@@ -17,7 +17,7 @@ export const FileCard: React.FC<FileCardProps> = ({
   onRemove,
   className = '',
 }) => {
-  const [localPreview, setLocalPreview] = useState<string | undefined>(previewUrl);
+  const [localPreview, setLocalPreview] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (file && file.type.startsWith('image/')) {
@@ -33,17 +33,40 @@ export const FileCard: React.FC<FileCardProps> = ({
     onRemove?.();
   };
 
-  const isLink = fileName.startsWith('http://') || fileName.startsWith('https://');
   const displayPreviewUrl = localPreview || previewUrl;
+
+  const isImageUrl = (url: string) => {
+    if (url.startsWith('blob:')) return true;
+
+    const cleanUrl = url.split('?')[0].toLowerCase();
+    return (
+      cleanUrl.endsWith('.png') ||
+      cleanUrl.endsWith('.jpg') ||
+      cleanUrl.endsWith('.jpeg') ||
+      cleanUrl.endsWith('.gif') ||
+      cleanUrl.endsWith('.webp') ||
+      cleanUrl.endsWith('.svg')
+    );
+  };
+
+  const getDisplayFileName = (name: string) => {
+    const isLink = name.startsWith('http://') || name.startsWith('https://');
+    if (isLink && name.length > 35) {
+      return `${name.slice(0, 22)}...${name.slice(-12)}`;
+    }
+    return name;
+  };
+
+  const showPreview = displayPreviewUrl && isImageUrl(displayPreviewUrl);
 
   return (
     <div className={`${styles.card} ${className}`}>
       <div className={styles.fileInfo}>
-        {displayPreviewUrl && !isLink && (
+        {showPreview && (
           <img src={displayPreviewUrl} alt="preview" className={styles.previewImage} />
         )}
         <span className={styles.fileName} title={fileName}>
-          {fileName}
+          {getDisplayFileName(fileName)}
         </span>
       </div>
 
@@ -52,7 +75,7 @@ export const FileCard: React.FC<FileCardProps> = ({
           type="button"
           className={styles.removeButton}
           onClick={handleRemove}
-          aria-label="Видалити файл"
+          title="Видалити"
         >
           <DeleteIcon />
         </button>

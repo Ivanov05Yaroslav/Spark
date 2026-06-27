@@ -1,80 +1,58 @@
 import React from 'react';
+import { useParams } from 'react-router-dom';
 import { StudentWorkSection } from '@/features/tasks/components/StudentWorkSection/StudentWorkSection';
 import { CommentsSection } from '@/features/comments/components/CommentsSection/CommentsSection';
-import { CommentProps } from '@/components/comments/CommentItem/CommentItem';
 import styles from './SubmissionsReviewWorkspace.module.css';
-import { PrimaryButton } from '@/components/ui/PrimaryButton/PrimaryButton.tsx';
 import { StudentSubmissionsList } from '@/features/tasks/components/StudentSubmissionsList/StudentSubmissionsList.tsx';
-import { TestResultsTable } from '@/features/tests/components/TestResultsTable/TestResultsTable.tsx';
+import { useTaskSubmissionsReview } from '@/features/tasks/hooks/useTaskSubmissionsReview';
+import { useStore } from '@/stores/useStore';
+import { formatToDateTime } from '@/libs/utils/date';
 
-interface SubmissionReviewPanelProps {
-  gradeValue: string | number;
-  maxGrade?: number;
-  onGradeChange: (value: string) => void;
-  onReturnClick: () => void;
-  isReturnDisabled?: boolean;
+export const SubmissionsReviewWorkspace: React.FC = () => {
+  const { taskId } = useParams<{ taskId: string }>();
+  const currentUser = useStore((state) => state.user);
 
-  studentWork: {
-    statusText?: string;
-    submittedAt?: string | null;
-    attachments?: string[];
-  };
+  const {
+    mappedSubmissions,
+    selectedStudentId,
+    setSelectedStudentId,
+    submissionDetail,
+    statusText,
+    gradeValue,
+    setGradeValue,
+    handleGradeSubmit,
+  } = useTaskSubmissionsReview(taskId);
 
-  commentsData: {
-    comments: CommentProps[];
-    currentUserAvatar?: string;
-    onAddComment: (content: string) => void;
-    onEditComment?: (id: string) => void;
-    onDeleteComment?: (id: string) => void;
-  };
-}
+  const hasSubmission = !!(selectedStudentId && submissionDetail?.id);
 
-const getStatusLabel = (status: string) => {
-  switch (status) {
-    case 'Graded':
-      return 'Оцінено';
-    case 'Turned in':
-      return 'Здано';
-    case 'Assigned':
-      return 'Призначено';
-    case 'Missing':
-      return 'Протерміновано';
-    default:
-      return '';
-  }
-};
-
-export const SubmissionsReviewWorkspace: React.FC<SubmissionReviewPanelProps> = ({
-  gradeValue,
-  maxGrade = 12,
-  onGradeChange,
-  onReturnClick,
-  isReturnDisabled = false,
-  studentWork,
-  commentsData,
-}) => {
   return (
     <div className={styles.contentGrid}>
       <div className={styles.leftColumn}>
         <StudentSubmissionsList
           submissions={mappedSubmissions}
           selectedId={selectedStudentId}
-          onItemClick={handleStudentSelect}
+          onItemClick={(id) => setSelectedStudentId(id)}
         />
       </div>
 
       <div className={styles.rightColumn}>
         <StudentWorkSection
-          statusText={studentWork.statusText}
-          submittedAt={studentWork.submittedAt}
-          attachments={studentWork.attachments}
+          statusText={statusText}
+          submittedAt={
+            submissionDetail?.submittedAt ? formatToDateTime(submissionDetail.submittedAt) : null
+          }
+          attachments={submissionDetail?.attachments || []}
+          showGradeBlock={hasSubmission}
+          gradeValue={gradeValue}
+          onGradeChange={setGradeValue}
+          onGradeSubmit={handleGradeSubmit}
         />
 
         {selectedStudentId && (
           <CommentsSection
             taskId={taskId}
             targetStudentId={selectedStudentId}
-            currentUserAvatar={user?.avatarUrl}
+            currentUserAvatar={currentUser?.avatarUrl}
           />
         )}
       </div>

@@ -1,26 +1,25 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/PageHeader/PageHeader';
 import { Tabs } from '@/components/ui/Tabs/Tabs';
 import { TaskInstructionsSection } from '@/features/tasks/components/TaskInstructionsSection/TaskInstructionsSection';
+import { SubmissionsReviewWorkspace } from '@/features/tasks/components/SubmissionsReviewWorkspace/SubmissionsReviewWorkspace';
+import { useTaskInstructions } from '@/features/tasks/hooks/useTaskInstructions';
 import styles from './TeacherTaskDetailsPage.module.css';
-import { useTestPreview } from '@/features/tests/hooks/useTestPreview.ts';
-import { SubmissionsReviewWorkspace } from '@/features/tasks/components/SubmissionsReviewWorkspace/SubmissionsReviewWorkspace.tsx';
 
 export const TeacherTaskDetailsPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { testId } = useParams<{ testId: string }>();
+  const { taskId } = useParams<{ taskId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const { test, isLoading } = useTestPreview(testId);
+  const { task, isLoading } = useTaskInstructions(taskId);
 
-  const activeTab = searchParams.get('tab') || 'details';
+  const activeTab = searchParams.get('tab') || 'instructions';
 
   useEffect(() => {
     if (!searchParams.has('tab')) {
       setSearchParams(
         (prev) => {
-          prev.set('tab', 'details');
+          prev.set('tab', 'instructions');
           return prev;
         },
         { replace: true },
@@ -44,8 +43,7 @@ export const TeacherTaskDetailsPage: React.FC = () => {
 
   return (
     <div className={styles.pageContainer}>
-      <PageHeader title={task?.title || 'Завдання'} />
-
+      <PageHeader title={task?.title || 'Завдання'} showBottomBorder={false} />
       <div className={styles.tabsWrapper}>
         <Tabs items={tabItems} activeId={activeTab} onTabChange={handleTabChange} />
       </div>

@@ -94,7 +94,7 @@ export const TaskSubmissionSection: React.FC<TaskSubmissionSectionProps> = ({
 
   return (
     <ContentCard
-      title={isTeacher ? "Student's work" : 'Your work'}
+      title={isTeacher ? 'Робота студента' : 'Ваша робота'}
       headerRightComponent={
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span className={`${styles.statusLabel} ${getStatusClass()}`}>{getStatusLabel()}</span>
@@ -121,7 +121,7 @@ export const TaskSubmissionSection: React.FC<TaskSubmissionSectionProps> = ({
             ))}
           </div>
         ) : (
-          <p className={styles.noFiles}>No files attached</p>
+          <p className={styles.noFiles}>Немає прикріплених файлів</p>
         )}
       </div>
 
@@ -133,7 +133,7 @@ export const TaskSubmissionSection: React.FC<TaskSubmissionSectionProps> = ({
       )}
 
       <PrimaryButton onClick={onSubmitOrReturn} disabled={status === 'Graded' && !isTeacher}>
-        {isTeacher ? 'Return work' : status === 'Turned in' ? 'Unsubmit' : 'Turn in'}
+        {isTeacher ? 'Повернути роботу' : status === 'Turned in' ? 'Скасувати здачу' : 'Здати'}
       </PrimaryButton>
 
       <UploadFilesModal

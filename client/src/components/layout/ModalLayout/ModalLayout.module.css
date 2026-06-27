@@ -25,6 +25,7 @@
     max-height: calc(100vh - 40px);
     box-sizing: border-box;
     animation: fadeIn 0.2s ease-out;
+    overflow: visible;
 }
 
 .header {
@@ -81,6 +82,7 @@
     overflow-y: auto;
     flex: 1;
     font-family: 'Inter', sans-serif;
+    overflow: visible;
 }
 
 .body form {

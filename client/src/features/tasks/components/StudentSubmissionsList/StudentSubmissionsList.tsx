@@ -4,6 +4,7 @@ import {
   StudentSubmissionItem,
   SubmissionStatus,
 } from '@/components/tasks/StudentSubmissionItem/StudentSubmissionItem';
+import styles from './StudentSubmissionsList.module.css';
 
 export interface Submission {
   id: string;
@@ -36,7 +37,7 @@ export const StudentSubmissionsList: React.FC<StudentSubmissionsListProps> = ({
 
   return (
     <ContentCard>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div className={styles.listContainer}>
         {submissions.map((sub) => (
           <StudentSubmissionItem
             key={sub.id}

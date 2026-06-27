@@ -97,7 +97,10 @@ function App() {
             <Route path="/courses/create" element={<CreateCoursePage />} />
             <Route path="/courses/:id/edit" element={<EditCoursePage />} />
 
-            <Route path="/courses/:id/tasks/:taskId" element={<TeacherTaskDetailsPage />} />
+            <Route
+              path="/courses/:id/tasks/:taskId/submissions"
+              element={<TeacherTaskDetailsPage />}
+            />
             <Route path="/courses/:id/tasks/create" element={<CreateTaskPage />} />
             <Route path="/courses/:id/tasks/:taskId/edit" element={<EditTaskPage />} />
 
