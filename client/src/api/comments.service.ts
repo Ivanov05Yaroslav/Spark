@@ -26,4 +26,9 @@ export const commentsService = {
     const response = await apiClient.patch(`/comments/${id}`, { content });
     return response.data;
   },
+
+  reportComment: async (id: string, reason: string): Promise<any> => {
+    const response = await apiClient.post(`/comments/${id}/report`, { reason });
+    return response.data;
+  },
 };

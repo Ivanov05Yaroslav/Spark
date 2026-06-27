@@ -114,9 +114,14 @@ export const useComments = ({ testId, taskId, targetStudentId }: UseCommentsProp
     }
   };
 
-  const complainComment = async (id: string) => {
-    console.log('Скарга на коментар:', id);
-    // TODO: Додати виклик API скарги
+  const complainComment = async (id: string, reason: string) => {
+    try {
+      await commentsService.reportComment(id, reason);
+      toast.success('Скаргу успішно відправлено');
+    } catch (error: any) {
+      console.error('Помилка при відправці скарги:', error);
+      toast.error(error?.response?.data?.message || 'Не вдалося відправити скаргу');
+    }
   };
 
   return {
