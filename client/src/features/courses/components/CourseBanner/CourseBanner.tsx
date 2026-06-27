@@ -1,27 +1,28 @@
 import React from 'react';
 import EditIcon from '@/assets/edit.svg?react';
+import { DEFAULT_THEME_COLORS } from '@/libs/constants/courses.constants';
 import styles from './CourseBanner.module.css';
 
 export interface CourseBannerProps {
   title: string;
-  description?: string;
+  classNumber?: string | number;
   themeColor?: string;
   backgroundImage?: string | null;
-  teacherName: string;
   onEdit?: () => void;
 }
 
 export const CourseBanner: React.FC<CourseBannerProps> = ({
   title,
-  description,
-  themeColor = '#702DFF',
+  classNumber,
+  themeColor = 'purple',
   backgroundImage,
-  teacherName,
   onEdit,
 }) => {
+  const resolvedColor = DEFAULT_THEME_COLORS.find((c) => c.value === themeColor)?.base || '#702DFF';
+
   const backgroundStyle = backgroundImage
     ? { backgroundImage: `url(${backgroundImage})` }
-    : { backgroundColor: themeColor };
+    : { backgroundColor: resolvedColor };
 
   return (
     <div className={styles.bannerContainer} style={backgroundStyle}>
@@ -30,17 +31,13 @@ export const CourseBanner: React.FC<CourseBannerProps> = ({
       <div className={styles.content}>
         <div className={styles.textBlock}>
           <h1 className={styles.title}>{title}</h1>
-          {description && <p className={styles.description}>{description}</p>}
-        </div>
-
-        <div className={styles.teacherInfo}>
-          Викладач: <span className={styles.teacherName}>{teacherName}</span>
+          {classNumber && <div className={styles.classNumber}>{classNumber} клас</div>}
         </div>
       </div>
 
       {onEdit && (
         <button className={styles.editButton} onClick={onEdit} aria-label="Редагувати курс">
-          <EditIcon />
+          <EditIcon className={styles.editIcon} />
         </button>
       )}
     </div>

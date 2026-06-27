@@ -20,7 +20,7 @@ export const Badge = ({
       className={`${styles.badge} ${className}`}
       style={{
         color: baseColor,
-        backgroundColor: `${baseColor}30`,
+        backgroundColor: `color-mix(in srgb, ${baseColor} 15%, transparent)`,
       }}
       {...props}
     >

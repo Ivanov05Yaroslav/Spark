@@ -2,6 +2,7 @@ import { apiClient } from '@/api/apiClient';
 import {
   ClassDto,
   CourseDetailDto,
+  CourseDetailResponseDto,
   CourseItemDto,
   CourseResponseDto,
   StudentDto,
@@ -32,7 +33,7 @@ export const courseService = {
     apiClient.get<CourseItemDto[]>('/courses', { params }).then((res) => res.data),
 
   getCourseById: (courseId: string) =>
-    apiClient.get<CourseDetailDto>(`/courses/${courseId}`).then((res) => res.data),
+    apiClient.get<CourseDetailResponseDto>(`/courses/${courseId}`).then((res) => res.data),
 
   updateCourse: (courseId: string, data: FormData | any) =>
     apiClient
@@ -45,4 +46,7 @@ export const courseService = {
 
   getModulesByCourseId: (courseId: string) =>
     apiClient.get<ModuleDto[]>(`/courses/${courseId}/modules`).then((res) => res.data),
+
+  updateVideoLinks: (courseId: string, videoLinks: string[]) =>
+    apiClient.patch(`/courses/${courseId}/video-links`, { videoLinks }).then((res) => res.data),
 };

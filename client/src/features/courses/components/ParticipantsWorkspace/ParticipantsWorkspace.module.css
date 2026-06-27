@@ -1,0 +1,64 @@
+.workspaceContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.topRow {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+}
+
+@media (min-width: 768px) {
+    .topRow {
+        flex-direction: row;
+        align-items: flex-start;
+    }
+
+    .topRow > * {
+        flex: 1;
+        min-width: 0;
+    }
+}
+
+.bottomRow {
+    width: 100%;
+}
+
+.topGrid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    width: 100%;
+}
+
+.topGrid > * {
+    flex: 1 1 140px;
+    max-width: 100%;
+}
+
+.studentsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 16px;
+    width: 100%;
+}
+
+@media (min-width: 1024px) {
+    .studentsGrid {
+        grid-template-columns: repeat(5, 1fr);
+        gap: 24px;
+    }
+}
+
+.emptyBlock {
+    color: #9CA3AF;
+    font-size: 14px;
+    font-style: italic;
+    font-family: 'Inter', sans-serif;
+    padding: 12px 0;
+}

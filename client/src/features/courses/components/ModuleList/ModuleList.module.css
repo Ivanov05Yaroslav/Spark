@@ -6,20 +6,18 @@
 }
 
 .emptyState {
+    font-size: 14px;
+    color: #9CA3AF;
+    margin: 0;
+    padding: 8px 0;
     text-align: center;
-    padding: 40px 20px;
-    background-color: #F9FAFB;
-    border: 1px dashed #D1D5DB;
-    border-radius: 16px;
-    color: #6B7280;
-    font-size: 15px;
-    font-family: 'Inter', sans-serif;
+    font-style: italic;
 }
 
 .emptyModule {
-    padding: 12px 0;
-    color: #9CA3AF;
     font-size: 14px;
+    color: #9CA3AF;
+    margin: 0;
+    text-align: center;
     font-style: italic;
-    font-family: 'Inter', sans-serif;
 }

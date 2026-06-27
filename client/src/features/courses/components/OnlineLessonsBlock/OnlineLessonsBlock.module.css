@@ -23,28 +23,24 @@
 }
 
 .addButton {
-    background: none;
+    background: transparent;
     border: none;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    background-color: #F3F4F6;
+    padding: 0;
     color: #4B5563;
-    transition: all 0.2s ease;
+    transition: color 0.2s ease;
 }
 
 .addButton:hover {
-    background-color: #E5E7EB;
     color: #111827;
 }
 
 .plusIcon {
-    width: 16px;
-    height: 16px;
+    width: 24px;
+    height: 24px;
 }
 
 .linksList {
@@ -53,28 +49,13 @@
     gap: 12px;
 }
 
-.linkItem {
-    transition: transform 0.2s ease;
-}
-
-.linkItem:hover {
-    transform: translateX(4px);
-}
-
-.linkAnchor {
-    text-decoration: none;
-    display: block;
-    color: inherit;
-}
-
 .emptyState {
     font-size: 14px;
-    color: #8E8E93;
+    color: #9CA3AF;
+    margin: 0;
+    padding: 8px 0;
     text-align: center;
-    padding: 16px 0;
-    background-color: #F9FAFB;
-    border-radius: 12px;
-    border: 1px dashed #E5E7EB;
+    font-style: italic;
 }
 
 @media (max-width: 600px) {

@@ -8,6 +8,7 @@ interface InfoItemProps {
   subtitle?: string;
   variant?: 'info' | 'task';
   className?: string;
+  linkUrl?: string; // Додано необов'язкове поле для посилання
 
   showMoreMenu?: boolean;
   onEdit?: () => void;
@@ -20,20 +21,48 @@ export const InfoItem: React.FC<InfoItemProps> = ({
   subtitle,
   variant = 'info',
   className = '',
+  linkUrl,
   showMoreMenu = false,
   onEdit,
   onDelete,
 }) => {
+  const textContent = (
+    <>
+      <span className={styles.topText}>{title}</span>
+      {subtitle && <span className={styles.bottomText}>{subtitle}</span>}
+    </>
+  );
+
   return (
     <div className={`${styles.container} ${className}`.trim()}>
       <div className={styles.iconWrapper}>
-        <Icon className={styles.icon} />
+        {linkUrl ? (
+          <a
+            href={linkUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ display: 'flex', color: 'inherit', textDecoration: 'none' }}
+          >
+            <Icon className={styles.icon} />
+          </a>
+        ) : (
+          <Icon className={styles.icon} />
+        )}
       </div>
 
-      <div className={`${styles.textContainer} ${styles[variant]}`}>
-        <span className={styles.topText}>{title}</span>
-        {subtitle && <span className={styles.bottomText}>{subtitle}</span>}
-      </div>
+      {linkUrl ? (
+        <a
+          href={linkUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`${styles.textContainer} ${styles[variant]}`}
+          style={{ color: 'inherit', textDecoration: 'none' }}
+        >
+          {textContent}
+        </a>
+      ) : (
+        <div className={`${styles.textContainer} ${styles[variant]}`}>{textContent}</div>
+      )}
 
       {showMoreMenu && (
         <div className={styles.moreMenuWrapper}>

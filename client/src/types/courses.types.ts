@@ -84,3 +84,49 @@ export interface CourseDetailDto extends Omit<CourseItemDto, 'class' | 'creator'
   coTeachers: UserBasicDto[];
   students: UserBasicDto[];
 }
+
+export interface CourseUserDto {
+  id: string;
+  firstName: string;
+  lastName: string;
+  middleName?: string;
+  avatarUrl?: string;
+  email?: string;
+}
+
+export interface CourseDetailResponseDto {
+  id: string;
+  subject: { id: string; name: string };
+  class: { id: string; name: string };
+  startDate: string;
+  endDate: string;
+  groupName: string | null;
+  videoLinks: any[];
+  themeColor: string;
+  backgroundUrl: string | null;
+  participants: {
+    creator: CourseUserDto;
+    coTeachers: CourseUserDto[];
+    homeroomTeacher: CourseUserDto;
+    students: CourseUserDto[];
+    totalStudentsCount: number;
+  };
+  modules: {
+    id: string;
+    title: string;
+    createdAt: string;
+    materials: { id: string; title: string; fileUrl: string | null; linkUrl: string | null }[];
+    tasks: { id: string; title: string; deadline: string }[];
+    tests: { id: string; title: string; deadline: string }[];
+  }[];
+  upcomingDeadlines: any[];
+  announcements: {
+    id: string;
+    title: string;
+    content: string;
+    createdAt: string;
+    isNew: boolean;
+    creator: CourseUserDto;
+  }[];
+  unreadAnnouncementsCount: number;
+}

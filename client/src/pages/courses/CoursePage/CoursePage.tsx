@@ -1,116 +1,116 @@
 import React, { useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { CourseBanner } from '@/features/courses/components/CourseBanner/CourseBanner';
 import { TabItem, Tabs } from '@/components/ui/Tabs/Tabs';
 import { CourseCreateButton } from '@/features/courses/components/CourseCreateButton/CourseCreateButton';
-import { ModuleData, ModuleList } from '@/features/courses/components/ModuleList/ModuleList';
-import {
-  OnlineLessonLink,
-  OnlineLessonsBlock,
-} from '@/features/courses/components/OnlineLessonsBlock/OnlineLessonsBlock';
-
-import ZoomIcon from '@/assets/link.svg?react';
-
+import { ModuleList } from '@/features/courses/components/ModuleList/ModuleList';
 import styles from './CoursePage.module.css';
+import { CourseWorkspace } from '@/features/courses/components/CourseWorkspace/CourseWorkspace.tsx';
+import { AnnouncementsWorkspace } from '@/features/announcements/components/AnnouncementsWorkspace/AnnouncementsWorkspace.tsx';
+import { ParticipantsWorkspace } from '@/features/courses/components/ParticipantsWorkspace/ParticipantsWorkspace.tsx';
+import { useGetCourseData } from '@/features/courses/hooks/useGetCourseData.ts';
 
 export const CoursePage: React.FC = () => {
+  const { id: courseId } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState('materials');
+  const [selectedAnnouncementId, setSelectedAnnouncementId] = useState<string | undefined>();
+
+  const {
+    loading,
+    error,
+    rawData,
+    modules,
+    participants,
+    announcements,
+    lessons,
+    unreadAnnouncementsCount,
+    handleAddLesson,
+    handleEditLesson,
+    handleDeleteLesson,
+  } = useGetCourseData(courseId || '');
 
   const TABS: TabItem[] = [
     { id: 'materials', label: 'Матеріали' },
-    { id: 'tasks', label: 'Завдання', badge: 1 },
+    {
+      id: 'tasks',
+      label: 'Завдання',
+      badge:
+        modules.reduce(
+          (acc, mod) =>
+            acc + mod.items.filter((i) => i.type === 'TASK' || i.type === 'TEST').length,
+          0,
+        ) || undefined,
+    },
+    {
+      id: 'announcements',
+      label: 'Оголошення',
+      badge: unreadAnnouncementsCount > 0 ? unreadAnnouncementsCount : undefined,
+    },
     { id: 'participants', label: 'Учасники' },
   ];
 
-  const MOCK_MODULES: ModuleData[] = [
-    {
-      id: 'mod-1',
-      title: 'Module 1',
-      items: [
-        { id: 'm1-1', type: 'LINK', title: 'Link 1' },
-        { id: 'm1-2', type: 'THEORY', title: 'Pdf file 1' },
-        {
-          id: 'm1-3',
-          type: 'TASK',
-          title: 'Task name 1',
-          subtitle: 'Due: March 25, 2026 at 23:59',
-        },
-      ],
-    },
-    {
-      id: 'mod-2',
-      title: 'Module 2',
-      items: [
-        { id: 'm2-1', type: 'LINK', title: 'Link 2' },
-        { id: 'm2-2', type: 'THEORY', title: 'Pdf file 3' },
-        {
-          id: 'm2-3',
-          type: 'TASK',
-          title: 'Task name 3',
-          subtitle: 'Due: March 25, 2026 at 23:59',
-        },
-        { id: 'm2-4', type: 'TASK', title: 'Task name 2', subtitle: 'Due: March 25, 23:59' },
-      ],
-    },
-  ];
-
-  const MOCK_LINKS: OnlineLessonLink[] = [
-    {
-      id: 'link-1',
-      title: 'Zoom',
-      url: 'https://zoom.us',
-      icon: ZoomIcon,
-    },
-  ];
-
-  const handleCreateModule = () => console.log('Створити модуль');
-  const handleCreateTheory = () => console.log('Створити теорію');
-  const handleCreateTask = () => console.log('Створити завдання');
-  const handleCreateTest = () => console.log('Створити тест');
+  if (loading) return <div>Завантаження курсу...</div>;
+  if (error) return <div>{error}</div>;
 
   return (
     <div className={styles.pageContainer}>
       <CourseBanner
-        title="Algebra"
-        description="Algebra covers the basics of equations, functions, and graphing. You’ll learn to solve linear and quadratic equations, understand inequalities, and work with polynomials. This foundational course builds critical problem-solving skills for advanced math and real-world applications."
-        teacherName="Daria Zhukova"
-        themeColor="#702DFF"
-        onEdit={() => console.log('Редагувати курс')}
+        title={rawData?.subject?.name || 'Без назви'}
+        classNumber={rawData?.class?.name}
+        themeColor={rawData?.themeColor}
+        backgroundImage={rawData?.backgroundUrl}
+        onEdit={() => console.log('Edit course')}
       />
 
-      <div className={styles.contentLayout}>
-        <div className={styles.mainColumn}>
-          <div className={styles.tabsRow}>
-            <Tabs items={TABS} activeId={activeTab} onTabChange={setActiveTab} />
-            <CourseCreateButton
-              themeColor="#702DFF"
-              onCreateModule={handleCreateModule}
-              onCreateTheory={handleCreateTheory}
-              onCreateTask={handleCreateTask}
-              onCreateTest={handleCreateTest}
-            />
-          </div>
+      <Tabs items={TABS} activeId={activeTab} onTabChange={setActiveTab} />
 
-          <div className={styles.tabContent}>
-            {activeTab === 'materials' && (
-              <ModuleList
-                modules={MOCK_MODULES}
-                onItemClick={(item) => console.log('Клік по:', item.title)}
-              />
-            )}
-            {activeTab === 'tasks' && <div>Тут буде список усіх завдань...</div>}
-            {activeTab === 'participants' && <div>Тут буде список учасників курсу...</div>}
-          </div>
-        </div>
+      <CourseCreateButton
+        onCreateModule={() => console.log('Module')}
+        onCreateMaterial={() => console.log('Material')}
+        onCreateTask={() => console.log('Task')}
+        onCreateTest={() => console.log('Test')}
+        onCreateAnnouncement={() => console.log('Announcement')}
+      />
 
-        <div className={styles.sidebarColumn}>
-          <OnlineLessonsBlock
-            links={MOCK_LINKS}
-            onAdd={() => console.log('Додати лінк')}
-            onEditLink={(id) => console.log('Редагувати лінк', id)}
-            onDeleteLink={(id) => console.log('Видалити лінк', id)}
-          />
-        </div>
-      </div>
+      {activeTab === 'materials' && (
+        <CourseWorkspace
+          lessons={lessons}
+          modules={modules}
+          onAddLesson={handleAddLesson}
+          onEditLesson={handleEditLesson}
+          onDeleteLesson={handleDeleteLesson}
+          onModuleItemClick={(item, moduleId) => console.log(item, moduleId)}
+          onEditModule={(id) => console.log('Редагувати модуль:', id)}
+          onDeleteModule={(id) => console.log('Видалити модуль:', id)}
+        />
+      )}
+
+      {activeTab === 'tasks' && (
+        <ModuleList
+          showMoreMenu={true}
+          modules={modules}
+          onItemClick={(item) => console.log(item)}
+          onEditModule={(id) => console.log('Редагувати модуль:', id)}
+          onDeleteModule={(id) => console.log('Видалити модуль:', id)}
+        />
+      )}
+
+      {activeTab === 'announcements' && (
+        <AnnouncementsWorkspace
+          announcements={announcements}
+          selectedId={selectedAnnouncementId}
+          onItemClick={setSelectedAnnouncementId}
+        />
+      )}
+
+      {activeTab === 'participants' && (
+        <ParticipantsWorkspace
+          teachers={participants.teachers}
+          coTeachers={participants.coTeachers}
+          classHomeroomTeacher={participants.homeroom}
+          students={participants.students}
+        />
+      )}
     </div>
   );
 };

@@ -7,21 +7,23 @@ import TaskIcon from '@/assets/task.svg?react';
 import TestIcon from '@/assets/test.svg?react';
 
 import styles from './CourseCreateButton.module.css';
+import { SecondaryButton } from '@/components/ui/SecondaryButton/SecondaryButton.tsx';
 
 interface CourseCreateButtonProps {
   onCreateModule: () => void;
-  onCreateTheory: () => void;
+  onCreateMaterial: () => void;
   onCreateTask: () => void;
   onCreateTest: () => void;
+  onCreateAnnouncement: () => void;
   themeColor?: string;
 }
 
 export const CourseCreateButton: React.FC<CourseCreateButtonProps> = ({
   onCreateModule,
-  onCreateTheory,
+  onCreateMaterial,
   onCreateTask,
   onCreateTest,
-  themeColor = '#702DFF',
+  onCreateAnnouncement,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -45,44 +47,39 @@ export const CourseCreateButton: React.FC<CourseCreateButtonProps> = ({
   };
 
   return (
-    <div
-      className={styles.container}
-      ref={containerRef}
-      style={{ '--theme-color': themeColor } as React.CSSProperties}
-    >
-      <button type="button" className={styles.createButton} onClick={handleToggle}>
-        <PlusIcon className={styles.plusIcon} />
+    <div className={styles.container} ref={containerRef}>
+      <SecondaryButton
+        onClick={handleToggle}
+        icon={<PlusIcon style={{ width: '20px', height: '20px' }} />}
+      >
         Створити
-      </button>
+      </SecondaryButton>
 
       {isOpen && (
         <div className={styles.dropdown}>
           <button className={styles.menuItem} onClick={() => handleAction(onCreateModule)}>
-            <div className={styles.iconWrapper}>
-              <LinkIcon className={styles.menuIcon} />
-            </div>
+            <LinkIcon className={styles.menuIcon} />
             Посилання
           </button>
 
-          <button className={styles.menuItem} onClick={() => handleAction(onCreateTheory)}>
-            <div className={styles.iconWrapper}>
-              <TheoryIcon className={styles.menuIcon} />
-            </div>
+          <button className={styles.menuItem} onClick={() => handleAction(onCreateMaterial)}>
+            <TheoryIcon className={styles.menuIcon} />
             Теоретичний матеріал
           </button>
 
           <button className={styles.menuItem} onClick={() => handleAction(onCreateTask)}>
-            <div className={styles.iconWrapper}>
-              <TaskIcon className={styles.menuIcon} />
-            </div>
+            <TaskIcon className={styles.menuIcon} />
             Завдання
           </button>
 
           <button className={styles.menuItem} onClick={() => handleAction(onCreateTest)}>
-            <div className={styles.iconWrapper}>
-              <TestIcon className={styles.menuIcon} />
-            </div>
+            <TestIcon className={styles.menuIcon} />
             Тест
+          </button>
+
+          <button className={styles.menuItem} onClick={() => handleAction(onCreateAnnouncement)}>
+            <TestIcon className={styles.menuIcon} />
+            Оголошення
           </button>
         </div>
       )}

@@ -2,11 +2,10 @@
     display: flex;
     align-items: center;
     gap: 16px;
-    padding: 16px 0;
+    padding-bottom: 8px;
     border-bottom: 1px solid #E5E7EB;
     cursor: pointer;
     background-color: transparent;
-    transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .container:last-child {
@@ -22,15 +21,14 @@
     opacity: 0.7;
 }
 
-.container:active {
-    transform: scale(0.99);
-}
-
 .icon {
     width: 24px;
     height: 24px;
-    color: #111827;
     flex-shrink: 0;
+}
+
+.icon path {
+    stroke: #202020;
 }
 
 .textContainer {
@@ -41,9 +39,8 @@
 }
 
 .title {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 500;
-    color: #111827;
 }
 
 .subtitle {

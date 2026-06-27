@@ -25,7 +25,7 @@ export const SecondaryButton: React.FC<SecondaryButtonProps> = ({
       green: { text: '#059669', bg: '#D1FAE5' },
       yellow: { text: '#D97706', bg: '#FEF3C7' },
       red: { text: '#DC2626', bg: '#FEE2E2' },
-      default: { text: '#702DFF', bg: '#F5F3FF' },
+      default: { text: '#702DFF', bg: '#DCD0FC' },
     };
 
     const { text, bg } = variantColors[variantColor];

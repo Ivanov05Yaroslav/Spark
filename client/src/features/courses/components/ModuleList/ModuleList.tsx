@@ -1,5 +1,4 @@
-import React from 'react';
-import { ModuleBlock } from '@/components/ui/ModuleBlock/ModuleBlock';
+import React, { useState } from 'react';
 import { ModuleItem } from '@/components/courses/ModuleItem/ModuleItem';
 
 import LinkIcon from '@/assets/link.svg?react';
@@ -8,6 +7,9 @@ import TaskIcon from '@/assets/task.svg?react';
 import TestIcon from '@/assets/test.svg?react';
 
 import styles from './ModuleList.module.css';
+import { ContentCard } from '@/components/ui/ContentCard/ContentCard.tsx';
+import { ConfirmDeleteModal } from '@/components/modals/ConfirmDeleteModal/ConfirmDeleteModal.tsx';
+import { MoreButton } from '@/components/ui/MoreButton/MoreButton.tsx';
 
 export type MaterialType = 'LINK' | 'THEORY' | 'TASK' | 'TEST';
 
@@ -27,6 +29,11 @@ export interface ModuleData {
 interface ModuleListProps {
   modules: ModuleData[];
   onItemClick?: (item: ModuleItemData, moduleId: string) => void;
+  showMoreMenu?: boolean;
+  onEditItem?: (item: ModuleItemData, moduleId: string) => void;
+  onDeleteItem?: (item: ModuleItemData, moduleId: string) => void;
+  onEditModule?: (moduleId: string) => void;
+  onDeleteModule?: (moduleId: string) => void;
 }
 
 const getIconByType = (type: MaterialType) => {
@@ -44,15 +51,49 @@ const getIconByType = (type: MaterialType) => {
   }
 };
 
-export const ModuleList: React.FC<ModuleListProps> = ({ modules, onItemClick }) => {
-  if (!modules || modules.length === 0) {
-    return <div className={styles.emptyState}>На цьому курсі поки що немає жодного модуля.</div>;
-  }
+export const ModuleList: React.FC<ModuleListProps> = ({
+  modules,
+  onItemClick,
+  showMoreMenu,
+  onEditItem,
+  onDeleteItem,
+  onEditModule,
+  onDeleteModule,
+}) => {
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [activeItemToDelete, setActiveItemToDelete] = useState<{
+    item: ModuleItemData;
+    moduleId: string;
+  } | null>(null);
+
+  const handleDeleteClick = (item: ModuleItemData, moduleId: string) => {
+    setActiveItemToDelete({ item, moduleId });
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (activeItemToDelete) {
+      onDeleteItem?.(activeItemToDelete.item, activeItemToDelete.moduleId);
+    }
+    setIsDeleteModalOpen(false);
+    setActiveItemToDelete(null);
+  };
 
   return (
     <div className={styles.container}>
       {modules.map((module) => (
-        <ModuleBlock key={module.id} title={module.title}>
+        <ContentCard
+          key={module.id}
+          title={module.title}
+          headerRightComponent={
+            showMoreMenu && (onEditModule || onDeleteModule) ? (
+              <MoreButton
+                onEdit={onEditModule ? () => onEditModule(module.id) : undefined}
+                onDelete={onDeleteModule ? () => onDeleteModule(module.id) : undefined}
+              />
+            ) : undefined
+          }
+        >
           {module.items.length > 0 ? (
             module.items.map((item) => (
               <ModuleItem
@@ -61,13 +102,26 @@ export const ModuleList: React.FC<ModuleListProps> = ({ modules, onItemClick }) 
                 title={item.title}
                 subtitle={item.subtitle}
                 onClick={() => onItemClick?.(item, module.id)}
+                showMoreMenu={showMoreMenu}
+                onEdit={() => onEditItem?.(item, module.id)}
+                onDelete={() => handleDeleteClick(item, module.id)}
               />
             ))
           ) : (
-            <div className={styles.emptyModule}>У цьому модулі поки немає матеріалів</div>
+            <div className={styles.emptyState}>В цьому модулі немає матеріалів.</div>
           )}
-        </ModuleBlock>
+        </ContentCard>
       ))}
+
+      <ConfirmDeleteModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setActiveItemToDelete(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        itemName={activeItemToDelete?.item.title || 'цей елемент'}
+      />
     </div>
   );
 };
