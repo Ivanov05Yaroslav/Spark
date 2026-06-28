@@ -31,6 +31,52 @@ export class TasksService {
     return course;
   }
 
+  private async signAttachments(attachments: string[]) {
+    return Promise.all(
+      attachments.map(async (url) => {
+        if (url.includes('amazonaws.com')) {
+          return await this.awsS3Service.generatePresignedUrl(url);
+        }
+        return url;
+      }),
+    );
+  }
+
+  private async signCreatorAvatar(creator: any) {
+    let avatarUrl = creator.avatarUrl;
+    if (avatarUrl && avatarUrl.includes('amazonaws.com')) {
+      avatarUrl = await this.awsS3Service.generatePresignedUrl(avatarUrl);
+    }
+    return { ...creator, avatarUrl };
+  }
+
+  private async getOrCreateModuleId(courseId: string, moduleId?: string, newTitle?: string) {
+    if (!moduleId && (!newTitle || newTitle.trim() === '')) {
+      throw new HttpException(
+        "Завдання обов'язково має належати до модуля (теми)",
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (newTitle && newTitle.trim() !== '') {
+      const cleanedTitle = newTitle.trim();
+      const existingModule = await this.prisma.courseModule.findFirst({
+        where: { courseId, title: { equals: cleanedTitle, mode: 'insensitive' } },
+      });
+
+      if (existingModule) {
+        return existingModule.id;
+      } else {
+        const newModule = await this.prisma.courseModule.create({
+          data: { courseId, title: cleanedTitle },
+        });
+        return newModule.id;
+      }
+    }
+
+    return moduleId as string;
+  }
+
   async create(teacherId: string, dto: CreateTaskDto, files: any[]) {
     const course = await this.verifyTeacherWriteAccess(dto.courseId, teacherId);
 
@@ -47,48 +93,22 @@ export class TasksService {
       }
     }
 
-    if (!dto.courseModuleId && (!dto.newModuleTitle || dto.newModuleTitle.trim() === '')) {
-      throw new HttpException(
-        "Завдання обов'язково має належати до модуля (теми)",
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    let finalModuleId = dto.courseModuleId || null;
-
-    if (dto.newModuleTitle && dto.newModuleTitle.trim() !== '') {
-      const cleanedTitle = dto.newModuleTitle.trim();
-
-      const existingModule = await this.prisma.courseModule.findFirst({
-        where: {
-          courseId: dto.courseId,
-          title: { equals: cleanedTitle, mode: 'insensitive' },
-        },
-      });
-
-      if (existingModule) {
-        finalModuleId = existingModule.id;
-      } else {
-        const newModule = await this.prisma.courseModule.create({
-          data: {
-            courseId: dto.courseId,
-            title: cleanedTitle,
-          },
-        });
-        finalModuleId = newModule.id;
-      }
-    }
+    const finalModuleId = await this.getOrCreateModuleId(
+      dto.courseId,
+      dto.courseModuleId,
+      dto.newModuleTitle,
+    );
 
     const attachments: string[] = [];
+    if (dto.links && dto.links.length > 0) {
+      attachments.push(...dto.links);
+    }
+
     if (files && files.length > 0) {
       for (const file of files) {
         const fileUrl = await this.awsS3Service.uploadFile(file, `courses/${dto.courseId}/tasks`);
         attachments.push(fileUrl);
       }
-    }
-
-    if (dto.links && dto.links.length > 0) {
-      attachments.push(...dto.links);
     }
 
     const task = await this.prisma.task.create({
@@ -98,31 +118,25 @@ export class TasksService {
         title: dto.title,
         description: dto.description,
         deadline: dto.deadline ? new Date(dto.deadline) : null,
-        nusGroupId: dto.nusGroupId,
+        nusGroupId: dto.nusGroupId || null,
         courseModuleId: finalModuleId,
         isHidden: dto.isHidden || false,
-        attachments: attachments,
-      },
-      include: {
-        nusGroup: true,
-        courseModule: { select: { id: true, title: true, createdAt: true } },
+        attachments,
       },
     });
 
-    if (!task.isHidden) {
-      const participants = await this.notificationsService.getCourseParticipants(
-        dto.courseId,
-        teacherId,
-      );
-      const notifications = participants.map((id) => ({
-        senderId: teacherId,
-        receiverId: id,
-        title: 'Нове завдання',
-        content: `Додано нове завдання: "${dto.title}".`,
-        type: 'TASK',
-      }));
-      await this.notificationsService.createMany(notifications);
-    }
+    const participants = await this.notificationsService.getCourseParticipants(
+      dto.courseId,
+      teacherId,
+    );
+    const notifications = participants.map((id) => ({
+      senderId: teacherId,
+      receiverId: id,
+      title: 'Нове завдання',
+      content: `Додано нове завдання: ${dto.title}`,
+      type: 'TASK_CREATED',
+    }));
+    await this.notificationsService.createMany(notifications);
 
     return task;
   }
@@ -146,15 +160,23 @@ export class TasksService {
     const whereClause: any = { courseId };
     if (!isTeacher) whereClause.isHidden = false;
 
-    return this.prisma.task.findMany({
+    const tasks = await this.prisma.task.findMany({
       where: whereClause,
       orderBy: { createdAt: 'desc' },
       include: {
-        creator: { select: { id: true, firstName: true, lastName: true } },
+        creator: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
         nusGroup: true,
         courseModule: { select: { id: true, title: true } },
       },
     });
+
+    return Promise.all(
+      tasks.map(async (task) => ({
+        ...task,
+        creator: await this.signCreatorAvatar(task.creator),
+        attachments: await this.signAttachments(task.attachments),
+      })),
+    );
   }
 
   async findOne(userId: string, taskId: string) {
@@ -162,14 +184,35 @@ export class TasksService {
       where: { id: taskId },
       include: {
         course: { include: { students: true, coTeachers: true, class: true } },
+        creator: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
         nusGroup: true,
         courseModule: { select: { id: true, title: true } },
       },
     });
     if (!task) throw new HttpException('Завдання не знайдено', HttpStatus.NOT_FOUND);
 
+    const isTeacher =
+      task.course.creatorId === userId ||
+      task.course.coTeachers.some((ct) => ct.teacherId === userId);
+    const isStudent = task.course.students.some((s) => s.studentId === userId);
+    const isHomeroom = task.course.class.homeroomTeacherId === userId;
+
+    if (!isTeacher && !isStudent && !isHomeroom) {
+      throw new HttpException('Ви не є учасником цього курсу', HttpStatus.FORBIDDEN);
+    }
+    if (!isTeacher && task.isHidden) {
+      throw new HttpException(
+        'Доступ до цього завдання заборонено (воно приховане)',
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
     const { course: _, ...result } = task;
-    return result;
+    return {
+      ...result,
+      creator: await this.signCreatorAvatar(result.creator),
+      attachments: await this.signAttachments(result.attachments),
+    };
   }
 
   async update(userId: string, taskId: string, dto: UpdateTaskDto, files?: any[]) {
@@ -188,57 +231,54 @@ export class TasksService {
       if (!nusGroup) throw new HttpException('Групу НУШ не знайдено', HttpStatus.NOT_FOUND);
       if (nusGroup.subjectId !== course.subjectId) {
         throw new HttpException(
-          'Помилка: Ця група результатів НУШ належить до іншого предмету!',
+          'Ця група результатів НУШ належить до іншого предмету!',
           HttpStatus.BAD_REQUEST,
         );
       }
     }
 
-    if (!dto.courseModuleId && (!dto.newModuleTitle || dto.newModuleTitle.trim() === '')) {
-      throw new HttpException(
-        "Завдання обов'язково має належати до модуля (теми)",
-        HttpStatus.BAD_REQUEST,
-      );
-    }
+    const finalModuleId = await this.getOrCreateModuleId(
+      task.courseId,
+      (dto.courseModuleId !== undefined ? dto.courseModuleId : task.courseModuleId) || undefined,
+      dto.newModuleTitle,
+    );
 
-    let finalModuleId = dto.courseModuleId !== undefined ? dto.courseModuleId : task.courseModuleId;
+    const finalAttachments: string[] = [];
+    const retained = dto.retainedAttachments || [];
+    const existingAwsUrls = task.attachments.filter((u) => u.includes('amazonaws.com'));
 
-    if (dto.newModuleTitle && dto.newModuleTitle.trim() !== '') {
-      const cleanedTitle = dto.newModuleTitle.trim();
-
-      const existingModule = await this.prisma.courseModule.findFirst({
-        where: {
-          courseId: task.courseId,
-          title: { equals: cleanedTitle, mode: 'insensitive' },
-        },
-      });
-
-      if (existingModule) {
-        finalModuleId = existingModule.id;
-      } else {
-        const newModule = await this.prisma.courseModule.create({
-          data: {
-            courseId: task.courseId,
-            title: cleanedTitle,
-          },
-        });
-        finalModuleId = newModule.id;
-      }
-    }
-
-    let finalAttachments: string[] = [...task.attachments];
-
-    if (dto.retainedAttachments !== undefined) {
-      const retained = dto.retainedAttachments;
-
-      const removedAttachments = task.attachments.filter((att) => !retained.includes(att));
-
-      for (const removed of removedAttachments) {
-        if (removed.includes('amazonaws.com')) {
-          await this.awsS3Service.deleteFile(removed);
+    const removedUrls = existingAwsUrls.filter((oldUrl) => {
+      return !retained.some((rUrl) => {
+        try {
+          const rPath = new URL(rUrl).pathname;
+          const oPath = new URL(oldUrl).pathname;
+          return rPath === oPath;
+        } catch {
+          return rUrl === oldUrl;
         }
+      });
+    });
+
+    for (const removed of removedUrls) {
+      try {
+        await this.awsS3Service.deleteFile(removed);
+      } catch (e) {
+        console.error('Помилка при видаленні файлу таски з S3', e);
       }
-      finalAttachments = [...retained];
+    }
+
+    if (retained && retained.length > 0) {
+      const cleanRetained = retained.map((url) => {
+        if (url.includes('amazonaws.com')) {
+          try {
+            return new URL(url).pathname.substring(1);
+          } catch {
+            return url;
+          }
+        }
+        return url;
+      });
+      finalAttachments.push(...cleanRetained);
     }
 
     if (dto.links && dto.links.length > 0) {
@@ -277,12 +317,17 @@ export class TasksService {
     await this.verifyTeacherWriteAccess(task.courseId, userId);
 
     if (task.attachments && task.attachments.length > 0) {
-      for (const fileUrl of task.attachments) {
-        await this.awsS3Service.deleteFile(fileUrl);
+      const awsUrls = task.attachments.filter((url) => url.includes('amazonaws.com'));
+      for (const url of awsUrls) {
+        try {
+          await this.awsS3Service.deleteFile(url);
+        } catch (e) {
+          console.error('Не вдалося видалити файл таски', e);
+        }
       }
     }
 
     await this.prisma.task.delete({ where: { id: taskId } });
-    return { message: 'Завдання та його файли успішно видалено' };
+    return { message: 'Завдання успішно видалено' };
   }
 }

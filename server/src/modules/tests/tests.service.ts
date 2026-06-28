@@ -1,10 +1,14 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { AwsS3Service } from '../../core/integrations/aws/aws-s3.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { CreateTestDto, SubmitTestDto, UpdateTestDto } from './dto/test.dto';
 
 @Injectable()
 export class TestsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly awsS3Service: AwsS3Service,
+  ) {}
 
   private async verifyTeacherWriteAccess(courseId: string, teacherId: string) {
     const course = await this.prisma.course.findUnique({
@@ -25,32 +29,48 @@ export class TestsService {
     return course;
   }
 
-  async createTest(teacherId: string, dto: CreateTestDto) {
-    await this.verifyTeacherWriteAccess(dto.courseId, teacherId);
-
-    if (!dto.courseModuleId && (!dto.newModuleTitle || dto.newModuleTitle.trim() === '')) {
+  private async getOrCreateModuleId(courseId: string, moduleId?: string, newTitle?: string) {
+    if (!moduleId && (!newTitle || newTitle.trim() === '')) {
       throw new HttpException(
         "Тест обов'язково має належати до модуля (теми)",
         HttpStatus.BAD_REQUEST,
       );
     }
 
-    let finalModuleId = dto.courseModuleId || null;
-    if (dto.newModuleTitle && dto.newModuleTitle.trim() !== '') {
-      const cleanedTitle = dto.newModuleTitle.trim();
+    if (newTitle && newTitle.trim() !== '') {
+      const cleanedTitle = newTitle.trim();
       const existingModule = await this.prisma.courseModule.findFirst({
-        where: { courseId: dto.courseId, title: { equals: cleanedTitle, mode: 'insensitive' } },
+        where: { courseId, title: { equals: cleanedTitle, mode: 'insensitive' } },
       });
 
       if (existingModule) {
-        finalModuleId = existingModule.id;
+        return existingModule.id;
       } else {
         const newModule = await this.prisma.courseModule.create({
-          data: { courseId: dto.courseId, title: cleanedTitle },
+          data: { courseId, title: cleanedTitle },
         });
-        finalModuleId = newModule.id;
+        return newModule.id;
       }
     }
+
+    return moduleId as string;
+  }
+
+  private async signCreatorAvatar(creator: any) {
+    let avatarUrl = creator.avatarUrl;
+    if (avatarUrl && avatarUrl.includes('amazonaws.com')) {
+      avatarUrl = await this.awsS3Service.generatePresignedUrl(avatarUrl);
+    }
+    return { ...creator, avatarUrl };
+  }
+
+  async createTest(teacherId: string, dto: CreateTestDto) {
+    await this.verifyTeacherWriteAccess(dto.courseId, teacherId);
+    const finalModuleId = await this.getOrCreateModuleId(
+      dto.courseId,
+      dto.courseModuleId,
+      dto.newModuleTitle,
+    );
 
     return this.prisma.test.create({
       data: {
@@ -83,12 +103,102 @@ export class TestsService {
             })) || [],
         },
       },
+    });
+  }
+
+  async findAllByCourse(userId: string, courseId: string) {
+    const course = await this.prisma.course.findUnique({
+      where: { id: courseId },
+      include: { students: true, coTeachers: true, class: true },
+    });
+    if (!course) throw new HttpException('Курс не знайдено', HttpStatus.NOT_FOUND);
+
+    const isTeacher =
+      course.creatorId === userId || course.coTeachers.some((ct) => ct.teacherId === userId);
+    const isStudent = course.students.some((s) => s.studentId === userId);
+    const isHomeroom = course.class.homeroomTeacherId === userId;
+
+    if (!isTeacher && !isStudent && !isHomeroom) {
+      throw new HttpException('Ви не є учасником цього курсу', HttpStatus.FORBIDDEN);
+    }
+
+    const whereClause: any = { courseId };
+    if (!isTeacher) whereClause.isHidden = false;
+
+    const tests = await this.prisma.test.findMany({
+      where: whereClause,
+      orderBy: { createdAt: 'desc' },
       include: {
-        questions: { include: { answers: true } },
-        courseModule: true,
-        nusGroup: true,
+        creator: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
+        _count: { select: { questions: true } },
+        courseModule: { select: { id: true, title: true } },
       },
     });
+
+    return Promise.all(
+      tests.map(async (test) => ({
+        ...test,
+        creator: await this.signCreatorAvatar(test.creator),
+      })),
+    );
+  }
+
+  async getTestDetails(userId: string, testId: string) {
+    const test = await this.prisma.test.findUnique({
+      where: { id: testId },
+      include: {
+        course: { include: { students: true, coTeachers: true, class: true } },
+        creator: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
+        nusGroup: true,
+        courseModule: { select: { id: true, title: true } },
+        questions: {
+          include: { answers: true },
+          orderBy: { id: 'asc' },
+        },
+      },
+    });
+    if (!test) throw new HttpException('Тест не знайдено', HttpStatus.NOT_FOUND);
+
+    const creatorSigned = await this.signCreatorAvatar(test.creator);
+
+    const isTeacher =
+      test.course.creatorId === userId ||
+      test.course.coTeachers.some((ct) => ct.teacherId === userId);
+
+    if (!isTeacher) {
+      const isStudent = test.course.students.some((s) => s.studentId === userId);
+      const isHomeroom = test.course.class.homeroomTeacherId === userId;
+      if (!isStudent && !isHomeroom) {
+        throw new HttpException('У вас немає доступу до цього тесту', HttpStatus.FORBIDDEN);
+      }
+      if (test.isHidden) {
+        throw new HttpException(
+          'Доступ до цього тесту заборонено (він прихований)',
+          HttpStatus.FORBIDDEN,
+        );
+      }
+
+      const safeQuestions = test.questions.map((question) => ({
+        ...question,
+        answers: question.answers.map((answer) => {
+          const { isCorrect, ...safeAnswer } = answer;
+          return safeAnswer;
+        }),
+      }));
+
+      const { course: _, ...result } = test;
+      return {
+        ...result,
+        creator: creatorSigned,
+        questions: safeQuestions,
+      };
+    }
+
+    const { course: _, ...result } = test;
+    return {
+      ...result,
+      creator: creatorSigned,
+    };
   }
 
   async updateTest(teacherId: string, testId: string, dto: UpdateTestDto) {
@@ -97,29 +207,11 @@ export class TestsService {
 
     await this.verifyTeacherWriteAccess(test.courseId, teacherId);
 
-    if (!dto.courseModuleId && (!dto.newModuleTitle || dto.newModuleTitle.trim() === '')) {
-      throw new HttpException(
-        "Тест обов'язково має належати до модуля (теми)",
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    let finalModuleId = dto.courseModuleId !== undefined ? dto.courseModuleId : test.courseModuleId;
-    if (dto.newModuleTitle && dto.newModuleTitle.trim() !== '') {
-      const cleanedTitle = dto.newModuleTitle.trim();
-      const existingModule = await this.prisma.courseModule.findFirst({
-        where: { courseId: test.courseId, title: { equals: cleanedTitle, mode: 'insensitive' } },
-      });
-
-      if (existingModule) {
-        finalModuleId = existingModule.id;
-      } else {
-        const newModule = await this.prisma.courseModule.create({
-          data: { courseId: test.courseId, title: cleanedTitle },
-        });
-        finalModuleId = newModule.id;
-      }
-    }
+    const finalModuleId = await this.getOrCreateModuleId(
+      test.courseId,
+      (dto.courseModuleId !== undefined ? dto.courseModuleId : test.courseModuleId) || undefined,
+      dto.newModuleTitle,
+    );
 
     await this.prisma.test.update({
       where: { id: testId },
@@ -151,14 +243,20 @@ export class TestsService {
 
       for (const q of dto.questions) {
         if (q.id) {
-          await this.prisma.question.update({
-            where: { id: q.id },
-            data: { type: q.type, content: q.content, points: q.points },
-          });
-
           const incomingAnswerIds = q.answers.map((a) => a.id).filter(Boolean) as string[];
           await this.prisma.answer.deleteMany({
-            where: { questionId: q.id, id: { notIn: incomingAnswerIds } },
+            where: {
+              questionId: q.id,
+              id: { notIn: incomingAnswerIds },
+            },
+          });
+
+          await this.prisma.question.update({
+            where: { id: q.id },
+            data: {
+              content: q.content,
+              points: q.points,
+            },
           });
 
           for (const a of q.answers) {
@@ -169,7 +267,11 @@ export class TestsService {
               });
             } else {
               await this.prisma.answer.create({
-                data: { questionId: q.id!, content: a.content, isCorrect: a.isCorrect },
+                data: {
+                  questionId: q.id,
+                  content: a.content,
+                  isCorrect: a.isCorrect,
+                },
               });
             }
           }
@@ -192,14 +294,7 @@ export class TestsService {
       }
     }
 
-    return this.prisma.test.findUnique({
-      where: { id: testId },
-      include: {
-        questions: { include: { answers: true } },
-        courseModule: true,
-        nusGroup: true,
-      },
-    });
+    return this.getTestDetails(teacherId, testId);
   }
 
   async deleteTest(teacherId: string, testId: string) {
@@ -207,7 +302,6 @@ export class TestsService {
     if (!test) throw new HttpException('Тест не знайдено', HttpStatus.NOT_FOUND);
 
     await this.verifyTeacherWriteAccess(test.courseId, teacherId);
-
     await this.prisma.test.delete({ where: { id: testId } });
     return { message: 'Тест успішно видалено' };
   }
@@ -368,75 +462,6 @@ export class TestsService {
   //   await this.prisma.question.delete({ where: { id: questionId } });
   //   return { message: 'Питання видалено' };
   // }
-
-  async findAllByCourse(userId: string, courseId: string) {
-    const course = await this.prisma.course.findUnique({
-      where: { id: courseId },
-      include: { students: true, coTeachers: true, class: true },
-    });
-    if (!course) throw new HttpException('Курс не знайдено', HttpStatus.NOT_FOUND);
-
-    const isTeacher =
-      course.creatorId === userId || course.coTeachers.some((ct) => ct.teacherId === userId);
-    const isStudent = course.students.some((s) => s.studentId === userId);
-    const isHomeroom = course.class.homeroomTeacherId === userId;
-
-    if (!isTeacher && !isStudent && !isHomeroom) {
-      throw new HttpException('Ви не є учасником цього курсу', HttpStatus.FORBIDDEN);
-    }
-
-    const whereClause: any = { courseId };
-    if (!isTeacher) whereClause.isHidden = false;
-
-    return this.prisma.test.findMany({
-      where: whereClause,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        creator: { select: { id: true, firstName: true, lastName: true } },
-        _count: { select: { questions: true } },
-        courseModule: { select: { id: true, title: true } },
-      },
-    });
-  }
-
-  async getTestDetails(userId: string, testId: string) {
-    const test = await this.prisma.test.findUnique({
-      where: { id: testId },
-      include: {
-        course: { include: { students: true, coTeachers: true, class: true } },
-        questions: {
-          include: { answers: true },
-          orderBy: { id: 'asc' },
-        },
-      },
-    });
-    if (!test) throw new HttpException('Тест не знайдено', HttpStatus.NOT_FOUND);
-
-    const isTeacher =
-      test.course.creatorId === userId ||
-      test.course.coTeachers.some((ct) => ct.teacherId === userId);
-
-    if (!isTeacher) {
-      const isStudent = test.course.students.some((s) => s.studentId === userId);
-      if (!isStudent || test.isHidden) {
-        throw new HttpException('У вас немає доступу до цього тесту', HttpStatus.FORBIDDEN);
-      }
-
-      const safeQuestions = test.questions.map((question) => ({
-        ...question,
-        answers: question.answers.map((answer) => {
-          const { isCorrect, ...safeAnswer } = answer;
-          return safeAnswer;
-        }),
-      }));
-
-      const { course: _, ...result } = test;
-      return { ...result, questions: safeQuestions };
-    }
-
-    const { course: _, ...result } = test;
-    return result;
-  }
 
   async submitTest(studentId: string, testId: string, dto: SubmitTestDto) {
     const test = await this.prisma.test.findUnique({
