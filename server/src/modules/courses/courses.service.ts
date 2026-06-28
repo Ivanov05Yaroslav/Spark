@@ -247,6 +247,7 @@ export class CoursesService {
 
     return {
       id: course.id,
+      schoolId: course.schoolId,
       subject: course.subject,
       class: {
         id: course.class.id,
@@ -260,6 +261,7 @@ export class CoursesService {
       backgroundUrl: course.backgroundUrl
         ? await this.awsS3Service.generatePresignedUrl(course.backgroundUrl)
         : null,
+      isHidden: course.isHidden,
 
       participants: {
         creator: creatorClean,

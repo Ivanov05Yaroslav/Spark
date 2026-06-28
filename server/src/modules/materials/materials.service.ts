@@ -99,6 +99,52 @@ export class MaterialsService {
     });
   }
 
+  async findOne(userId: string, materialId: string) {
+    const material = await this.prisma.material.findUnique({
+      where: { id: materialId },
+      include: {
+        course: { include: { students: true, coTeachers: true, class: true } },
+        creator: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
+        courseModule: { select: { id: true, title: true } },
+      },
+    });
+
+    if (!material) throw new HttpException('Матеріал не знайдено', HttpStatus.NOT_FOUND);
+
+    const isTeacher =
+      material.course.creatorId === userId ||
+      material.course.coTeachers.some((ct) => ct.teacherId === userId);
+    const isStudent = material.course.students.some((s) => s.studentId === userId);
+    const isHomeroom = material.course.class.homeroomTeacherId === userId;
+
+    if (!isTeacher && !isStudent && !isHomeroom) {
+      throw new HttpException('Ви не є учасником цього курсу', HttpStatus.FORBIDDEN);
+    }
+    if (!isTeacher && material.isHidden) {
+      throw new HttpException(
+        'Доступ до цього матеріалу заборонено (він прихований)',
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
+    let avatarUrl = material.creator.avatarUrl;
+    if (avatarUrl && avatarUrl.includes('amazonaws.com')) {
+      avatarUrl = await this.awsS3Service.generatePresignedUrl(avatarUrl);
+    }
+
+    let signedFileUrl = material.fileUrl;
+    if (signedFileUrl && signedFileUrl.includes('amazonaws.com')) {
+      signedFileUrl = await this.awsS3Service.generatePresignedUrl(signedFileUrl);
+    }
+
+    const { course: _, ...result } = material;
+    return {
+      ...result,
+      fileUrl: signedFileUrl,
+      creator: { ...result.creator, avatarUrl },
+    };
+  }
+
   async findAllByCourse(userId: string, courseId: string) {
     const course = await this.prisma.course.findUnique({
       where: { id: courseId },

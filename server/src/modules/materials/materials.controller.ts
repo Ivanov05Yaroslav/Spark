@@ -46,6 +46,12 @@ export class MaterialsController {
     return this.materialsService.createFileMaterial(teacherId, dto, file);
   }
 
+  @ApiOperation({ summary: 'Отримати деталі конкретного матеріалу' })
+  @Get('/:id')
+  async getOne(@GetUser('id') userId: string, @Param('id') id: string) {
+    return this.materialsService.findOne(userId, id);
+  }
+
   @ApiOperation({ summary: 'Отримати всі матеріали курсу (Для всіх учасників)' })
   @Get('/course/:courseId')
   async getByCourse(@GetUser('id') userId: string, @Param('courseId') courseId: string) {
