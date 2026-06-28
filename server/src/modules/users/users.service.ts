@@ -4,6 +4,7 @@ import { AwsS3Service } from '../../core/integrations/aws/aws-s3.service';
 import { EmailService } from '../../core/integrations/email/email.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { ClassesService } from '../classes/classes.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { RolesService } from '../roles/roles.service';
 import { SubjectsService } from '../subjects/subjects.service';
 import { AdminCreateUserDto, GetSchoolUsersDto } from './dto/admin-create-user.dto';
@@ -16,6 +17,7 @@ export class UsersService {
     private readonly rolesService: RolesService,
     private readonly classesService: ClassesService,
     private readonly subjectsService: SubjectsService,
+    private readonly notificationsService: NotificationsService,
     private readonly awsS3Service: AwsS3Service,
     private readonly emailService: EmailService,
   ) {}
@@ -562,6 +564,15 @@ export class UsersService {
       }
     }
 
+    await this.notificationsService.create({
+      senderId: adminId,
+      receiverId: newUser.id,
+      title: 'Акаунт створено',
+      content: 'Ласкаво просимо на платформі Spark!',
+      type: 'WELCOME',
+      metadata: {},
+    });
+
     await this.emailService.sendWelcomeEmail(newUser.email, plainPassword);
 
     const { password, userRoles, ...result } = newUser as any;
@@ -752,7 +763,6 @@ export class UsersService {
     });
 
     const isAlreadyAdded = parent?.parentRelations.some((rel) => rel.studentId === student.id);
-
     if (isAlreadyAdded) {
       throw new HttpException('Цю дитину вже додано до вашого профілю', HttpStatus.BAD_REQUEST);
     }
@@ -766,6 +776,16 @@ export class UsersService {
           },
         },
       },
+    });
+
+    const parentName = parent ? `${parent.firstName} ${parent.lastName}` : 'Батьки';
+    await this.notificationsService.create({
+      senderId: parentId,
+      receiverId: student.id,
+      title: 'Підключення батьків',
+      content: `Користувач ${parentName} отримав доступ до вашого профілю як "Батьки".`,
+      type: 'AUTH',
+      metadata: { parentId: parentId },
     });
 
     return {

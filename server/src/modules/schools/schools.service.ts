@@ -2,6 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { AwsS3Service } from '../../core/integrations/aws/aws-s3.service';
 import { EmailService } from '../../core/integrations/email/email.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class SchoolsService {
@@ -9,6 +10,7 @@ export class SchoolsService {
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
     private readonly awsS3Service: AwsS3Service,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async getRegions() {
@@ -86,12 +88,22 @@ export class SchoolsService {
       requests.map(async (request) => {
         return {
           ...request,
-          passportDocs: await Promise.all(request.passportDocs.map(url => this.awsS3Service.generatePresignedUrl(url))),
-          edrDocs: await Promise.all(request.edrDocs.map(url => this.awsS3Service.generatePresignedUrl(url))),
-          appointmentOrderDocs: await Promise.all(request.appointmentOrderDocs.map(url => this.awsS3Service.generatePresignedUrl(url))),
-          employmentContractDocs: await Promise.all(request.employmentContractDocs.map(url => this.awsS3Service.generatePresignedUrl(url))),
+          passportDocs: await Promise.all(
+            request.passportDocs.map((url) => this.awsS3Service.generatePresignedUrl(url)),
+          ),
+          edrDocs: await Promise.all(
+            request.edrDocs.map((url) => this.awsS3Service.generatePresignedUrl(url)),
+          ),
+          appointmentOrderDocs: await Promise.all(
+            request.appointmentOrderDocs.map((url) => this.awsS3Service.generatePresignedUrl(url)),
+          ),
+          employmentContractDocs: await Promise.all(
+            request.employmentContractDocs.map((url) =>
+              this.awsS3Service.generatePresignedUrl(url),
+            ),
+          ),
         };
-      })
+      }),
     );
 
     return secureRequests;
@@ -196,6 +208,15 @@ export class SchoolsService {
     });
 
     await this.emailService.sendApprovalEmail(request.email);
+
+    await this.notificationsService.create({
+      senderId: director.id,
+      receiverId: director.id,
+      title: 'Успішна верифікація',
+      content: 'Ваш заклад освіти успішно пройшов верифікацію. Ласкаво просимо на платформі Spark!',
+      type: 'AUTH',
+      metadata: { schoolId: school.id },
+    });
 
     return { message: 'Школу та профіль директора успішно створено!' };
   }

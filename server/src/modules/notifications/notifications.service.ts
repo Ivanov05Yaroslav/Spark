@@ -11,6 +11,7 @@ export class NotificationsService {
     title: string;
     content: string;
     type: string;
+    metadata?: any;
   }) {
     return this.prisma.notification.create({ data });
   }

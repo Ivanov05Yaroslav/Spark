@@ -13,7 +13,7 @@ export class AnnouncementsService {
   private async verifyTeacherWriteAccess(courseId: string, teacherId: string) {
     const course = await this.prisma.course.findUnique({
       where: { id: courseId },
-      include: { coTeachers: true },
+      include: { coTeachers: true, subject: true, class: true },
     });
     if (!course) throw new HttpException('Курс не знайдено', HttpStatus.NOT_FOUND);
 
@@ -32,6 +32,8 @@ export class AnnouncementsService {
   async create(teacherId: string, dto: CreateAnnouncementDto) {
     await this.verifyTeacherWriteAccess(dto.courseId, teacherId);
 
+    const course = await this.verifyTeacherWriteAccess(dto.courseId, teacherId);
+
     const result = await this.prisma.announcement.create({
       data: {
         courseId: dto.courseId,
@@ -41,8 +43,8 @@ export class AnnouncementsService {
         reads: {
           create: {
             userId: teacherId,
-          }
-        }
+          },
+        },
       },
       include: {
         creator: {
@@ -56,6 +58,8 @@ export class AnnouncementsService {
       },
     });
 
+    const courseName = `${course.subject.name} ${course.class.name}`;
+
     const participants = await this.notificationsService.getCourseParticipants(
       dto.courseId,
       teacherId,
@@ -64,8 +68,9 @@ export class AnnouncementsService {
       senderId: teacherId,
       receiverId: id,
       title: 'Нове оголошення',
-      content: `У курсі опубліковано нове оголошення: ${dto.title}`,
+      content: `У курсі "${courseName}" опубліковано нове оголошення: ${dto.title}`,
       type: 'ANNOUNCEMENT',
+      metadata: { courseId: dto.courseId, announcementId: result.id },
     }));
     await this.notificationsService.createMany(notifications);
 
@@ -78,6 +83,7 @@ export class AnnouncementsService {
       include: {
         students: true,
         coTeachers: true,
+        subject: true,
         class: true,
       },
     });

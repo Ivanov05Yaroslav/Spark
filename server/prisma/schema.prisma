@@ -494,6 +494,7 @@ model Notification {
   content    String
   type       String
   isRead     Boolean  @default(false)
+  metadata   Json?
   createdAt  DateTime @default(now())
 
   sender   User @relation("SentNotifications", fields: [senderId], references: [id], onDelete: Cascade)

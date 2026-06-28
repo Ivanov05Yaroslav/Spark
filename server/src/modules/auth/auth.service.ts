@@ -12,6 +12,7 @@ import 'multer';
 import { AwsS3Service } from '../../core/integrations/aws/aws-s3.service';
 import { EmailService } from '../../core/integrations/email/email.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { UsersService } from '../users/users.service';
 import {
   ChangePasswordDto,
@@ -74,6 +75,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly awsS3Service: AwsS3Service,
     private readonly emailService: EmailService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async login(dto: LoginUserDto) {
@@ -556,6 +558,28 @@ export class AuthService {
       },
     });
 
+    await this.notificationsService.create({
+      senderId: newParent.id,
+      receiverId: newParent.id,
+      title: 'Реєстрація успішна',
+      content: 'Ласкаво просимо на платформі Spark!',
+      type: 'AUTH',
+      metadata: {},
+    });
+
+    const parentName = `${newParent.firstName} ${newParent.lastName}`;
+    await Promise.all(
+      newParent.parentRelations.map((rel) =>
+        this.notificationsService.create({
+          senderId: newParent.id,
+          receiverId: rel.student.id,
+          title: 'Підключення батьків',
+          content: `Користувач ${parentName} отримав доступ до вашого профілю як "Батьки".`,
+          type: 'AUTH',
+          metadata: { parentId: newParent.id },
+        }),
+      ),
+    );
     this.parentRegistrationSessions.delete(dto.sessionId);
 
     const tokens = await this.generateTokens(newParent);

@@ -20,7 +20,7 @@ export class SubmissionsService {
   async submitTask(studentId: string, dto: CreateTaskSubmissionDto, files?: any[]) {
     const task = await this.prisma.task.findUnique({
       where: { id: dto.taskId },
-      include: { course: { include: { students: true } } },
+      include: { course: { include: { students: true, coTeachers: true, subject: true, class: true } } },
     });
     if (!task) throw new HttpException('Завдання не знайдено', HttpStatus.NOT_FOUND);
 
@@ -53,13 +53,40 @@ export class SubmissionsService {
     }
     if (hasLinks) attachments.push(...(dto.links ?? []));
 
-    return this.prisma.submission.create({
+    const newSubmission = await this.prisma.submission.create({
       data: {
         taskId: dto.taskId,
         studentId,
         attachments,
       },
     });
+
+    const courseName = `${task.course.subject.name} ${task.course.class.name}`;
+
+    const studentUser = await this.prisma.user.findUnique({ where: { id: studentId } });
+    if (studentUser && task.course.creatorId) {
+      await this.notificationsService.create({
+        senderId: studentId,
+        receiverId: task.course.creatorId,
+        title: 'Учень здав роботу',
+        content: `Учень ${studentUser.firstName} ${studentUser.lastName} здав роботу: "${task.title}" у курсі "${courseName}".`,
+        type: 'SUBMISSION',
+        metadata: { courseId: task.course.id, taskId: task.id, submissionId: newSubmission.id },
+      });
+
+      for (const ct of task.course.coTeachers) {
+        await this.notificationsService.create({
+          senderId: studentId,
+          receiverId: ct.teacherId,
+          title: 'Учень здав роботу',
+          content: `Учень ${studentUser.firstName} ${studentUser.lastName} здав роботу: "${task.title}" у курсі "${courseName}".`,
+          type: 'SUBMISSION',
+          metadata: { courseId: task.course.id, taskId: task.id, submissionId: newSubmission.id },
+        });
+      }
+    }
+
+    return newSubmission;
   }
 
   private paginateResponse(data: any[], total: number, page: number, limit: number) {
@@ -379,8 +406,8 @@ export class SubmissionsService {
     const submission = await this.prisma.submission.findUnique({
       where: { id: submissionId },
       include: {
-        task: { include: { course: { include: { coTeachers: true } } } },
-        test: { include: { course: { include: { coTeachers: true } } } },
+        task: { include: { course: { include: { coTeachers: true, subject: true, class: true } } } },
+        test: { include: { course: { include: { coTeachers: true, subject: true, class: true } } } },
       },
     });
     if (!submission) throw new HttpException('Роботу не знайдено', HttpStatus.NOT_FOUND);
@@ -398,14 +425,19 @@ export class SubmissionsService {
       where: { id: submissionId },
       data: { score: dto.score, checkedAt: new Date() },
     });
+    
 
     if (submission.task) {
+
+      const courseName = `${submission.task.course.subject.name} ${submission.task.course.class.name}`;
+
       await this.notificationsService.create({
         senderId: teacherId,
         receiverId: submission.studentId,
         title: 'Оцінка за завдання',
-        content: `Вашу роботу "${submission.task.title}" перевірено. Оцінка: ${dto.score}`,
-        type: 'GRADE',
+        content: `Вашу роботу "${submission.task.title}" у курсі "${courseName}" перевірено. Оцінка: ${dto.score}`,
+        type: 'SUBMISSION',
+        metadata: { courseId: submission.task.courseId, taskId: submission.task.id },
       });
     }
 

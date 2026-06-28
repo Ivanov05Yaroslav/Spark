@@ -15,7 +15,7 @@ export class TasksService {
   private async verifyTeacherWriteAccess(courseId: string, teacherId: string) {
     const course = await this.prisma.course.findUnique({
       where: { id: courseId },
-      include: { coTeachers: true },
+      include: { coTeachers: true, subject: true, class: true },
     });
     if (!course) throw new HttpException('Курс не знайдено', HttpStatus.NOT_FOUND);
 
@@ -125,6 +125,8 @@ export class TasksService {
       },
     });
 
+    const courseName = `${course.subject.name} ${course.class.name}`;
+
     const participants = await this.notificationsService.getCourseParticipants(
       dto.courseId,
       teacherId,
@@ -133,8 +135,9 @@ export class TasksService {
       senderId: teacherId,
       receiverId: id,
       title: 'Нове завдання',
-      content: `Додано нове завдання: ${dto.title}`,
-      type: 'TASK_CREATED',
+      content: `Додано нове завдання: "${dto.title}" у курсі "${courseName}".`,
+      type: 'TASK',
+      metadata: { courseId: dto.courseId, taskId: task.id },
     }));
     await this.notificationsService.createMany(notifications);
 
@@ -218,7 +221,7 @@ export class TasksService {
   async update(userId: string, taskId: string, dto: UpdateTaskDto, files?: any[]) {
     const task = await this.prisma.task.findUnique({
       where: { id: taskId },
-      include: { course: true },
+      include: { course: { include: { subject: true, class: true } } },
     });
     if (!task) throw new HttpException('Завдання не знайдено', HttpStatus.NOT_FOUND);
 
@@ -292,7 +295,10 @@ export class TasksService {
       }
     }
 
-    return this.prisma.task.update({
+    const isDeadlineChanged =
+      dto.deadline && task.deadline && new Date(dto.deadline).getTime() !== task.deadline.getTime();
+
+    const updatedTask = await this.prisma.task.update({
       where: { id: taskId },
       data: {
         title: dto.title,
@@ -308,6 +314,32 @@ export class TasksService {
         courseModule: { select: { id: true, title: true, createdAt: true } },
       },
     });
+
+    if (isDeadlineChanged && !updatedTask.isHidden) {
+      const courseName = `${task.course.subject.name} ${task.course.class.name}`;
+      const participants = await this.notificationsService.getCourseParticipants(
+        updatedTask.courseId,
+        userId,
+      );
+
+      const formattedDate = new Date(dto.deadline!).toLocaleDateString('uk-UA', {
+        day: 'numeric',
+        month: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
+      const notifications = participants.map((id) => ({
+        senderId: userId,
+        receiverId: id,
+        title: 'Зміна дедлайну',
+        content: `Змінено дедлайн для завдання "${updatedTask.title}" у курсі "${courseName}". Новий термін: ${formattedDate}.`,
+        type: 'TASK',
+        metadata: { courseId: updatedTask.courseId, taskId: updatedTask.id },
+      }));
+      await this.notificationsService.createMany(notifications);
+    }
+    return updatedTask;
   }
 
   async delete(userId: string, taskId: string) {

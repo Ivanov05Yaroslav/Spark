@@ -31,22 +31,26 @@ export class CommentsService {
     if (dto.taskId) {
       const task = await this.prisma.task.findUnique({
         where: { id: dto.taskId },
-        include: { course: { include: { coTeachers: true, students: true } } },
+        include: {
+          course: { include: { coTeachers: true, students: true, subject: true, class: true } },
+        },
       });
       if (!task) throw new HttpException('Завдання не знайдено', HttpStatus.NOT_FOUND);
-      return { entity: task, course: task.course, title: 'Коментар до завдання' };
+      return { entity: task, course: task.course, title: task.title };
     }
 
     if (dto.testId) {
       const test = await this.prisma.test.findUnique({
         where: { id: dto.testId },
-        include: { course: { include: { coTeachers: true, students: true } } },
+        include: {
+          course: { include: { coTeachers: true, students: true, subject: true, class: true } },
+        },
       });
       if (!test) throw new HttpException('Тест не знайдено', HttpStatus.NOT_FOUND);
-      return { entity: test, course: test.course, title: 'Коментар до тесту' };
+      return { entity: test, course: test.course, title: test.title };
     }
 
-    throw new HttpException('Не вказано taskId або testId', HttpStatus.BAD_REQUEST);
+    throw new HttpException('Не вказано ID завдання або тесту', HttpStatus.BAD_REQUEST);
   }
 
   async createComment(userId: string, dto: CreateCommentDto) {
@@ -59,6 +63,8 @@ export class CommentsService {
       );
     }
     const { course, title } = await this.getContext(dto);
+
+    const courseName = `${course.subject.name} ${course.class.name}`;
 
     const isTeacher =
       course.creatorId === userId || course.coTeachers.some((ct) => ct.teacherId === userId);
@@ -112,12 +118,16 @@ export class CommentsService {
     });
 
     if (notificationReceiverId && notificationReceiverId !== userId) {
+      const sender = await this.prisma.user.findUnique({ where: { id: userId } });
+      const senderName = sender ? `${sender.firstName} ${sender.lastName}` : 'Користувач';
+
       await this.notificationsService.create({
         senderId: userId,
         receiverId: notificationReceiverId,
-        title,
-        content: `Приватне повідомлення: "${dto.content.substring(0, 50)}..."`,
+        title: 'Нове приватне повідомлення',
+        content: `${senderName} написав коментар до ${dto.taskId ? 'завдання' : 'тесту'} "${title}" у курсі "${courseName}": "${dto.content.substring(0, 50)}..."`,
         type: 'COMMENT',
+        metadata: { taskId: dto.taskId || null, testId: dto.testId || null, courseId: course.id },
       });
     }
 
@@ -273,7 +283,7 @@ export class CommentsService {
       throw new HttpException('Ви вже надіслали скаргу на цей коментар', HttpStatus.BAD_REQUEST);
     }
 
-    await this.prisma.complaint.create({
+    const complaint = await this.prisma.complaint.create({
       data: {
         reporterId: userId,
         reportedUserId: comment.authorId,
@@ -281,6 +291,26 @@ export class CommentsService {
         reason: dto.reason,
       },
     });
+
+    const moderators = await this.prisma.user.findMany({
+      where: {
+        userRoles: { some: { role: { name: { in: ['MODERATOR'] } } } },
+      },
+    });
+
+    const reporter = await this.prisma.user.findUnique({ where: { id: userId } });
+    const reported = await this.prisma.user.findUnique({ where: { id: comment.authorId } });
+
+    for (const mod of moderators) {
+      await this.notificationsService.create({
+        senderId: userId,
+        receiverId: mod.id,
+        title: 'Нова скарга',
+        content: `Нова скарга від ${reporter?.firstName} ${reporter?.lastName} на коментар користувача ${reported?.firstName} ${reported?.lastName}. Потребує перевірки.`,
+        type: 'COMPLAINT',
+        metadata: { complaintId: complaint.id, commentId: commentId },
+      });
+    }
 
     return { message: 'Вашу скаргу успішно надіслано на розгляд модераторам' };
   }
@@ -425,10 +455,9 @@ export class CommentsService {
       await this.notificationsService.create({
         senderId: moderatorId,
         receiverId: complaint.reportedUserId,
-        type: 'WARNING',
+        type: 'COMPLAINT',
         title: 'Попередження про порушення',
-        content:
-          'Ваш коментар було видалено через порушення правил платформи. У разі повторних порушень вас може бути заблоковано.',
+        content: `Ваш коментар: "${complaint.comment?.content || 'Видалений'}" було видалено через порушення правил платформи. У разі повторних порушень вас може бути заблоковано.`,
       });
       await this.emailService.sendMail(
         complaint.reportedUser.email,
@@ -439,7 +468,7 @@ export class CommentsService {
       await this.notificationsService.create({
         senderId: moderatorId,
         receiverId: complaint.reporterId,
-        type: 'INFO',
+        type: 'COMPLAINT',
         title: 'Скаргу розглянуто',
         content:
           'Вашу скаргу було ухвалено. Порушника попереджено, а коментар видалено. Дякуємо за допомогу!',
@@ -458,7 +487,7 @@ export class CommentsService {
       await this.notificationsService.create({
         senderId: moderatorId,
         receiverId: complaint.reporterId,
-        type: 'INFO',
+        type: 'COMPLAINT',
         title: 'Скаргу відхилено',
         content: 'Модератори переглянули вашу скаргу і не знайшли порушень правил платформи.',
       });
@@ -491,10 +520,9 @@ export class CommentsService {
       await this.notificationsService.create({
         senderId: moderatorId,
         receiverId: complaint.reportedUserId,
-        type: 'WARNING',
+        type: 'COMPLAINT',
         title: 'Блокування коментарів',
-        content:
-          'Через грубе порушення правил вам заблоковано можливість залишати коментарі на 7 днів.',
+        content: `Через ваш коментар: "${complaint.comment?.content || 'Видалений'}" (який є грубим порушенням правил) вам заблоковано можливість залишати коментарі на 7 днів.`,
       });
       await this.emailService.sendMail(
         complaint.reportedUser.email,
@@ -505,7 +533,7 @@ export class CommentsService {
       await this.notificationsService.create({
         senderId: moderatorId,
         receiverId: complaint.reporterId,
-        type: 'INFO',
+        type: 'COMPLAINT',
         title: 'Порушника покарано',
         content:
           'За вашою скаргою порушнику було заблоковано можливість писати коментарі на тиждень.',

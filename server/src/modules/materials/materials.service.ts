@@ -1,6 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { AwsS3Service } from '../../core/integrations/aws/aws-s3.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateFileMaterialDto, CreateLinkDto, UpdateMaterialDto } from './dto/material.dto';
 
 @Injectable()
@@ -8,12 +9,13 @@ export class MaterialsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly awsS3Service: AwsS3Service,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private async verifyTeacherWriteAccess(courseId: string, teacherId: string) {
     const course = await this.prisma.course.findUnique({
       where: { id: courseId },
-      include: { coTeachers: true },
+      include: { coTeachers: true, subject: true, class: true },
     });
     if (!course) throw new HttpException('Курс не знайдено', HttpStatus.NOT_FOUND);
 
@@ -57,14 +59,14 @@ export class MaterialsService {
   }
 
   async createLink(teacherId: string, dto: CreateLinkDto) {
-    await this.verifyTeacherWriteAccess(dto.courseId, teacherId);
+    const course = await this.verifyTeacherWriteAccess(dto.courseId, teacherId);
     const finalModuleId = await this.getOrCreateModuleId(
       dto.courseId,
       dto.courseModuleId,
       dto.newModuleTitle,
     );
 
-    return this.prisma.material.create({
+    const newMaterial = await this.prisma.material.create({
       data: {
         courseId: dto.courseId,
         creatorId: teacherId,
@@ -74,11 +76,30 @@ export class MaterialsService {
         isHidden: dto.isHidden || false,
       },
     });
+
+    if (!newMaterial.isHidden) {
+      const courseName = `${course.subject.name} ${course.class.name}`;
+      const participants = await this.notificationsService.getCourseParticipants(
+        dto.courseId,
+        teacherId,
+      );
+      const notifications = participants.map((id) => ({
+        senderId: teacherId,
+        receiverId: id,
+        title: 'Новий матеріал',
+        content: `У курсі "${courseName}" додано новий матеріал: "${dto.title}".`,
+        type: 'MATERIAL',
+        metadata: { courseId: dto.courseId, materialId: newMaterial.id },
+      }));
+      await this.notificationsService.createMany(notifications);
+    }
+
+    return newMaterial;
   }
 
   async createFileMaterial(teacherId: string, dto: CreateFileMaterialDto, file: any) {
     if (!file) throw new HttpException("Файл обов'язковий", HttpStatus.BAD_REQUEST);
-    await this.verifyTeacherWriteAccess(dto.courseId, teacherId);
+    const course = await this.verifyTeacherWriteAccess(dto.courseId, teacherId);
     const finalModuleId = await this.getOrCreateModuleId(
       dto.courseId,
       dto.courseModuleId,
@@ -87,7 +108,7 @@ export class MaterialsService {
 
     const fileUrl = await this.awsS3Service.uploadFile(file, `courses/${dto.courseId}/materials`);
 
-    return this.prisma.material.create({
+    const newMaterial = await this.prisma.material.create({
       data: {
         courseId: dto.courseId,
         creatorId: teacherId,
@@ -97,6 +118,25 @@ export class MaterialsService {
         isHidden: dto.isHidden || false,
       },
     });
+
+    if (!newMaterial.isHidden) {
+      const courseName = `${course.subject.name} ${course.class.name}`;
+      const participants = await this.notificationsService.getCourseParticipants(
+        dto.courseId,
+        teacherId,
+      );
+      const notifications = participants.map((id) => ({
+        senderId: teacherId,
+        receiverId: id,
+        title: 'Новий матеріал',
+        content: `У курсі "${courseName}" додано новий матеріал: "${dto.title}".`,
+        type: 'MATERIAL',
+        metadata: { courseId: dto.courseId, materialId: newMaterial.id },
+      }));
+      await this.notificationsService.createMany(notifications);
+    }
+
+    return newMaterial;
   }
 
   async findOne(userId: string, materialId: string) {

@@ -2,6 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import 'multer';
 import { AwsS3Service } from '../../core/integrations/aws/aws-s3.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   CreateCourseDto,
   CreateCourseModuleDto,
@@ -15,6 +16,7 @@ export class CoursesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly awsS3Service: AwsS3Service,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private async ensureCourseCreator(courseId: string, teacherId: string) {
@@ -381,6 +383,22 @@ export class CoursesService {
       },
     });
 
+    if (!course.isHidden && enrolledStudentIds.length > 0) {
+      const subjectInfo = await this.prisma.subject.findUnique({ where: { id: dto.subjectId } });
+      const classInfo = await this.prisma.class.findUnique({ where: { id: dto.classId } });
+      const courseName = `${subjectInfo?.name} ${classInfo?.name}`;
+
+      const notifications = enrolledStudentIds.map((studentId) => ({
+        senderId: teacherId,
+        receiverId: studentId,
+        title: 'Новий курс',
+        content: `Вас зараховано до нового курсу: "${courseName}".`,
+        type: 'COURSE',
+        metadata: { courseId: course.id },
+      }));
+      await this.notificationsService.createMany(notifications);
+    }
+
     return this.getCourseById(teacherId, course.id);
   }
 
@@ -390,7 +408,31 @@ export class CoursesService {
     dto: UpdateCourseDto,
     file?: Express.Multer.File,
   ) {
-    const course = await this.ensureCourseCreator(courseId, teacherId);
+    const course = await this.prisma.course.findUnique({
+      where: { id: courseId },
+      include: {
+        school: true,
+        students: true,
+        coTeachers: true,
+        subject: true,
+        class: true,
+      },
+    });
+
+    if (!course) throw new HttpException('Курс не знайдено', HttpStatus.NOT_FOUND);
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: teacherId },
+      include: { userRoles: { include: { role: true } } },
+    });
+    const isAdmin = user?.userRoles.some((r) => ['ADMIN', 'SUPER_ADMIN'].includes(r.role.name));
+
+    if (course.creatorId !== teacherId && !isAdmin) {
+      throw new HttpException(
+        'Тільки творець курсу або адміністратор може виконувати цю дію',
+        HttpStatus.FORBIDDEN,
+      );
+    }
 
     let backgroundUrl = course.backgroundUrl;
     if (file) {
@@ -408,18 +450,27 @@ export class CoursesService {
     }
 
     let coTeachersUpdate: any = undefined;
+    let newCoTeacherIds: string[] = [];
+
     if (dto.coTeacherIds !== undefined) {
-      await this.prisma.courseTeacher.deleteMany({ where: { courseId } });
+      const existingTeacherIds = course.coTeachers.map((ct) => ct.teacherId);
       const filteredCoTeachers = dto.coTeacherIds.filter((id) => id !== course.creatorId);
+
+      newCoTeacherIds = filteredCoTeachers.filter((id) => !existingTeacherIds.includes(id));
+
+      await this.prisma.courseTeacher.deleteMany({ where: { courseId } });
       if (filteredCoTeachers.length > 0) {
         coTeachersUpdate = { create: filteredCoTeachers.map((id) => ({ teacherId: id })) };
       }
     }
 
     let studentsUpdate: any = undefined;
+    let newStudentIds: string[] = [];
+
     if (dto.studentIds !== undefined || dto.groupName === null) {
-      await this.prisma.courseStudent.deleteMany({ where: { courseId } });
+      const existingStudentIds = course.students.map((s) => s.studentId);
       let targetStudentIds: string[] = [];
+
       if (dto.groupName || (course.groupName && dto.groupName !== null)) {
         targetStudentIds = dto.studentIds || [];
       } else {
@@ -429,12 +480,16 @@ export class CoursesService {
         });
         targetStudentIds = allClassStudents.map((s) => s.studentId);
       }
+
+      newStudentIds = targetStudentIds.filter((id) => !existingStudentIds.includes(id));
+
+      await this.prisma.courseStudent.deleteMany({ where: { courseId } });
       if (targetStudentIds.length > 0) {
         studentsUpdate = { create: targetStudentIds.map((id) => ({ studentId: id })) };
       }
     }
 
-    await this.prisma.course.update({
+    const updatedCourse = await this.prisma.course.update({
       where: { id: courseId },
       data: {
         startDate: dto.startDate ? new Date(dto.startDate) : undefined,
@@ -449,6 +504,36 @@ export class CoursesService {
         students: studentsUpdate,
       },
     });
+
+    const isNowHidden = dto.isHidden !== undefined ? dto.isHidden : course.isHidden;
+
+    if (!isNowHidden) {
+      const courseName = `${course.subject.name} ${course.class.name}`;
+
+      if (newStudentIds.length > 0) {
+        const studentNotifications = newStudentIds.map((studentId) => ({
+          senderId: teacherId,
+          receiverId: studentId,
+          title: 'Новий курс',
+          content: `Вас зараховано до нового курсу: "${courseName}".`,
+          type: 'COURSE',
+          metadata: { courseId: updatedCourse.id },
+        }));
+        await this.notificationsService.createMany(studentNotifications);
+      }
+
+      if (newCoTeacherIds.length > 0) {
+        const teacherNotifications = newCoTeacherIds.map((newTeacherId) => ({
+          senderId: teacherId,
+          receiverId: newTeacherId,
+          title: 'Призначення співвикладачем',
+          content: `Вас призначено співвикладачем у курсі "${courseName}".`,
+          type: 'COURSE',
+          metadata: { courseId: updatedCourse.id },
+        }));
+        await this.notificationsService.createMany(teacherNotifications);
+      }
+    }
 
     return this.getCourseById(teacherId, courseId);
   }
@@ -482,6 +567,24 @@ export class CoursesService {
     await this.prisma.courseTeacher.create({
       data: { courseId, teacherId: targetTeacherId },
     });
+
+    const courseInfo = await this.prisma.course.findUnique({
+      where: { id: courseId },
+      include: { subject: true, class: true },
+    });
+
+    if (courseInfo) {
+      const courseName = `${courseInfo.subject.name} ${courseInfo.class.name}`;
+      await this.notificationsService.create({
+        senderId: teacherId,
+        receiverId: targetTeacherId,
+        title: 'Призначення співвикладачем',
+        content: `Вас призначено співвикладачем у курсі "${courseName}".`,
+        type: 'COURSE',
+        metadata: { courseId: courseId },
+      });
+    }
+
     return this.getCourseById(teacherId, courseId);
   }
 

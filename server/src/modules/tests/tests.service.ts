@@ -1,6 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { AwsS3Service } from '../../core/integrations/aws/aws-s3.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateTestDto, SubmitTestDto, UpdateTestDto } from './dto/test.dto';
 
 @Injectable()
@@ -8,12 +9,13 @@ export class TestsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly awsS3Service: AwsS3Service,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private async verifyTeacherWriteAccess(courseId: string, teacherId: string) {
     const course = await this.prisma.course.findUnique({
       where: { id: courseId },
-      include: { coTeachers: true },
+      include: { coTeachers: true, subject: true, class: true },
     });
     if (!course) throw new HttpException('Курс не знайдено', HttpStatus.NOT_FOUND);
 
@@ -65,14 +67,14 @@ export class TestsService {
   }
 
   async createTest(teacherId: string, dto: CreateTestDto) {
-    await this.verifyTeacherWriteAccess(dto.courseId, teacherId);
+    const course = await this.verifyTeacherWriteAccess(dto.courseId, teacherId);
     const finalModuleId = await this.getOrCreateModuleId(
       dto.courseId,
       dto.courseModuleId,
       dto.newModuleTitle,
     );
 
-    return this.prisma.test.create({
+    const newTest = await this.prisma.test.create({
       data: {
         courseId: dto.courseId,
         creatorId: teacherId,
@@ -104,6 +106,24 @@ export class TestsService {
         },
       },
     });
+
+    const courseName = `${course.subject.name} ${course.class.name}`;
+    const participants = await this.notificationsService.getCourseParticipants(
+      dto.courseId,
+      teacherId,
+    );
+
+    const notifications = participants.map((id) => ({
+      senderId: teacherId,
+      receiverId: id,
+      title: 'Новий тест',
+      content: `Додано новий тест: "${dto.title}" у курсі "${courseName}".`,
+      type: 'TEST',
+      metadata: { courseId: dto.courseId, testId: newTest.id },
+    }));
+    await this.notificationsService.createMany(notifications);
+
+    return newTest;
   }
 
   async findAllByCourse(userId: string, courseId: string) {
@@ -202,10 +222,16 @@ export class TestsService {
   }
 
   async updateTest(teacherId: string, testId: string, dto: UpdateTestDto) {
-    const test = await this.prisma.test.findUnique({ where: { id: testId } });
+    const test = await this.prisma.test.findUnique({
+      where: { id: testId },
+      include: { course: { include: { subject: true, class: true } } },
+    });
     if (!test) throw new HttpException('Тест не знайдено', HttpStatus.NOT_FOUND);
 
     await this.verifyTeacherWriteAccess(test.courseId, teacherId);
+
+    const isDeadlineChanged =
+      dto.deadline && test.deadline && new Date(dto.deadline).getTime() !== test.deadline.getTime();
 
     const finalModuleId = await this.getOrCreateModuleId(
       test.courseId,
@@ -292,6 +318,32 @@ export class TestsService {
           });
         }
       }
+    }
+
+    const isNowHidden = dto.isHidden !== undefined ? dto.isHidden : test.isHidden;
+    if (isDeadlineChanged && !isNowHidden) {
+      const courseName = `${test.course.subject.name} ${test.course.class.name}`;
+      const participants = await this.notificationsService.getCourseParticipants(
+        test.courseId,
+        teacherId,
+      );
+
+      const formattedDate = new Date(dto.deadline!).toLocaleDateString('uk-UA', {
+        day: 'numeric',
+        month: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
+      const notifications = participants.map((id) => ({
+        senderId: teacherId,
+        receiverId: id,
+        title: 'Зміна дедлайну',
+        content: `Змінено дедлайн для тесту "${dto.title || test.title}" у курсі "${courseName}". Новий термін: ${formattedDate}.`,
+        type: 'TEST',
+        metadata: { courseId: test.courseId, testId: test.id },
+      }));
+      await this.notificationsService.createMany(notifications);
     }
 
     return this.getTestDetails(teacherId, testId);
