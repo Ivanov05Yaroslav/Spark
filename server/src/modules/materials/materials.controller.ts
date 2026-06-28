@@ -53,14 +53,17 @@ export class MaterialsController {
   }
 
   @ApiOperation({ summary: 'Редагувати матеріал/посилання' })
+  @ApiConsumes('multipart/form-data', 'application/json')
   @Roles('TEACHER')
   @Patch('/:id')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 100 * 1024 * 1024 } }))
   async update(
     @GetUser('id') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdateMaterialDto,
+    @UploadedFile() file?: any,
   ) {
-    return this.materialsService.update(userId, id, dto);
+    return this.materialsService.update(userId, id, dto, file);
   }
 
   @ApiOperation({ summary: 'Видалити матеріал' })

@@ -301,7 +301,6 @@ model Material {
   creatorId      String
   courseModuleId String?
   title          String
-  description    String?
   fileUrl        String?
   linkUrl        String?
   createdAt      DateTime @default(now())

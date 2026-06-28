@@ -29,16 +29,47 @@ export class MaterialsService {
     return course;
   }
 
+  private async getOrCreateModuleId(courseId: string, moduleId?: string, newTitle?: string) {
+    if (!moduleId && (!newTitle || newTitle.trim() === '')) {
+      throw new HttpException(
+        "Матеріал обов'язково має належати до модуля (теми)",
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (newTitle && newTitle.trim() !== '') {
+      const cleanedTitle = newTitle.trim();
+      const existingModule = await this.prisma.courseModule.findFirst({
+        where: { courseId, title: { equals: cleanedTitle, mode: 'insensitive' } },
+      });
+
+      if (existingModule) {
+        return existingModule.id;
+      } else {
+        const newModule = await this.prisma.courseModule.create({
+          data: { courseId, title: cleanedTitle },
+        });
+        return newModule.id;
+      }
+    }
+
+    return moduleId as string;
+  }
+
   async createLink(teacherId: string, dto: CreateLinkDto) {
     await this.verifyTeacherWriteAccess(dto.courseId, teacherId);
+    const finalModuleId = await this.getOrCreateModuleId(
+      dto.courseId,
+      dto.courseModuleId,
+      dto.newModuleTitle,
+    );
 
     return this.prisma.material.create({
       data: {
         courseId: dto.courseId,
         creatorId: teacherId,
         title: dto.title,
-        description: dto.description,
-        courseModuleId: dto.courseModuleId || null,
+        courseModuleId: finalModuleId,
         linkUrl: dto.linkUrl,
         isHidden: dto.isHidden || false,
       },
@@ -48,6 +79,11 @@ export class MaterialsService {
   async createFileMaterial(teacherId: string, dto: CreateFileMaterialDto, file: any) {
     if (!file) throw new HttpException("Файл обов'язковий", HttpStatus.BAD_REQUEST);
     await this.verifyTeacherWriteAccess(dto.courseId, teacherId);
+    const finalModuleId = await this.getOrCreateModuleId(
+      dto.courseId,
+      dto.courseModuleId,
+      dto.newModuleTitle,
+    );
 
     const fileUrl = await this.awsS3Service.uploadFile(file, `courses/${dto.courseId}/materials`);
 
@@ -56,8 +92,7 @@ export class MaterialsService {
         courseId: dto.courseId,
         creatorId: teacherId,
         title: dto.title,
-        description: dto.description,
-        courseModuleId: dto.courseModuleId || null,
+        courseModuleId: finalModuleId,
         fileUrl: fileUrl,
         isHidden: dto.isHidden || false,
       },
@@ -97,7 +132,7 @@ export class MaterialsService {
     });
   }
 
-  async update(userId: string, materialId: string, dto: UpdateMaterialDto) {
+  async update(userId: string, materialId: string, dto: UpdateMaterialDto, file?: any) {
     const material = await this.prisma.material.findUnique({
       where: { id: materialId },
       include: { course: true },
@@ -105,9 +140,86 @@ export class MaterialsService {
     if (!material) throw new HttpException('Матеріал не знайдено', HttpStatus.NOT_FOUND);
     await this.verifyTeacherWriteAccess(material.courseId, userId);
 
+    const safeLinkUrl =
+      dto.linkUrl === 'null' ||
+      dto.linkUrl === 'undefined' ||
+      !dto.linkUrl ||
+      dto.linkUrl.trim() === ''
+        ? null
+        : dto.linkUrl.trim();
+
+    const isTryingToAddLink = safeLinkUrl !== null;
+
+    const isValidFile = file && file.fieldname && file.size > 0;
+
+    if (
+      material.linkUrl &&
+      (dto.linkUrl === '' || dto.linkUrl === 'null' || dto.linkUrl === null)
+    ) {
+      throw new HttpException(
+        'Посилання не може бути порожнім. Видаліть матеріал повністю, якщо він більше не потрібен.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (material.fileUrl && isTryingToAddLink) {
+      throw new HttpException(
+        'Цей матеріал є файлом. Ви не можете замінити його на посилання.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (material.linkUrl && isValidFile) {
+      throw new HttpException(
+        'Цей матеріал є посиланням. Ви не можете замінити його на файл.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const safeModuleId =
+      dto.courseModuleId === 'null' || dto.courseModuleId === 'undefined'
+        ? undefined
+        : dto.courseModuleId;
+    const safeNewTitle =
+      dto.newModuleTitle === 'null' || dto.newModuleTitle === 'undefined'
+        ? undefined
+        : dto.newModuleTitle;
+
+    let finalModuleId = material.courseModuleId;
+    if (safeModuleId || safeNewTitle) {
+      finalModuleId = await this.getOrCreateModuleId(material.courseId, safeModuleId, safeNewTitle);
+    }
+
+    let finalFileUrl = material.fileUrl;
+
+    if (isValidFile) {
+      if (material.fileUrl) {
+        try {
+          await this.awsS3Service.deleteFile(material.fileUrl);
+        } catch (e) {
+          console.error('Не вдалося видалити старий файл матеріалу з S3:', e);
+        }
+      }
+      finalFileUrl = await this.awsS3Service.uploadFile(
+        file,
+        `courses/${material.courseId}/materials`,
+      );
+    }
+
+    const safeIsHidden =
+      dto.isHidden === undefined || dto.isHidden === null || String(dto.isHidden) === 'null'
+        ? material.isHidden
+        : String(dto.isHidden) === 'true';
+
     return this.prisma.material.update({
       where: { id: materialId },
-      data: dto,
+      data: {
+        title: dto.title && dto.title !== 'null' ? dto.title : material.title,
+        linkUrl: isTryingToAddLink ? safeLinkUrl : material.linkUrl,
+        fileUrl: finalFileUrl,
+        courseModuleId: finalModuleId,
+        isHidden: safeIsHidden,
+      },
     });
   }
 
@@ -121,7 +233,11 @@ export class MaterialsService {
     await this.verifyTeacherWriteAccess(material.courseId, userId);
 
     if (material.fileUrl) {
-      await this.awsS3Service.deleteFile(material.fileUrl);
+      try {
+        await this.awsS3Service.deleteFile(material.fileUrl);
+      } catch (e) {
+        console.error('Помилка при видаленні файлу матеріалу з S3:', e);
+      }
     }
 
     await this.prisma.material.delete({ where: { id: materialId } });

@@ -13,15 +13,19 @@ export class CreateLinkDto {
   @IsNotEmpty()
   title!: string;
 
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsString()
-  description?: string;
-
   @ApiProperty({ example: 'uuid-модуля', required: false, description: 'ID теми/модуля курсу' })
   @IsOptional()
   @IsString()
   courseModuleId?: string;
+
+  @ApiProperty({
+    example: 'Вступ до геометрії',
+    required: false,
+    description: 'Назва нового модуля, якщо його потрібно створити разом із матеріалом',
+  })
+  @IsOptional()
+  @IsString()
+  newModuleTitle?: string;
 
   @ApiProperty({ example: 'https://youtube.com/...' })
   @IsUrl({}, { message: 'Введіть коректне URL посилання' })
@@ -45,15 +49,19 @@ export class CreateFileMaterialDto {
   @IsNotEmpty()
   title!: string;
 
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsString()
-  description?: string;
-
   @ApiProperty({ example: 'uuid-модуля', required: false, description: 'ID теми/модуля курсу' })
   @IsOptional()
   @IsString()
   courseModuleId?: string;
+
+  @ApiProperty({
+    example: 'Вступ до геометрії',
+    required: false,
+    description: 'Назва нового модуля, якщо його потрібно створити разом із матеріалом',
+  })
+  @IsOptional()
+  @IsString()
+  newModuleTitle?: string;
 
   @ApiProperty({ required: false, default: false })
   @IsOptional()
@@ -73,12 +81,6 @@ export class UpdateMaterialDto {
 
   @ApiProperty({ required: false })
   @IsOptional()
-  @IsString()
-  description?: string;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsUrl()
   linkUrl?: string;
 
   @ApiProperty({ example: 'uuid-модуля', required: false, description: 'ID теми/модуля курсу' })
@@ -86,9 +88,27 @@ export class UpdateMaterialDto {
   @IsString()
   courseModuleId?: string;
 
+  @ApiProperty({
+    example: 'Повторення матеріалу',
+    required: false,
+    description:
+      'Назва нового модуля, якщо його потрібно створити прямо під час редагування матеріалу',
+  })
+  @IsOptional()
+  @IsString()
+  newModuleTitle?: string;
+
   @ApiProperty({ required: false })
   @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   isHidden?: boolean;
+
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    required: false,
+    description: 'Новий файл для заміни старого',
+  })
+  file?: any;
 }
