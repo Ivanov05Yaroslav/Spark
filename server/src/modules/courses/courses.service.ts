@@ -241,6 +241,31 @@ export class CoursesService {
       .filter((t) => t.deadline && t.deadline > now && t.deadline <= nextWeek)
       .map((t) => ({ ...t, type: 'test' }));
 
+    let unsubmittedWorksCount = 0;
+
+    const isCurrentUserStudent = course.students.some((s) => s.studentId === userId);
+
+    if (isCurrentUserStudent) {
+      const allTaskIds = allTasks.map((t) => t.id);
+      const allTestIds = allTests.map((t) => t.id);
+
+      const userSubmissions = await this.prisma.submission.findMany({
+        where: {
+          studentId: userId,
+          OR: [{ taskId: { in: allTaskIds } }, { testId: { in: allTestIds } }],
+        },
+        select: { taskId: true, testId: true },
+      });
+
+      const submittedTaskIds = new Set(userSubmissions.map((s) => s.taskId).filter(Boolean));
+      const submittedTestIds = new Set(userSubmissions.map((s) => s.testId).filter(Boolean));
+
+      const unsubmittedTasks = allTaskIds.length - submittedTaskIds.size;
+      const unsubmittedTests = allTestIds.length - submittedTestIds.size;
+
+      unsubmittedWorksCount = Math.max(0, unsubmittedTasks + unsubmittedTests);
+    }
+
     const upcomingDeadlines = [...upcomingTasks, ...upcomingTests].sort(
       (a, b) => a.deadline!.getTime() - b.deadline!.getTime(),
     );
@@ -277,6 +302,7 @@ export class CoursesService {
 
       announcements,
       unreadAnnouncementsCount,
+      unsubmittedWorksCount,
     };
   }
 
