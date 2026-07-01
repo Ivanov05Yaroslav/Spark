@@ -84,8 +84,6 @@ model User {
   madeComplaints        Complaint[]        @relation("ReporterRelation")
   receivedComplaints    Complaint[]        @relation("ReportedRelation")
   readAnnouncements     AnnouncementRead[]
-  chats                 ChatMember[]
-  messages              Message[]
 
   @@map("users")
 }
@@ -483,7 +481,7 @@ model Attendance {
 }
 
 // ==========================================
-// 6. Комунікація та Чати
+// 6. Нотифікації та скарги
 // ==========================================
 
 model Notification {
@@ -518,41 +516,6 @@ model Complaint {
   comment      Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade) // <--- ДОДАТИ ЗВ'ЯЗОК
 
   @@map("complaints")
-}
-
-model Chat {
-  id   String @id @default(uuid())
-  type String
-
-  members  ChatMember[]
-  messages Message[]
-
-  @@map("chats")
-}
-
-model ChatMember {
-  chatId String
-  userId String
-
-  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@id([chatId, userId])
-  @@map("chat_members")
-}
-
-model Message {
-  id       String   @id @default(uuid())
-  chatId   String
-  senderId String
-  content  String
-  sentAt   DateTime @default(now())
-  isRead   Boolean  @default(false)
-
-  chat   Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  sender User @relation(fields: [senderId], references: [id], onDelete: Cascade)
-
-  @@map("messages")
 }
 
 // ==========================================
