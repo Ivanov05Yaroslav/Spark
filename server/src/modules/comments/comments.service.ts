@@ -326,7 +326,7 @@ export class CommentsService {
     } = query;
     const skip = (page - 1) * limit;
 
-    const where: any = { commentId: { not: null } };
+    const where: any = {};
 
     if (status) {
       where.status = status;
