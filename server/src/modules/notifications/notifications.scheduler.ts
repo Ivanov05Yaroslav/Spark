@@ -12,7 +12,7 @@ export class NotificationsScheduler {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  @Cron(CronExpression.EVERY_DAY_AT_9AM)
+  @Cron(CronExpression.EVERY_DAY_AT_8AM)
   async handleDeadlineReminders() {
     this.logger.log('Запуск перевірки дедлайнів...');
     await this.processReminders(7, 'рівно через тиждень');
