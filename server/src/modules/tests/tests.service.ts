@@ -529,6 +529,13 @@ export class TestsService {
     const isStudent = test.course.students.some((s) => s.studentId === studentId);
     if (!isStudent) throw new HttpException('Ви не є учнем цього курсу', HttpStatus.FORBIDDEN);
 
+    if (test.deadline && new Date() > test.deadline) {
+      throw new HttpException(
+        'Час на виконання тесту вичерпано (дедлайн минув)',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     const attemptsCount = await this.prisma.submission.count({ where: { testId, studentId } });
     if (attemptsCount >= test.maxAttempts) {
       throw new HttpException('Ви використали всі доступні спроби', HttpStatus.BAD_REQUEST);
