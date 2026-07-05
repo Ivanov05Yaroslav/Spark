@@ -375,17 +375,19 @@ export class UsersService {
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto, file?: any) {
-    const user = await this.findById(userId);
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+
+    if (!user) {
+      throw new HttpException('Користувача не знайдено', HttpStatus.NOT_FOUND);
+    }
 
     let newAvatarUrl = user.avatarUrl;
 
     if (file) {
       const uploadedUrl = await this.awsS3Service.uploadFile(file, `users/avatars/${userId}`);
-
       if (user.avatarUrl && user.avatarUrl.includes('amazonaws.com')) {
         await this.awsS3Service.deleteFile(user.avatarUrl);
       }
-
       newAvatarUrl = uploadedUrl;
     }
 
@@ -399,7 +401,7 @@ export class UsersService {
       },
     });
 
-    const { password, ...result } = updatedUser;
+    const { password, ...result } = updatedUser as any;
     return result;
   }
 
@@ -717,14 +719,21 @@ export class UsersService {
 
   async deleteUser(adminId: string, targetUserId: string) {
     if (adminId === targetUserId) {
-      throw new HttpException('Ви не можете видалити власний акаунт', HttpStatus.FORBIDDEN);
+      throw new HttpException('Не можна видалити самого себе', HttpStatus.FORBIDDEN);
     }
 
-    const targetUser = await this.findById(targetUserId);
+    const targetUser = await this.prisma.user.findUnique({
+      where: { id: targetUserId },
+      include: { userRoles: { include: { role: true } } },
+    });
 
-    const isTargetAdmin = targetUser.roles.includes('ADMIN');
+    if (!targetUser) {
+      throw new HttpException('Користувача не знайдено', HttpStatus.NOT_FOUND);
+    }
+
+    const isTargetAdmin = targetUser.userRoles.some((ur) => ur.role.name === 'ADMIN');
     if (isTargetAdmin) {
-      throw new HttpException('Не можна видалити іншого адміністратора', HttpStatus.FORBIDDEN);
+      throw new HttpException('Неможливо видалити іншого адміністратора', HttpStatus.FORBIDDEN);
     }
 
     await this.prisma.class.updateMany({

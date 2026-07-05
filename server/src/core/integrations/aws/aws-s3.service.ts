@@ -50,9 +50,15 @@ export class AwsS3Service {
     try {
       if (!fileUrl.includes('amazonaws.com')) return;
 
-      const urlParts = fileUrl.split('.amazonaws.com/');
+      const cleanUrl = fileUrl.split('?')[0];
+
+      const urlParts = cleanUrl.split('.amazonaws.com/');
       if (urlParts.length < 2) return;
-      const key = urlParts[1];
+
+      let key = urlParts[1];
+      if (key.includes('%3F')) {
+        key = decodeURIComponent(key).split('?')[0];
+      }
 
       const command = new DeleteObjectCommand({
         Bucket: this.bucketName,
@@ -70,9 +76,15 @@ export class AwsS3Service {
     try {
       if (!fileUrl || !fileUrl.includes('amazonaws.com')) return fileUrl;
 
-      const urlParts = fileUrl.split('.amazonaws.com/');
+      const cleanUrl = fileUrl.split('?')[0];
+
+      const urlParts = cleanUrl.split('.amazonaws.com/');
       if (urlParts.length < 2) return fileUrl;
-      const key = urlParts[1];
+
+      let key = urlParts[1];
+      if (key.includes('%3F')) {
+        key = decodeURIComponent(key).split('?')[0];
+      }
 
       const command = new GetObjectCommand({
         Bucket: this.bucketName,
