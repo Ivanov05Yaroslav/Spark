@@ -12,6 +12,15 @@ export class TestsService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
+  private shuffleArray<T>(array: T[]): T[] {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+
   private async verifyTeacherWriteAccess(courseId: string, teacherId: string) {
     const course = await this.prisma.course.findUnique({
       where: { id: courseId },
@@ -198,13 +207,25 @@ export class TestsService {
         );
       }
 
-      const safeQuestions = test.questions.map((question) => ({
-        ...question,
-        answers: question.answers.map((answer) => {
+      let safeQuestions = test.questions.map((question) => {
+        let processedAnswers = question.answers.map((answer) => {
           const { isCorrect, ...safeAnswer } = answer;
           return safeAnswer;
-        }),
-      }));
+        });
+
+        if (test.isShuffleAnswers) {
+          processedAnswers = this.shuffleArray(processedAnswers);
+        }
+
+        return {
+          ...question,
+          answers: processedAnswers,
+        };
+      });
+
+      if (test.isShuffleQuestions) {
+        safeQuestions = this.shuffleArray(safeQuestions);
+      }
 
       const { course: _, ...result } = test;
       return {
@@ -213,7 +234,6 @@ export class TestsService {
         questions: safeQuestions,
       };
     }
-
     const { course: _, ...result } = test;
     return {
       ...result,
