@@ -375,10 +375,32 @@ export class UsersService {
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto, file?: any) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { userRoles: { include: { role: true } } },
+    });
 
     if (!user) {
       throw new HttpException('Користувача не знайдено', HttpStatus.NOT_FOUND);
+    }
+
+    const isNameChanging =
+      (dto.firstName && dto.firstName.trim() !== user.firstName) ||
+      (dto.lastName && dto.lastName.trim() !== user.lastName) ||
+      (dto.middleName !== undefined && dto.middleName.trim() !== user.middleName);
+
+    if (isNameChanging) {
+      const userRoles = user.userRoles.map((ur) => ur.role.name);
+      const allowedRoles = ['PARENT', 'ADMIN', 'SUPER_ADMIN'];
+
+      const canChangeName = userRoles.some((role) => allowedRoles.includes(role));
+
+      if (!canChangeName) {
+        throw new HttpException(
+          'У вас немає прав для зміни ПІБ. Зверніться до адміністратора школи.',
+          HttpStatus.FORBIDDEN,
+        );
+      }
     }
 
     let newAvatarUrl = user.avatarUrl;
@@ -391,17 +413,26 @@ export class UsersService {
       newAvatarUrl = uploadedUrl;
     }
 
+    const dataToUpdate: any = {
+      avatarUrl: newAvatarUrl,
+    };
+
+    if (dto.firstName && dto.firstName.trim() !== '') {
+      dataToUpdate.firstName = dto.firstName.trim();
+    }
+    if (dto.lastName && dto.lastName.trim() !== '') {
+      dataToUpdate.lastName = dto.lastName.trim();
+    }
+    if (dto.middleName !== undefined && dto.middleName.trim() !== '') {
+      dataToUpdate.middleName = dto.middleName.trim();
+    }
+
     const updatedUser = await this.prisma.user.update({
       where: { id: userId },
-      data: {
-        firstName: dto.firstName,
-        middleName: dto.middleName,
-        lastName: dto.lastName,
-        avatarUrl: newAvatarUrl,
-      },
+      data: dataToUpdate,
     });
 
-    const { password, ...result } = updatedUser as any;
+    const { password, userRoles: ur, ...result } = updatedUser as any;
     return result;
   }
 
