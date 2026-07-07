@@ -334,6 +334,15 @@ export class CoursesService {
       );
     }
 
+    const now = new Date();
+    const courseEndDate = new Date(dto.endDate);
+    if (courseEndDate < now) {
+      throw new HttpException(
+        'Дата закінчення курсу не може бути у минулому. Створення пройдених курсів заборонено.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     let backgroundUrl: string | null = null;
     if (file) {
       backgroundUrl = await this.awsS3Service.uploadFile(file, `courses/backgrounds/${schoolId}`);
@@ -366,7 +375,7 @@ export class CoursesService {
         classId: dto.classId,
         creatorId: teacherId,
         startDate: new Date(dto.startDate),
-        endDate: new Date(dto.endDate),
+        endDate: courseEndDate,
         groupName: dto.groupName || null,
         themeColor: dto.themeColor || '#702DFF',
         backgroundUrl: backgroundUrl,
@@ -431,6 +440,25 @@ export class CoursesService {
       throw new HttpException(
         'Тільки творець курсу або адміністратор може виконувати цю дію',
         HttpStatus.FORBIDDEN,
+      );
+    }
+
+    const now = new Date();
+    const finalEndDate = dto.endDate ? new Date(dto.endDate) : course.endDate;
+    const finalIsArchived = dto.isArchived !== undefined ? dto.isArchived : course.isArchived;
+    const finalIsHidden = dto.isHidden !== undefined ? dto.isHidden : course.isHidden;
+
+    if (finalIsArchived === true && finalEndDate >= now) {
+      throw new HttpException(
+        'Не можна архівувати поточні або майбутні курси (тільки пройдені).',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (finalIsHidden === true && finalEndDate < now) {
+      throw new HttpException(
+        'Не можна приховувати курси, що вже завершилися.',
+        HttpStatus.BAD_REQUEST,
       );
     }
 
@@ -695,37 +723,50 @@ export class CoursesService {
       }
 
       if (accessOrConditions.length === 0) {
-        return [];
+        return { data: [], meta: { total: 0, page, limit, totalPages: 0 } };
       }
 
       where.AND.push({ OR: accessOrConditions });
     }
 
     switch (filter) {
+      case 'PAST':
+        where.AND.push({
+          endDate: { lt: now },
+          isArchived: false,
+        });
+        break;
       case 'ARCHIVED':
         where.AND.push({
-          OR: [{ isArchived: true }, { endDate: { lt: now } }],
+          endDate: { lt: now },
+          isArchived: true,
         });
         break;
-      case 'IN_PROGRESS':
+      case 'ACTIVE':
         where.AND.push({
-          isArchived: false,
           startDate: { lte: now },
           endDate: { gte: now },
+          isHidden: false,
         });
         break;
-      case 'PLANNED':
+      case 'UPCOMING':
         where.AND.push({
-          isArchived: false,
           startDate: { gt: now },
+          isHidden: false,
+        });
+        break;
+      case 'HIDDEN':
+        where.AND.push({
+          endDate: { gte: now },
+          isHidden: true,
         });
         break;
       case 'ALL':
-      default:
         where.AND.push({
+          isHidden: false,
           isArchived: false,
-          endDate: { gte: now },
         });
+      default:
         break;
     }
 

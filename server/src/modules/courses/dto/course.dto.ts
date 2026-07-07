@@ -13,6 +13,27 @@ import {
   Min,
 } from 'class-validator';
 
+export enum CourseStatusFilter {
+  ACTIVE = 'ACTIVE',
+  PAST = 'PAST',
+  UPCOMING = 'UPCOMING',
+  ARCHIVED = 'ARCHIVED',
+  HIDDEN = 'HIDDEN',
+  ALL = 'ALL',
+}
+
+export enum CourseSortBy {
+  NAME = 'NAME',
+  START_DATE = 'START_DATE',
+}
+
+export enum CourseRoleContext {
+  ADMIN = 'ADMIN',
+  TEACHER = 'TEACHER',
+  STUDENT = 'STUDENT',
+  PARENT = 'PARENT',
+}
+
 export class CreateCourseDto {
   @ApiProperty({ example: 'uuid-предмету' })
   @IsUUID()
@@ -271,36 +292,22 @@ export class CoTeacherDto {
   teacherId!: string;
 }
 
-export enum CourseFilter {
-  ALL = 'ALL',
-  IN_PROGRESS = 'IN_PROGRESS',
-  PLANNED = 'PLANNED',
-  // PAST = 'PAST',
-  ARCHIVED = 'ARCHIVED',
-}
-
-export enum CourseSortBy {
-  NAME = 'NAME',
-  START_DATE = 'START_DATE',
-}
-
-export enum CourseRoleContext {
-  ADMIN = 'ADMIN',
-  TEACHER = 'TEACHER',
-  STUDENT = 'STUDENT',
-  PARENT = 'PARENT',
-}
-
 export class GetCoursesQueryDto {
   @ApiProperty({ required: false, description: 'Пошук за предметом, класом або назвою' })
   @IsOptional()
   @IsString()
   search?: string;
 
-  @ApiProperty({ required: false, enum: CourseFilter, default: CourseFilter.ALL })
+  @ApiProperty({
+    required: false,
+    enum: CourseStatusFilter,
+    description:
+      'Фільтр за статусом (ACTIVE - в процесі, ARCHIVED - архівні, PAST - пройдені, UPCOMING - майбутні, HIDDEN - сховані, ALL - всі)',
+    default: CourseStatusFilter.ACTIVE,
+  })
   @IsOptional()
-  @IsEnum(CourseFilter)
-  filter?: CourseFilter;
+  @IsEnum(CourseStatusFilter)
+  filter?: CourseStatusFilter = CourseStatusFilter.ACTIVE;
 
   @ApiProperty({ required: false, enum: CourseSortBy, default: CourseSortBy.START_DATE })
   @IsOptional()
