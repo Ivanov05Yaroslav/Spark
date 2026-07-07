@@ -90,31 +90,42 @@ export class CoursesService {
             title: true,
             createdAt: true,
             materials: {
-              where: { isHidden: false },
-              select: { id: true, title: true, fileUrl: true, linkUrl: true },
+              select: {
+                id: true,
+                title: true,
+                fileUrl: true,
+                linkUrl: true,
+                createdAt: true,
+                isHidden: true,
+              },
             },
             tasks: {
-              where: { isHidden: false },
-              select: { id: true, title: true, deadline: true },
+              select: { id: true, title: true, deadline: true, createdAt: true, isHidden: true },
             },
             tests: {
-              where: { isHidden: false },
-              select: { id: true, title: true, deadline: true },
+              select: { id: true, title: true, deadline: true, createdAt: true, isHidden: true },
             },
           },
           orderBy: { createdAt: 'asc' },
         },
         materials: {
-          where: { courseModuleId: null, isHidden: false },
-          select: { id: true, title: true, fileUrl: true, linkUrl: true },
+          where: { courseModuleId: null },
+          select: {
+            id: true,
+            title: true,
+            fileUrl: true,
+            linkUrl: true,
+            createdAt: true,
+            isHidden: true,
+          },
         },
         tasks: {
-          where: { courseModuleId: null, isHidden: false },
-          select: { id: true, title: true, deadline: true },
+          where: { courseModuleId: null },
+          select: { id: true, title: true, deadline: true, createdAt: true, isHidden: true },
         },
         tests: {
-          where: { courseModuleId: null, isHidden: false },
-          select: { id: true, title: true, deadline: true },
+          where: { courseModuleId: null },
+          select: { id: true, title: true, deadline: true, createdAt: true, isHidden: true },
         },
         announcements: {
           orderBy: { createdAt: 'desc' },
@@ -232,14 +243,17 @@ export class CoursesService {
     const allTasks = [...course.tasks, ...course.modules.flatMap((m) => m.tasks)];
     const allTests = [...course.tests, ...course.modules.flatMap((m) => m.tests)];
 
+    const visibleTasks = allTasks.filter((t) => !t.isHidden);
+    const visibleTests = allTests.filter((t) => !t.isHidden);
+
     const now = new Date();
     const nextWeek = new Date();
     nextWeek.setDate(now.getDate() + 7);
 
-    const upcomingTasks = allTasks
+    const upcomingTasks = visibleTasks
       .filter((t) => t.deadline && t.deadline > now && t.deadline <= nextWeek)
       .map((t) => ({ ...t, type: 'task' }));
-    const upcomingTests = allTests
+    const upcomingTests = visibleTests
       .filter((t) => t.deadline && t.deadline > now && t.deadline <= nextWeek)
       .map((t) => ({ ...t, type: 'test' }));
 
@@ -248,13 +262,13 @@ export class CoursesService {
     const isCurrentUserStudent = course.students.some((s) => s.studentId === userId);
 
     if (isCurrentUserStudent) {
-      const allTaskIds = allTasks.map((t) => t.id);
-      const allTestIds = allTests.map((t) => t.id);
+      const visibleTaskIds = visibleTasks.map((t) => t.id);
+      const visibleTestIds = visibleTests.map((t) => t.id);
 
       const userSubmissions = await this.prisma.submission.findMany({
         where: {
           studentId: userId,
-          OR: [{ taskId: { in: allTaskIds } }, { testId: { in: allTestIds } }],
+          OR: [{ taskId: { in: visibleTaskIds } }, { testId: { in: visibleTestIds } }],
         },
         select: { taskId: true, testId: true },
       });
@@ -262,8 +276,8 @@ export class CoursesService {
       const submittedTaskIds = new Set(userSubmissions.map((s) => s.taskId).filter(Boolean));
       const submittedTestIds = new Set(userSubmissions.map((s) => s.testId).filter(Boolean));
 
-      const unsubmittedTasks = allTaskIds.length - submittedTaskIds.size;
-      const unsubmittedTests = allTestIds.length - submittedTestIds.size;
+      const unsubmittedTasks = visibleTaskIds.length - submittedTaskIds.size;
+      const unsubmittedTests = visibleTestIds.length - submittedTestIds.size;
 
       unsubmittedWorksCount = Math.max(0, unsubmittedTasks + unsubmittedTests);
     }
