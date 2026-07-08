@@ -53,6 +53,10 @@
     transition: opacity 0.2s ease;
 }
 
+.removeButton path {
+    stroke: #F13E3E;
+}
+
 .removeButton:hover {
     opacity: 0.7;
 }

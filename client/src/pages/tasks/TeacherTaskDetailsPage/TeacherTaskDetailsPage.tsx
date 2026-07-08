@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/PageHeader/PageHeader';
 import { Tabs } from '@/components/ui/Tabs/Tabs';
 import { TaskInstructionsSection } from '@/features/tasks/components/TaskInstructionsSection/TaskInstructionsSection';
@@ -8,6 +8,7 @@ import { useTaskInstructions } from '@/features/tasks/hooks/useTaskInstructions'
 import styles from './TeacherTaskDetailsPage.module.css';
 
 export const TeacherTaskDetailsPage: React.FC = () => {
+  const navigate = useNavigate();
   const { taskId } = useParams<{ taskId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -43,7 +44,11 @@ export const TeacherTaskDetailsPage: React.FC = () => {
 
   return (
     <div className={styles.pageContainer}>
-      <PageHeader title={task?.title || 'Завдання'} showBottomBorder={false} />
+      <PageHeader
+        title={task?.title || 'Завдання'}
+        showBottomBorder={false}
+        onBack={() => navigate(-1)}
+      />
       <div className={styles.tabsWrapper}>
         <Tabs items={tabItems} activeId={activeTab} onTabChange={handleTabChange} />
       </div>

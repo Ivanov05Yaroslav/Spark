@@ -8,7 +8,7 @@ interface InfoItemProps {
   subtitle?: string;
   variant?: 'info' | 'task';
   className?: string;
-  linkUrl?: string; // Додано необов'язкове поле для посилання
+  linkUrl?: string;
 
   showMoreMenu?: boolean;
   onEdit?: () => void;

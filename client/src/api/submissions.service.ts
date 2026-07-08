@@ -21,11 +21,6 @@ export const submissionsService = {
     return response.data;
   },
 
-  getMyTaskSubmission: async (taskId: string): Promise<any> => {
-    const response = await apiClient.get(`/submissions/task/${taskId}/my`);
-    return response.data;
-  },
-
   patchTaskSubmission: async (taskId: string, formData: FormData): Promise<any> => {
     const response = await apiClient.patch(`/submissions/task/${taskId}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },

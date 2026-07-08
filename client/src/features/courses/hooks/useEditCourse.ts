@@ -73,8 +73,8 @@ export const useEditCourse = () => {
       setIsHidden(courseDetail.isHidden || false);
       setExistingBackgroundUrl(courseDetail.backgroundUrl || null);
 
-      if (courseDetail.coTeachers && courseDetail.coTeachers.length > 0) {
-        setCoTeachers(courseDetail.coTeachers.map((t: any) => t.id));
+      if (courseDetail.participants.coTeachers && courseDetail.participants.coTeachers.length > 0) {
+        setCoTeachers(courseDetail.participants.coTeachers.map((t: any) => t.id));
       } else {
         setCoTeachers([]);
       }
@@ -84,8 +84,8 @@ export const useEditCourse = () => {
         const cleanGroupName = courseDetail.groupName.replace(/^Група\s+/i, '').trim();
         setGroupName(cleanGroupName);
 
-        if (courseDetail.students && courseDetail.students.length > 0) {
-          setStudents(courseDetail.students.map((s: any) => s.id));
+        if (courseDetail.participants.students && courseDetail.participants.students.length > 0) {
+          setStudents(courseDetail.participants.students.map((s: any) => s.id));
         }
       } else {
         setIsDivided(false);
@@ -198,13 +198,13 @@ export const useEditCourse = () => {
     data: {
       subjects: courseDetail?.subject
         ? [{ id: String(courseDetail.subject.id), name: courseDetail.subject.name }]
-        : courseDetail?.subjectId
-          ? [{ id: String(courseDetail.subjectId), name: `Предмет` }]
+        : courseDetail?.subject.id
+          ? [{ id: String(courseDetail.subject.id), name: `Предмет` }]
           : [],
       classes: courseDetail?.class
         ? [{ id: String(courseDetail.class.id), name: courseDetail.class.name }]
-        : courseDetail?.classId
-          ? [{ id: String(courseDetail.classId), name: `Клас` }]
+        : courseDetail?.class.id
+          ? [{ id: String(courseDetail.class.id), name: `Клас` }]
           : [],
       teachers: teachersQuery?.data || [],
       students: studentsQuery?.data || [],

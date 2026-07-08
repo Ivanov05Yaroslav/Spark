@@ -18,6 +18,7 @@ export const TestExecutionWorkspace: React.FC = () => {
     answers,
     mappedCurrentQuestion,
     navItems,
+    isSubmitting,
     handleOptionToggle,
     handleNext,
     handlePrev,
@@ -76,6 +77,7 @@ export const TestExecutionWorkspace: React.FC = () => {
           onNext={isLastQuestion ? handleFinishTest : handleNext}
           isFirstQuestion={isFirstQuestion}
           isLastQuestion={isLastQuestion}
+          isSubmitting={isSubmitting}
         />
       </div>
     </TwoColumnContentLayout>

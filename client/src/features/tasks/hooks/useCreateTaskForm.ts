@@ -34,7 +34,7 @@ export const useCreateTaskForm = () => {
     onSuccess: () => {
       toast.success('Завдання успішно створено');
       queryClient.invalidateQueries({ queryKey: ['tasks', courseId] });
-      navigate(`/courses/${courseId}/tasks`);
+      navigate(`/courses/${courseId}`);
     },
     onError: (error) => {
       if (isAxiosError(error)) {

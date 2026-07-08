@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ContentCard } from '@/components/ui/ContentCard/ContentCard.tsx';
 import { SelectField } from '@/components/ui/SelectField/SelectField.tsx';
 import { Input } from '@/components/ui/Input/Input.tsx';
@@ -80,6 +80,18 @@ export const TestSettingsSidebar: React.FC<TestSettingsSidebarProps> = ({
   const moduleOptions = modules.map((m) => ({ value: String(m.id), label: m.title }));
   const nusGroupOptions = nusGroups.map((g) => ({ value: String(g.id), label: g.name }));
 
+  const isNushClass = useMemo(() => {
+    if (!courseClassName) return false;
+
+    const match = courseClassName.match(/^(\d+)/);
+    if (match) {
+      const gradeNumber = parseInt(match[1], 10);
+      return gradeNumber >= 5 && gradeNumber <= 9;
+    }
+
+    return false;
+  }, [courseClassName]);
+
   return (
     <div className={styles.sidebarWrapper}>
       <ContentCard title="Налаштування" className={styles.cardCustom}>
@@ -118,14 +130,16 @@ export const TestSettingsSidebar: React.FC<TestSettingsSidebarProps> = ({
             disabled={isLoading}
           />
 
-          <SelectField
-            label="Група оцінювання НУШ"
-            options={nusGroupOptions}
-            value={nusGroup}
-            onChange={(value: string) => setNusGroupId(value)}
-            placeholder={isLoading ? 'Завантаження...' : 'Оберіть тему'}
-            disabled={isLoading}
-          />
+          {isNushClass && (
+            <SelectField
+              label="Група оцінювання НУШ"
+              options={nusGroupOptions}
+              value={nusGroup}
+              onChange={(value: string) => setNusGroupId(value)}
+              placeholder={isLoading ? 'Завантаження...' : 'Оберіть тему'}
+              disabled={isLoading}
+            />
+          )}
 
           <DatePickerField
             label="Виконати до"

@@ -31,6 +31,7 @@ const ROLE_TRANSLATIONS: Record<string, string> = {
   ADMIN: 'Адміністратор',
   PARENT: 'Батько / Мати',
   STUDENT: 'Учень',
+  SUPER_ADMIN: 'Адміністратор платформи',
 };
 
 export const Sidebar = ({ isExpanded, setIsExpanded, onOpenNotifications }: SidebarProps) => {
@@ -44,7 +45,6 @@ export const Sidebar = ({ isExpanded, setIsExpanded, onOpenNotifications }: Side
     { id: 1, label: 'Мої курси', icon: DashboardIcon, path: '/courses' },
     { id: 2, label: 'Журнал', icon: JournalIcon, path: '/journal' },
     { id: 3, label: 'Сповіщення', icon: NotificationsIcon },
-    { id: 4, label: 'Чати', icon: ChatsIcon, path: '/chats' },
     { id: 5, label: 'Статистика', icon: StatisticsIcon, path: '/statistics' },
     { id: 6, label: 'Адмін панель', icon: AdminIcon, path: '/admin' },
   ];

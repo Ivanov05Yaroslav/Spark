@@ -4,25 +4,16 @@ import { ToastContainer } from 'react-toastify';
 
 import MainLayout from './components/layout/MainLayout/MainLayout.tsx';
 import { ProtectedRoute } from '@/router/ProtectedRoute';
-import { useStore } from '@/stores/useStore.ts';
+
+import { TaskDetailsRouter } from '@/router/TaskDetailsRouter';
+import { TestDetailsRouter } from '@/router/TestDetailsRouter';
 
 import { CoursePage, CoursesPage, EditCoursePage, CreateCoursePage } from './pages/courses';
 import { ProfilePage } from './pages/profile';
 import { AdminUserManagementPage } from '@/pages/administration';
 import { CreateAnnouncementPage, EditAnnouncementPage } from '@/pages/announcements';
-import {
-  CreateTestPage,
-  EditTestPage,
-  TeacherTestDetailsPage,
-  TestDetailsPage,
-  TestExecutionPage,
-} from '@/pages/tests';
-import {
-  CreateTaskPage,
-  EditTaskPage,
-  GeneralTaskDetailsPage,
-  TeacherTaskDetailsPage,
-} from '@/pages/tasks';
+import { CreateTestPage, EditTestPage, TestExecutionPage } from '@/pages/tests';
+import { CreateTaskPage, EditTaskPage } from '@/pages/tasks';
 
 import {
   EmailVerificationPage as AuthEmailVerificationPage,
@@ -38,6 +29,7 @@ import {
   SchoolDocumentsPage,
 } from './pages/auth';
 import { TestAttemptReviewPage } from '@/pages/tests/TestAttemptReviewPage/TestAttemptReviewPage.tsx';
+import { UploadFilePage, UploadLinkPage } from '@/pages/materials';
 
 function App() {
   return (
@@ -73,41 +65,39 @@ function App() {
 
         <Route path="/" element={<MainLayout />}>
           <Route
-            element={<ProtectedRoute allowedRoles={['STUDENT', 'PARENT', 'TEACHER', 'ADMIN']} />}
+            element={
+              <ProtectedRoute
+                allowedRoles={['STUDENT', 'PARENT', 'TEACHER', 'ADMIN', 'MODERATOR']}
+              />
+            }
           >
             <Route index element={<Navigate to="/courses" replace />} />
-
             <Route path="/courses" element={<CoursesPage />} />
             <Route path="/courses/:id" element={<CoursePage />} />
             <Route path="/profile" element={<ProfilePage />} />
 
-            <Route path="/courses/:id/tasks/:taskId" element={<GeneralTaskDetailsPage />} />
+            <Route path="/courses/:id/tasks/:taskId" element={<TaskDetailsRouter />} />
+            <Route path="/courses/:id/tests/:testId" element={<TestDetailsRouter />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['STUDENT', 'PARENT']} />}>
-            <Route path="/courses/:id/tests/:testId" element={<TestDetailsPage />} />
-            <Route path="/courses/:id/tests/:testId/execute" element={<TestExecutionPage />} />
             <Route
               path="/courses/:id/tests/:testId/review/:attemptId"
               element={<TestAttemptReviewPage />}
             />
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={['TEACHER', 'ADMIN']} />}>
+          <Route element={<ProtectedRoute allowedRoles={['STUDENT']} />}>
+            <Route path="/courses/:id/tests/:testId/execute" element={<TestExecutionPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={['TEACHER']} />}>
             <Route path="/courses/create" element={<CreateCoursePage />} />
             <Route path="/courses/:id/edit" element={<EditCoursePage />} />
 
-            <Route
-              path="/courses/:id/tasks/:taskId/submissions"
-              element={<TeacherTaskDetailsPage />}
-            />
             <Route path="/courses/:id/tasks/create" element={<CreateTaskPage />} />
             <Route path="/courses/:id/tasks/:taskId/edit" element={<EditTaskPage />} />
 
-            <Route
-              path="/courses/:id/tests/:testId/submissions"
-              element={<TeacherTestDetailsPage />}
-            />
             <Route path="/courses/:id/tests/create" element={<CreateTestPage />} />
             <Route path="/courses/:id/tests/:testId/edit" element={<EditTestPage />} />
 
@@ -115,6 +105,17 @@ function App() {
             <Route
               path="/courses/:id/announcements/:announcementId/edit"
               element={<EditAnnouncementPage />}
+            />
+
+            <Route path="/courses/:id/materials/links/create" element={<UploadLinkPage />} />
+            <Route path="/courses/:id/materials/files/create" element={<UploadFilePage />} />
+            <Route
+              path="/courses/:id/materials/links/:materialId/edit"
+              element={<UploadLinkPage />}
+            />
+            <Route
+              path="/courses/:id/materials/files/:materialId/edit"
+              element={<UploadFilePage />}
             />
           </Route>
 

@@ -1,0 +1,131 @@
+.card {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 20px;
+    background-color: #ffffff;
+    border: 1px solid #f3f4f6;
+    border-radius: 24px;
+    padding: 20px;
+    box-shadow: 0 4px 18px rgba(112, 45, 255, 0.03);
+    font-family: 'Inter', sans-serif;
+}
+
+.infoSection {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    min-width: 0;
+}
+
+.usersRow {
+    display: flex;
+    gap: 64px;
+    flex-wrap: wrap;
+    width: 100%;
+    align-items: center;
+}
+
+.schoolBlock {
+    display: flex;
+    align-items: flex-start;
+    gap: 40px;
+}
+
+.schoolInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.text {
+    margin: 0;
+    font-size: 15px;
+    color: #111827;
+    line-height: 1.5;
+}
+
+.schoolAddress {
+    font-size: 14px;
+    color: #4B5563;
+    margin: 0;
+}
+
+.edboWrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+.edboNumber {
+    font-size: 16px;
+    font-weight: 700;
+    color: #374151;
+    background-color: #E5E7EB;
+    padding: 4px 10px;
+    border-radius: 6px;
+}
+
+.documentsBlock {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.documentsList {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    width: 100%;
+}
+
+.attachmentLink {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    text-decoration: none;
+    color: inherit;
+}
+
+.label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.actionsSection {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-left: 1px dashed #e5e7eb;
+    padding-left: 20px;
+}
+
+.statusBadge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 16px;
+    font-size: 14px;
+    font-weight: 500;
+    height: fit-content;
+    margin-left: auto;
+}
+
+.statusDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.statusPending { background-color: #FEF3C7; color: #92400E; }
+.dotPending { background-color: #F59E0B; }
+
+.statusApproved { background-color: #D1FAE5; color: #065F46; }
+.dotApproved { background-color: #10B981; }
+
+.statusRejected { background-color: #FEE2E2; color: #991B1B; }
+.dotRejected { background-color: #EF4444; }

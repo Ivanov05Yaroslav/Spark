@@ -13,4 +13,7 @@ export const announcementService = {
 
   deleteAnnouncement: (id: string) =>
     apiClient.delete(`/announcements/${id}`).then((res) => res.data),
+
+  readAnnouncement: (id: string) =>
+    apiClient.patch(`/announcements/${id}/read`).then((res) => res.data),
 };

@@ -103,6 +103,8 @@ export interface CourseDetailResponseDto {
   groupName: string | null;
   videoLinks: any[];
   themeColor: string;
+  isHidden: boolean;
+  isArchived: boolean;
   backgroundUrl: string | null;
   participants: {
     creator: CourseUserDto;
@@ -129,4 +131,5 @@ export interface CourseDetailResponseDto {
     creator: CourseUserDto;
   }[];
   unreadAnnouncementsCount: number;
+  unsubmittedWorksCount: number;
 }

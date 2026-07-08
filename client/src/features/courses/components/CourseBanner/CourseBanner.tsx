@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import EditIcon from '@/assets/edit.svg?react';
 import { DEFAULT_THEME_COLORS } from '@/libs/constants/courses.constants';
 import styles from './CourseBanner.module.css';
@@ -9,6 +9,7 @@ export interface CourseBannerProps {
   themeColor?: string;
   backgroundImage?: string | null;
   onEdit?: () => void;
+  showEditButton: boolean;
 }
 
 export const CourseBanner: React.FC<CourseBannerProps> = ({
@@ -17,15 +18,27 @@ export const CourseBanner: React.FC<CourseBannerProps> = ({
   themeColor = 'purple',
   backgroundImage,
   onEdit,
+  showEditButton,
 }) => {
+  const [imageLoaded, setImageLoaded] = useState(false);
+
   const resolvedColor = DEFAULT_THEME_COLORS.find((c) => c.value === themeColor)?.base || '#702DFF';
 
-  const backgroundStyle = backgroundImage
-    ? { backgroundImage: `url(${backgroundImage})` }
-    : { backgroundColor: resolvedColor };
+  const containerStyle = { backgroundColor: resolvedColor };
 
   return (
-    <div className={styles.bannerContainer} style={backgroundStyle}>
+    <div className={styles.bannerContainer} style={containerStyle}>
+      {backgroundImage && (
+        <img
+          src={backgroundImage}
+          alt={title}
+          className={`${styles.backgroundImage} ${imageLoaded ? styles.loaded : ''}`}
+          loading="lazy"
+          decoding="async"
+          onLoad={() => setImageLoaded(true)}
+        />
+      )}
+
       {backgroundImage && <div className={styles.overlay} />}
 
       <div className={styles.content}>
@@ -35,7 +48,7 @@ export const CourseBanner: React.FC<CourseBannerProps> = ({
         </div>
       </div>
 
-      {onEdit && (
+      {showEditButton && (
         <button className={styles.editButton} onClick={onEdit} aria-label="Редагувати курс">
           <EditIcon className={styles.editIcon} />
         </button>

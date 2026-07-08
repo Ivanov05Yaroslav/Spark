@@ -66,7 +66,7 @@ export const useEditTaskForm = () => {
       toast.success('Завдання успішно оновлено');
       queryClient.invalidateQueries({ queryKey: ['tasks', courseId] });
       queryClient.invalidateQueries({ queryKey: ['task', taskId] });
-      navigate(`/courses/${courseId}/tasks`);
+      navigate(`/courses/${courseId}`);
     },
     onError: (error) => {
       if (isAxiosError(error)) {

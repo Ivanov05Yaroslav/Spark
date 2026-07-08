@@ -5,10 +5,20 @@
     width: 100%;
 }
 
-.header {
+.filtersContainer {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 16px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.searchWrapper {
+    flex: 1;
+}
+
+.selectWrapper {
+    flex-shrink: 0;
 }
 
 .list {
@@ -21,9 +31,6 @@
     text-align: center;
     padding: 40px 20px;
     color: #6B7280;
-    font-family: 'Inter', sans-serif;
     font-size: 15px;
-    background-color: #F9FAFB;
-    border-radius: 12px;
-    border: 1px dashed #D1D5DB;
+    font-style: italic;
 }

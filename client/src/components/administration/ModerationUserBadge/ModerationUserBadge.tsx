@@ -11,6 +11,7 @@ interface ModerationUserBadgeProps {
   role: string;
   roleLabel: string;
   avatarUrl?: string;
+  showRoleLabel?: boolean;
 }
 
 export const ModerationUserBadge: React.FC<ModerationUserBadgeProps> = ({
@@ -21,6 +22,7 @@ export const ModerationUserBadge: React.FC<ModerationUserBadgeProps> = ({
   role,
   roleLabel,
   avatarUrl,
+  showRoleLabel = true,
 }) => {
   const fullName = `${lastName} ${firstName} ${middleName}`.trim();
   const defaultAvatar = `https://ui-avatars.com/api/?name=${firstName}+${lastName}&background=E1D4FE&color=702DFF`;
@@ -45,9 +47,11 @@ export const ModerationUserBadge: React.FC<ModerationUserBadgeProps> = ({
 
         <div className={styles.textMeta}>
           <span className={styles.name}>{fullName}</span>
-          <Badge themeColor={getRoleThemeColor(role)} className={styles.roleBadge}>
-            {roleLabel}
-          </Badge>
+          {showRoleLabel && (
+            <Badge themeColor={getRoleThemeColor(role)} className={styles.roleBadge}>
+              {roleLabel}
+            </Badge>
+          )}
         </div>
       </div>
     </div>

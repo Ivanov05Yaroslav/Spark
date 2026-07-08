@@ -22,6 +22,7 @@ export interface TestPassingQuestionCardProps {
   onNext: () => void;
   isFirstQuestion: boolean;
   isLastQuestion: boolean;
+  isSubmitting?: boolean;
 }
 
 export const TestPassingQuestionCard: React.FC<TestPassingQuestionCardProps> = ({
@@ -37,6 +38,7 @@ export const TestPassingQuestionCard: React.FC<TestPassingQuestionCardProps> = (
   onNext,
   isFirstQuestion,
   isLastQuestion,
+  isSubmitting = false,
 }) => {
   const pointsText = points
     ? `${points} бал${points > 1 && points < 5 ? 'и' : points >= 5 ? 'ів' : ''}`
@@ -72,6 +74,7 @@ export const TestPassingQuestionCard: React.FC<TestPassingQuestionCardProps> = (
         onNext={onNext}
         isFirstQuestion={isFirstQuestion}
         isLastQuestion={isLastQuestion}
+        isSubmitting={isSubmitting}
       />
     </div>
   );

@@ -24,4 +24,8 @@ export const testsService = {
     const response = await apiClient.post(`/tests/${id}/submit`, payload);
     return response.data;
   },
+
+  deleteTest: async (id: string): Promise<void> => {
+    await apiClient.delete(`/tests/${id}`);
+  },
 };

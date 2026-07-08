@@ -31,7 +31,6 @@ export const AnnouncementsList: React.FC<AnnouncementsListProps> = ({
             fontSize: '14px',
             color: '#9CA3AF',
             margin: 0,
-            padding: '8px 0',
             textAlign: 'center',
             fontStyle: 'italic',
           }}

@@ -6,6 +6,7 @@ import { RoleManagementTab } from '@/features/administration/components/RoleMana
 import { TABS_ITEMS } from '@/libs/constants/administration.constants.ts';
 import styles from './AdminUserManagementPage.module.css';
 import { MessageModerationTab } from '@/features/administration/components/MessageModerationTab/MessageModerationTab.tsx';
+import { SchoolRegisterRequestsTab } from '@/features/administration/components/SchoolRegisterRequestsTab/SchoolRegisterRequestsTab.tsx';
 
 export const AdminUserManagementPage = () => {
   const [activeTab, setActiveTab] = useState('user-management');
@@ -21,6 +22,7 @@ export const AdminUserManagementPage = () => {
       {activeTab === 'user-management' && <UserManagementTab />}
       {activeTab === 'role-management' && <RoleManagementTab />}
       {activeTab === 'messages-moderation' && <MessageModerationTab />}
+      {activeTab === 'school-management' && <SchoolRegisterRequestsTab />}
     </div>
   );
 };

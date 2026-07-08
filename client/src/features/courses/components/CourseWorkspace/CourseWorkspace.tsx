@@ -19,8 +19,13 @@ interface CourseWorkspaceProps {
   onDeleteLesson?: (id: string) => void;
 
   onModuleItemClick?: (item: ModuleItemData, moduleId: string) => void;
-  onEditModule?: (moduleId: string) => void;
+  onEditModule?: (moduleId: string, newTitle: string) => void;
   onDeleteModule?: (moduleId: string) => void;
+
+  onEditItem?: (item: ModuleItemData, moduleId: string) => void;
+  onDeleteItem?: (item: ModuleItemData, moduleId: string) => void;
+
+  showMoreMenu: boolean;
 }
 
 export const CourseWorkspace: React.FC<CourseWorkspaceProps> = ({
@@ -32,6 +37,9 @@ export const CourseWorkspace: React.FC<CourseWorkspaceProps> = ({
   onModuleItemClick,
   onEditModule,
   onDeleteModule,
+  onEditItem,
+  onDeleteItem,
+  showMoreMenu,
 }) => {
   return (
     <div className={styles.pageContainer}>
@@ -43,16 +51,19 @@ export const CourseWorkspace: React.FC<CourseWorkspaceProps> = ({
               onAdd={onAddLesson}
               onEditLink={onEditLesson}
               onDeleteLink={onDeleteLesson}
+              showMoreMenu={showMoreMenu}
             />
           </div>
 
           <div className={styles.mainColumn}>
             <ModuleList
-              showMoreMenu={true}
+              showMoreMenu={showMoreMenu}
               modules={modules}
               onItemClick={onModuleItemClick}
               onEditModule={onEditModule}
               onDeleteModule={onDeleteModule}
+              onEditItem={onEditItem}
+              onDeleteItem={onDeleteItem}
             />
           </div>
         </div>

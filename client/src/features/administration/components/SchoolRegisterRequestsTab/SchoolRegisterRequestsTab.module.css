@@ -1,0 +1,27 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+}
+
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.emptyState {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6B7280;
+    font-size: 15px;
+    font-style: italic;
+}
+
+.loadingState {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6B7280;
+    font-size: 15px;
+}

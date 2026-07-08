@@ -5,12 +5,13 @@ import LinkIcon from '@/assets/link.svg?react';
 import TheoryIcon from '@/assets/theory.svg?react';
 import TaskIcon from '@/assets/task.svg?react';
 import TestIcon from '@/assets/test.svg?react';
+import AnnouncementIcon from '@/assets/announcement.svg?react';
 
 import styles from './CourseCreateButton.module.css';
 import { SecondaryButton } from '@/components/ui/SecondaryButton/SecondaryButton.tsx';
 
 interface CourseCreateButtonProps {
-  onCreateModule: () => void;
+  onCreateLink: () => void;
   onCreateMaterial: () => void;
   onCreateTask: () => void;
   onCreateTest: () => void;
@@ -19,7 +20,7 @@ interface CourseCreateButtonProps {
 }
 
 export const CourseCreateButton: React.FC<CourseCreateButtonProps> = ({
-  onCreateModule,
+  onCreateLink,
   onCreateMaterial,
   onCreateTask,
   onCreateTest,
@@ -57,7 +58,7 @@ export const CourseCreateButton: React.FC<CourseCreateButtonProps> = ({
 
       {isOpen && (
         <div className={styles.dropdown}>
-          <button className={styles.menuItem} onClick={() => handleAction(onCreateModule)}>
+          <button className={styles.menuItem} onClick={() => handleAction(onCreateLink)}>
             <LinkIcon className={styles.menuIcon} />
             Посилання
           </button>
@@ -78,7 +79,7 @@ export const CourseCreateButton: React.FC<CourseCreateButtonProps> = ({
           </button>
 
           <button className={styles.menuItem} onClick={() => handleAction(onCreateAnnouncement)}>
-            <TestIcon className={styles.menuIcon} />
+            <AnnouncementIcon className={styles.menuIcon} />
             Оголошення
           </button>
         </div>

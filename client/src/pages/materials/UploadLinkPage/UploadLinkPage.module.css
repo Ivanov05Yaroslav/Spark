@@ -1,0 +1,26 @@
+.pageContainer {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-height: 100vh;
+    box-sizing: border-box;
+}
+
+.content {
+    display: flex;
+    justify-content: center;
+    padding: 40px 0;
+    width: 100%;
+    height: fit-content;
+    box-sizing: border-box;
+    flex: 1;
+}
+
+.formWrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+    max-width: 680px;
+    height: fit-content;
+}

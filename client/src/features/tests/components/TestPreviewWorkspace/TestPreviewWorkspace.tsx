@@ -42,7 +42,19 @@ export const TestPreviewWorkspace: React.FC = () => {
             />
           ))
         ) : (
-          <div style={{ textAlign: 'center', color: '#6B7280', padding: '40px 0' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              minHeight: '200px',
+              color: '#9CA3AF',
+              fontSize: '14px',
+              textAlign: 'center',
+              padding: '24px',
+            }}
+          >
             У цьому тесті ще немає запитань.
           </div>
         )}

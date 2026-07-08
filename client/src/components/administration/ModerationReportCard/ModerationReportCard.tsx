@@ -1,8 +1,10 @@
 import React from 'react';
-import { MessageBubble } from '@/components/chats/MessageBubble/MessageBubble';
+import { MessageBubble } from '@/components/administration/MessageBubble/MessageBubble';
 import { ModerationUserBadge } from '@/components/administration/ModerationUserBadge/ModerationUserBadge';
 import { ModerationActions } from '@/components/administration/ModerationActions/ModerationActions';
 import styles from './ModerationReportCard.module.css';
+
+export type ModerationStatus = 'PENDING' | 'RESOLVED' | 'REJECTED' | 'BLOCKED';
 
 interface ModerationUser {
   id: string;
@@ -23,9 +25,9 @@ export interface ModerationReportCardProps {
   messageTime?: string;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
-  onDeleteMessage: (id: string) => void;
   onBlockUser: (id: string) => void;
   isPending?: boolean;
+  status: ModerationStatus;
 }
 
 export const ModerationReportCard: React.FC<ModerationReportCardProps> = ({
@@ -37,10 +39,38 @@ export const ModerationReportCard: React.FC<ModerationReportCardProps> = ({
   messageTime,
   onApprove,
   onReject,
-  onDeleteMessage,
   onBlockUser,
   isPending = false,
+  status,
 }) => {
+  const statusConfig: Record<
+    ModerationStatus,
+    { label: string; className: string; dotClassName: string }
+  > = {
+    PENDING: {
+      label: 'Очікує розгляду',
+      className: styles.statusPending,
+      dotClassName: styles.dotPending,
+    },
+    RESOLVED: {
+      label: 'Вирішено',
+      className: styles.statusResolved,
+      dotClassName: styles.dotResolved,
+    },
+    REJECTED: {
+      label: 'Відхилено',
+      className: styles.statusRejected,
+      dotClassName: styles.dotRejected,
+    },
+    BLOCKED: {
+      label: 'Заблоковано',
+      className: styles.statusBlocked,
+      dotClassName: styles.dotBlocked,
+    },
+  };
+
+  const currentStatus = statusConfig[status];
+
   return (
     <div className={styles.card}>
       <div className={styles.infoSection}>
@@ -64,6 +94,13 @@ export const ModerationReportCard: React.FC<ModerationReportCardProps> = ({
             roleLabel={reportedUser.roleLabel}
             avatarUrl={reportedUser.avatarUrl}
           />
+
+          {currentStatus && (
+            <div className={`${styles.statusBadge} ${currentStatus.className}`}>
+              <span className={`${styles.statusDot} ${currentStatus.dotClassName}`}></span>
+              {currentStatus.label}
+            </div>
+          )}
         </div>
 
         <div className={styles.reasonBlock}>
@@ -73,21 +110,24 @@ export const ModerationReportCard: React.FC<ModerationReportCardProps> = ({
 
         <div className={styles.messageBlock}>
           <span className={styles.label}>Оскаржене повідомлення:</span>
-          <div className={styles.bubbleWrapper}>
+          {messageText === 'Повідомлення відсутнє' ? (
+            <div className={styles.emptyMessageState}>{messageText}</div>
+          ) : (
             <MessageBubble text={messageText} time={messageTime} position="left" />
-          </div>
+          )}
         </div>
       </div>
 
-      <div className={styles.actionsSection}>
-        <ModerationActions
-          onApprove={() => onApprove(id)}
-          onReject={() => onReject(id)}
-          onDeleteMessage={() => onDeleteMessage(id)}
-          onBlockUser={() => onBlockUser(id)}
-          isPending={isPending}
-        />
-      </div>
+      {status === 'PENDING' && (
+        <div className={styles.actionsSection}>
+          <ModerationActions
+            onApprove={() => onApprove(id)}
+            onReject={() => onReject(id)}
+            onBlockUser={() => onBlockUser(id)}
+            isPending={isPending}
+          />
+        </div>
+      )}
     </div>
   );
 };

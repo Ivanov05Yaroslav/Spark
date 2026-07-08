@@ -1,0 +1,76 @@
+.container {
+    display: flex;
+    min-height: 400px;
+    margin: -24px;
+}
+
+.sidebar {
+    width: 200px;
+    padding: 24px 0;
+}
+
+.tabButton {
+    width: 100%;
+    text-align: left;
+    padding: 12px 24px;
+    background: none;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    color: #475569;
+    transition: all 0.2s;
+    border-bottom: 1px solid #F1F5F9;
+}
+
+.tabButton:hover {
+    background-color: #F8FAFC;
+}
+
+.activeTab {
+    color: #702DFF;
+    font-weight: 500;
+}
+
+.content {
+    flex: 1;
+    padding: 36px 48px;
+    display: flex;
+    flex-direction: column;
+}
+
+.contentTitle {
+    font-size: 18px;
+    font-weight: 500;
+    margin-bottom: 24px;
+    color: #1E293B;
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+}
+
+.avatarSection {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+    align-items: stretch;
+    justify-content: center;
+}
+
+.centeredUpload {
+    width: 100%;
+    align-items: center;
+    text-align: center;
+}
+
+.saveButton {
+    margin-top: auto;
+    align-self: center;
+    min-width: 140px;
+}

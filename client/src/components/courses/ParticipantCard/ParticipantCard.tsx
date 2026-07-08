@@ -17,7 +17,7 @@ interface ParticipantCardProps {
 }
 
 export const ParticipantCard: React.FC<ParticipantCardProps> = ({ participant }) => {
-  const { name, classGroup, role, avatarUrl } = participant;
+  const { name, classGroup, avatarUrl, role } = participant;
 
   const getInitials = (fullName: string) => {
     return fullName

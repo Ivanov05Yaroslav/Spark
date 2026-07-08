@@ -1,16 +1,13 @@
 import React from 'react';
 import { SecondaryButton } from '@/components/ui/SecondaryButton/SecondaryButton';
 import styles from './ModerationActions.module.css';
-
 import ApproveIcon from '@/assets/approve.svg?react';
 import RejectIcon from '@/assets/reject.svg?react';
-import DeleteIcon from '@/assets/delete.svg?react';
 import BlockIcon from '@/assets/block.svg?react';
 
 interface ModerationActionsProps {
   onApprove: () => void;
   onReject: () => void;
-  onDeleteMessage: () => void;
   onBlockUser: () => void;
   isPending?: boolean;
 }
@@ -18,7 +15,6 @@ interface ModerationActionsProps {
 export const ModerationActions: React.FC<ModerationActionsProps> = ({
   onApprove,
   onReject,
-  onDeleteMessage,
   onBlockUser,
   isPending = false,
 }) => {
@@ -35,17 +31,7 @@ export const ModerationActions: React.FC<ModerationActionsProps> = ({
       </SecondaryButton>
 
       <SecondaryButton
-        variantColor="default"
-        onClick={onReject}
-        disabled={isPending}
-        icon={<RejectIcon />}
-        className={styles.actionBtn}
-      >
-        Відхилити
-      </SecondaryButton>
-
-      <SecondaryButton
-        variantColor="yellow"
+        variantColor="red"
         onClick={onBlockUser}
         disabled={isPending}
         icon={<BlockIcon />}
@@ -55,13 +41,13 @@ export const ModerationActions: React.FC<ModerationActionsProps> = ({
       </SecondaryButton>
 
       <SecondaryButton
-        variantColor="red"
-        onClick={onDeleteMessage}
+        variantColor="gray"
+        onClick={onReject}
         disabled={isPending}
-        icon={<DeleteIcon />}
+        icon={<RejectIcon />}
         className={styles.actionBtn}
       >
-        Видалити
+        Відхилити
       </SecondaryButton>
     </div>
   );

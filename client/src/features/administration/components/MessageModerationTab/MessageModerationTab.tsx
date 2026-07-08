@@ -1,133 +1,171 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect } from 'react';
 import { SearchInput } from '@/components/ui/SearchInput/SearchInput';
-import { ModerationReportCard } from '@/components/administration/ModerationReportCard/ModerationReportCard';
+import {
+  ModerationReportCard,
+  ModerationStatus,
+} from '@/components/administration/ModerationReportCard/ModerationReportCard';
 import styles from './MessageModerationTab.module.css';
-
-const MOCK_REPORTS = [
-  {
-    id: 'report-1',
-    messageText: 'Ты вообще ничего не понимаешь в этом предмете, прекрати писать бред!',
-    messageTime: '14:32',
-    reportReason: 'Образа інших учасників / Булінг',
-    reporter: {
-      id: 'u-1',
-      firstName: 'Иван',
-      lastName: 'Франко',
-      middleName: 'Яковлевич',
-      role: 'STUDENT',
-      roleLabel: 'Учень',
-      avatarUrl: '',
-    },
-    reportedUser: {
-      id: 'u-2',
-      firstName: 'Александр',
-      lastName: 'Коваленко',
-      middleName: 'Петрович',
-      role: 'STUDENT',
-      roleLabel: 'Учень',
-      avatarUrl: '',
-    },
-  },
-  {
-    id: 'report-2',
-    messageText: 'Давай встретимся после уроков за школой и разберемся, если ты такой смелый.',
-    messageTime: '15:05',
-    reportReason: 'Образа інших учасників / Булінг',
-    reporter: {
-      id: 'u-3',
-      firstName: 'Мария',
-      lastName: 'Шевченко',
-      middleName: 'Ивановна',
-      role: 'TEACHER',
-      roleLabel: 'Вчитель',
-      avatarUrl: '',
-    },
-    reportedUser: {
-      id: 'u-4',
-      firstName: 'Дмитрий',
-      lastName: 'Мельник',
-      middleName: 'Сергеевич',
-      role: 'STUDENT',
-      roleLabel: 'Учень',
-      avatarUrl: '',
-    },
-  },
-];
+import { COURSE_SORT_ORDER } from '@/libs/constants/courses.constants.ts';
+import { Select } from '@/components/ui/Select/Select.tsx';
+import { STATUS, MODERATION_SORT_BY } from '@/libs/constants/administration.constants.ts';
+import { useMessageModeration } from '@/features/administration/hooks/useMessageModeration';
 
 export const MessageModerationTab = () => {
-  const [reports, setReports] = useState(MOCK_REPORTS);
-  const [searchQuery, setSearchQuery] = useState('');
+  const {
+    reports,
+    isLoading,
+    isActionLoading,
+    queryParams,
+    handleParamChange,
+    executeReportAction,
+    totalPages,
+  } = useMessageModeration();
 
-  const handleApprove = (id: string) => {
-    setReports((prev) => prev.filter((report) => report.id !== id));
-    console.log(`Report ${id} approved (kept message, cleared report)`);
+  const statusOptions = (STATUS || []).map((item) => ({
+    value: item.id,
+    label: item.label,
+  }));
+
+  const sortByOptions = (MODERATION_SORT_BY || []).map((item) => ({
+    value: item.id,
+    label: item.label,
+  }));
+
+  const sortOrderOptions = (COURSE_SORT_ORDER || []).map((item: any) => ({
+    value: item.value || item.id,
+    label: item.label,
+  }));
+
+  const getRoleLabel = (roles: string[] | undefined) => {
+    if (!roles || roles.length === 0) return 'Користувач';
+    if (roles.includes('SUPER_ADMIN')) return 'Супер Адмін';
+    if (roles.includes('ADMIN')) return 'Адміністратор';
+    if (roles.includes('TEACHER')) return 'Вчитель';
+    if (roles.includes('PARENT')) return 'Батько/Мати';
+    return 'Учень';
   };
 
-  const handleReject = (id: string) => {
-    setReports((prev) => prev.filter((report) => report.id !== id));
-    console.log(`Report ${id} rejected`);
-  };
-
-  const handleBlockUser = (id: string) => {
-    const report = reports.find((r) => r.id === id);
-    if (report) {
-      console.log(
-        `User ${report.reportedUser.firstName} ${report.reportedUser.lastName} has been blocked`,
-      );
-    }
-    setReports((prev) => prev.filter((report) => report.id !== id));
-  };
-
-  const handleDeleteMessage = (id: string) => {
-    setReports((prev) => prev.filter((report) => report.id !== id));
-    console.log(`Message in report ${id} deleted`);
-  };
-
-  const filteredReports = useMemo(() => {
-    const query = searchQuery.toLowerCase().trim();
-    if (!query) return reports;
-
-    return reports.filter((report) => {
-      const messageMatches = report.messageText.toLowerCase().includes(query);
-      const reporterName = `${report.reporter.firstName} ${report.reporter.lastName}`.toLowerCase();
-      const reportedName =
-        `${report.reportedUser.firstName} ${report.reportedUser.lastName}`.toLowerCase();
-
-      return messageMatches || reporterName.includes(query) || reportedName.includes(query);
-    });
-  }, [reports, searchQuery]);
+  useEffect(() => {
+    console.log('Компонент MessageModerationTab успешно отрендерился!');
+  }, []);
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <SearchInput
-          placeholder="Пошук скарг за текстом або користувачем..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
+      <div className={styles.filtersContainer}>
+        <div className={styles.searchWrapper}>
+          <SearchInput
+            placeholder="Пошук скарг за текстом або користувачем..."
+            value={queryParams.search || ''}
+            onChange={(e) => handleParamChange('search', e.target.value)}
+          />
+        </div>
+        <div className={styles.selectWrapper}>
+          <Select
+            value={queryParams.status || ''}
+            onChange={(value) => handleParamChange('status', value)}
+            options={statusOptions}
+          />
+        </div>
+        <div className={styles.selectWrapper}>
+          <Select
+            value={queryParams.sortBy || 'createdAt'}
+            onChange={(value) => handleParamChange('sortBy', value)}
+            options={sortByOptions}
+          />
+        </div>
+        <div className={styles.selectWrapper}>
+          <Select
+            value={queryParams.sortOrder || 'desc'}
+            onChange={(value) => handleParamChange('sortOrder', value)}
+            options={sortOrderOptions}
+          />
+        </div>
       </div>
 
       <div className={styles.list}>
-        {filteredReports.length > 0 ? (
-          filteredReports.map((report) => (
-            <ModerationReportCard
-              key={report.id}
-              id={report.id}
-              reporter={report.reporter}
-              reportedUser={report.reportedUser}
-              messageText={report.messageText}
-              messageTime={report.messageTime}
-              reportReason={report.reportReason}
-              onApprove={handleApprove}
-              onReject={handleReject}
-              onBlockUser={handleBlockUser}
-              onDeleteMessage={handleDeleteMessage}
-            />
-          ))
+        {isLoading ? (
+          <div className={styles.emptyState}>
+            <p>Завантаження скарг модерації...</p>
+          </div>
+        ) : reports.length > 0 ? (
+          reports.map((report) => {
+            const formattedTime = report.comment?.createdAt
+              ? new Date(report.comment.createdAt).toLocaleTimeString('uk-UA', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })
+              : '';
+
+            const cardReporter = {
+              id: report.reporter?.id,
+              firstName: report.reporter?.firstName || 'Невідомо',
+              lastName: report.reporter?.lastName || '',
+              middleName: report.reporter?.middleName || '',
+              role: report.reporter?.roles?.[0] || 'STUDENT',
+              roleLabel: getRoleLabel(report.reporter?.roles),
+              avatarUrl: report.reporter?.avatarUrl || undefined,
+            };
+
+            const cardReportedUser = {
+              id: report.reportedUser?.id,
+              firstName: report.reportedUser?.firstName || 'Невідомо',
+              lastName: report.reportedUser?.lastName || '',
+              middleName: report.reportedUser?.middleName || '',
+              role: report.reportedUser?.roles?.[0] || 'STUDENT',
+              roleLabel: getRoleLabel(report.reportedUser?.roles),
+              avatarUrl: report.reportedUser?.avatarUrl || undefined,
+            };
+
+            return (
+              <ModerationReportCard
+                key={report.id}
+                id={report.id}
+                reporter={cardReporter}
+                reportedUser={cardReportedUser}
+                messageText={report.comment?.content || 'Повідомлення відсутнє'}
+                messageTime={formattedTime}
+                reportReason={report.reason || 'Причина не вказана'}
+                onApprove={(id) =>
+                  executeReportAction(id, 'RESOLVE', 'Скаргу успішно підтверджено')
+                }
+                onReject={(id) => executeReportAction(id, 'REJECT', 'Скаргу відхилено')}
+                onBlockUser={(id) =>
+                  executeReportAction(id, 'BLOCK_USER', 'Користувача заблоковано')
+                }
+                status={(report.status?.toUpperCase() || 'PENDING') as ModerationStatus}
+                isPending={isActionLoading}
+              />
+            );
+          })
         ) : (
-          <div className={styles.emptyState}>Скарг на повідомлення не знайдено</div>
+          <div className={styles.emptyState}>
+            <p>Скарг на повідомлення не знайдено</p>
+          </div>
         )}
       </div>
+
+      {totalPages > 1 && (
+        <div
+          className={styles.pagination}
+          style={{ display: 'flex', gap: '8px', marginTop: '16px', justifyContent: 'center' }}
+        >
+          <button
+            disabled={queryParams.page === 1}
+            onClick={() => handleParamChange('page', (queryParams.page || 1) - 1)}
+          >
+            Назад
+          </button>
+          <span>
+            Сторінка {queryParams.page} з {totalPages}
+          </span>
+          <button
+            disabled={queryParams.page === totalPages}
+            onClick={() => handleParamChange('page', (queryParams.page || 1) + 1)}
+          >
+            Вперед
+          </button>
+        </div>
+      )}
     </div>
   );
 };

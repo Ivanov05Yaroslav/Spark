@@ -10,6 +10,7 @@ import styles from './ModuleList.module.css';
 import { ContentCard } from '@/components/ui/ContentCard/ContentCard.tsx';
 import { ConfirmDeleteModal } from '@/components/modals/ConfirmDeleteModal/ConfirmDeleteModal.tsx';
 import { MoreButton } from '@/components/ui/MoreButton/MoreButton.tsx';
+import { EditModuleModal } from '@/features/courses/components/ModuleList/EditModuleModal.tsx';
 
 export type MaterialType = 'LINK' | 'THEORY' | 'TASK' | 'TEST';
 
@@ -18,6 +19,8 @@ export interface ModuleItemData {
   type: MaterialType;
   title: string;
   subtitle?: string;
+  fileUrl?: string | null;
+  linkUrl?: string | null;
 }
 
 export interface ModuleData {
@@ -32,7 +35,7 @@ interface ModuleListProps {
   showMoreMenu?: boolean;
   onEditItem?: (item: ModuleItemData, moduleId: string) => void;
   onDeleteItem?: (item: ModuleItemData, moduleId: string) => void;
-  onEditModule?: (moduleId: string) => void;
+  onEditModule?: (moduleId: string, newTitle: string) => void;
   onDeleteModule?: (moduleId: string) => void;
 }
 
@@ -60,23 +63,36 @@ export const ModuleList: React.FC<ModuleListProps> = ({
   onEditModule,
   onDeleteModule,
 }) => {
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [activeItemToDelete, setActiveItemToDelete] = useState<{
     item: ModuleItemData;
     moduleId: string;
   } | null>(null);
 
-  const handleDeleteClick = (item: ModuleItemData, moduleId: string) => {
-    setActiveItemToDelete({ item, moduleId });
-    setIsDeleteModalOpen(true);
-  };
+  const [activeModuleToEdit, setActiveModuleToEdit] = useState<ModuleData | null>(null);
 
-  const handleConfirmDelete = () => {
+  const [activeModuleToDelete, setActiveModuleToDelete] = useState<ModuleData | null>(null);
+
+  const handleConfirmItemDelete = () => {
     if (activeItemToDelete) {
       onDeleteItem?.(activeItemToDelete.item, activeItemToDelete.moduleId);
     }
-    setIsDeleteModalOpen(false);
     setActiveItemToDelete(null);
+  };
+
+  const handleConfirmModuleEdit = (e: React.FormEvent, newTitle: string) => {
+    e.preventDefault();
+
+    if (activeModuleToEdit && newTitle.trim()) {
+      onEditModule?.(activeModuleToEdit.id, newTitle.trim());
+    }
+    setActiveModuleToEdit(null);
+  };
+
+  const handleConfirmModuleDelete = () => {
+    if (activeModuleToDelete) {
+      onDeleteModule?.(activeModuleToDelete.id);
+      setActiveModuleToDelete(null);
+    }
   };
 
   return (
@@ -88,8 +104,8 @@ export const ModuleList: React.FC<ModuleListProps> = ({
           headerRightComponent={
             showMoreMenu && (onEditModule || onDeleteModule) ? (
               <MoreButton
-                onEdit={onEditModule ? () => onEditModule(module.id) : undefined}
-                onDelete={onDeleteModule ? () => onDeleteModule(module.id) : undefined}
+                onEdit={onEditModule ? () => setActiveModuleToEdit(module) : undefined}
+                onDelete={onDeleteModule ? () => setActiveModuleToDelete(module) : undefined}
               />
             ) : undefined
           }
@@ -104,7 +120,7 @@ export const ModuleList: React.FC<ModuleListProps> = ({
                 onClick={() => onItemClick?.(item, module.id)}
                 showMoreMenu={showMoreMenu}
                 onEdit={() => onEditItem?.(item, module.id)}
-                onDelete={() => handleDeleteClick(item, module.id)}
+                onDelete={() => setActiveItemToDelete({ item, moduleId: module.id })}
               />
             ))
           ) : (
@@ -113,14 +129,27 @@ export const ModuleList: React.FC<ModuleListProps> = ({
         </ContentCard>
       ))}
 
+      {activeModuleToEdit && (
+        <EditModuleModal
+          isOpen={!!activeModuleToEdit}
+          onClose={() => setActiveModuleToEdit(null)}
+          initialTitle={activeModuleToEdit.title}
+          onSubmit={handleConfirmModuleEdit}
+        />
+      )}
+
       <ConfirmDeleteModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => {
-          setIsDeleteModalOpen(false);
-          setActiveItemToDelete(null);
-        }}
-        onConfirm={handleConfirmDelete}
+        isOpen={!!activeItemToDelete}
+        onClose={() => setActiveItemToDelete(null)}
+        onConfirm={handleConfirmItemDelete}
         itemName={activeItemToDelete?.item.title || 'цей елемент'}
+      />
+
+      <ConfirmDeleteModal
+        isOpen={!!activeModuleToDelete}
+        onClose={() => setActiveModuleToDelete(null)}
+        onConfirm={handleConfirmModuleDelete}
+        itemName={activeModuleToDelete?.title || 'цей модуль'}
       />
     </div>
   );

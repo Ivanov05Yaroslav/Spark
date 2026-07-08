@@ -24,7 +24,7 @@ export const useCreateAnnouncement = () => {
       toast.success('Оголошення успішно створено!');
 
       setTimeout(() => {
-        navigate(`/courses/${id}/announcements`);
+        navigate(-1);
       }, 1500);
     },
     onError: (error) => {

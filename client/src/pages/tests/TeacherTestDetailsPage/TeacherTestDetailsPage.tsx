@@ -44,7 +44,11 @@ export const TeacherTestDetailsPage: React.FC = () => {
 
   return (
     <div className={styles.pageContainer}>
-      <PageHeader title={test?.title || 'Тест'} showBottomBorder={false} />
+      <PageHeader
+        title={test?.title || 'Тест'}
+        showBottomBorder={false}
+        onBack={() => navigate(-1)}
+      />
 
       <div className={styles.tabsWrapper}>
         <Tabs items={tabItems} activeId={activeTab} onTabChange={handleTabChange} />

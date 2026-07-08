@@ -1,18 +1,22 @@
 import { UserProfileResponseDTO } from '@/types/profile.types.ts';
 import { apiClient } from '@/api/apiClient.ts';
 
+export interface ChangePasswordPayload {
+  oldPassword: string;
+  newPassword: string;
+}
+
 export const userService = {
-  async getProfile(): Promise<UserProfileResponseDTO> {
-    try {
-      const response = await apiClient.get<UserProfileResponseDTO>('/users/profile/me');
+  getProfile: () =>
+    apiClient.get<UserProfileResponseDTO>('/users/profile/me').then((res) => res.data),
 
-      return response.data;
-    } catch (error: any) {
-      if (error.response && error.response.data) {
-        throw new Error(error.response.data.message || 'Щось пішло не так');
-      }
+  updateProfile: (data: FormData) =>
+    apiClient
+      .patch('/users/profile', data, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((res) => res.data),
 
-      throw new Error('Помилка сервера. Спробуйте пізніше');
-    }
-  },
+  changePassword: (data: ChangePasswordPayload) =>
+    apiClient.post('/auth/password/change', data).then((res) => res.data),
 };

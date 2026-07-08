@@ -8,6 +8,7 @@ export interface TestButtonsProps {
   onNext: () => void;
   isFirstQuestion: boolean;
   isLastQuestion: boolean;
+  isSubmitting?: boolean;
 }
 
 export const TestButtons: React.FC<TestButtonsProps> = ({
@@ -15,6 +16,7 @@ export const TestButtons: React.FC<TestButtonsProps> = ({
   onNext,
   isFirstQuestion,
   isLastQuestion,
+  isSubmitting,
 }) => {
   return (
     <div className={styles.navigationButtons}>
@@ -35,10 +37,13 @@ export const TestButtons: React.FC<TestButtonsProps> = ({
         type="button"
         className={`${styles.buttonContainer} ${styles.rightButton}`}
         onClick={onNext}
+        disabled={isSubmitting}
       >
         <p>
           {isLastQuestion ? (
-            <strong style={{ fontWeight: 500 }}>Завершити тест</strong>
+            <strong style={{ fontWeight: 500 }}>
+              {isSubmitting ? 'Відправка...' : 'Завершити тест'}
+            </strong>
           ) : (
             'Наступне'
           )}

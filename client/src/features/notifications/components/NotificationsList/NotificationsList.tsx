@@ -1,111 +1,75 @@
-import { NotificationItem } from '../NotificationItem/NotificationItem';
-import { Divider } from '../../../../components/ui/Divider/Divider';
+import React, { useEffect, useRef } from 'react';
+import { NotificationItem } from '@/features/notifications/components/NotificationItem/NotificationItem';
+import { Divider } from '@/components/ui/Divider/Divider';
+import { ApiNotification } from '@/types/notifications.types';
 import styles from './NotificationsList.module.css';
 
-const mockNotifications = [
-  {
-    id: 1,
-    isUnread: true,
-    userName: 'Сара Джеймс',
-    message: 'перевірила Завдання 1',
-    courseName: 'Інформатика 11-Б',
-    avatar: 'https://i.pravatar.cc/150?img=47',
-    date: '25 березня, 23:59',
-  },
-  {
-    id: 2,
-    isUnread: true,
-    userName: 'Сара Джеймс',
-    message: 'перевірила Завдання 1',
-    courseName: 'Інформатика 11-Б',
-    avatar: 'https://i.pravatar.cc/150?img=47',
-    date: '25 березня, 23:59',
-  },
-  {
-    id: 3,
-    isUnread: true,
-    userName: 'Сара Джеймс',
-    message: 'перевірила Завдання 1',
-    courseName: 'Інформатика 11-Б',
-    avatar: 'https://i.pravatar.cc/150?img=47',
-    date: '25 березня, 23:59',
-  },
-  {
-    id: 4,
-    isUnread: true,
-    userName: 'Сара Джеймс',
-    message: 'перевірила Завдання 1',
-    courseName: 'Інформатика 11-Б',
-    avatar: 'https://i.pravatar.cc/150?img=47',
-    date: '25 березня, 23:59',
-  },
-  {
-    id: 5,
-    isUnread: false,
-    userName: 'Сара Джеймс',
-    message: 'залишила коментар',
-    courseName: 'Інформатика 11-Б',
-    avatar: 'https://i.pravatar.cc/150?img=47',
-    date: '25 березня, 23:59',
-  },
-  {
-    id: 6,
-    isUnread: false,
-    userName: 'Сара Джеймс',
-    message: 'залишила коментар',
-    courseName: 'Інформатика 11-Б',
-    avatar: 'https://i.pravatar.cc/150?img=47',
-    date: '25 березня, 23:59',
-  },
-  {
-    id: 7,
-    isUnread: false,
-    userName: 'Сара Джеймс',
-    message: 'залишила коментар',
-    courseName: 'Інформатика 11-Б',
-    avatar: 'https://i.pravatar.cc/150?img=47',
-    date: '25 березня, 23:59',
-  },
-  {
-    id: 8,
-    isUnread: false,
-    userName: 'Сара Джеймс',
-    message: 'залишила коментар',
-    courseName: 'Інформатика 11-Б',
-    avatar: 'https://i.pravatar.cc/150?img=47',
-    date: '25 березня, 23:59',
-  },
-  {
-    id: 9,
-    isUnread: false,
-    userName: 'Сара Джеймс',
-    message: 'залишила коментар',
-    courseName: 'Інформатика 11-Б',
-    avatar: 'https://i.pravatar.cc/150?img=47',
-    date: '25 березня, 23:59',
-  },
-];
+type NotificationsListProps = {
+  notifications: ApiNotification[];
+  isLoading: boolean;
+  hasMore: boolean;
+  onLoadMore: () => void;
+  onItemClick: (id: string) => void;
+  onCloseDrawer: () => void;
+};
 
-export const NotificationsList = () => {
-  if (mockNotifications.length === 0) {
-    return <div className={styles.empty}>Немає нових повідомлень</div>;
+export const NotificationsList: React.FC<NotificationsListProps> = ({
+  notifications = [],
+  isLoading,
+  hasMore,
+  onLoadMore,
+  onItemClick,
+  onCloseDrawer,
+}) => {
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (isLoading || !hasMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          onLoadMore();
+        }
+      },
+      {
+        root: null,
+        rootMargin: '100px',
+        threshold: 0.1,
+      },
+    );
+
+    if (sentinelRef.current) {
+      observer.observe(sentinelRef.current);
+    }
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [isLoading, hasMore, onLoadMore]);
+
+  if (notifications.length === 0 && !isLoading) {
+    return <div className={styles.emptyState}>Немає нових сповіщень</div>;
   }
 
   return (
     <div className={styles.listContainer}>
-      {mockNotifications.map((notification, index) => (
-        <div key={notification.id}>
-          <NotificationItem
-            isUnread={notification.isUnread}
-            userName={notification.userName}
-            message={notification.message}
-            courseName={notification.courseName}
-            avatarSrc={notification.avatar}
-            date={notification.date}
-          />
-          {index < mockNotifications.length - 1 && <Divider />}
-        </div>
-      ))}
+      <div className={styles.linksList}>
+        {notifications.map((notification, index) => (
+          <React.Fragment key={notification.id}>
+            <NotificationItem
+              notification={notification}
+              onItemClick={onItemClick}
+              onCloseDrawer={onCloseDrawer}
+            />
+            {index < notifications.length - 1 && <Divider />}
+          </React.Fragment>
+        ))}
+      </div>
+
+      <div ref={sentinelRef} style={{ height: '10px', width: '100%', flexShrink: 0 }} />
+
+      {isLoading && <div className={styles.loadingState}>Завантаження нових сповіщень...</div>}
     </div>
   );
 };

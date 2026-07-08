@@ -37,7 +37,7 @@ export const useEditAnnouncement = () => {
       toast.success('Оголошення успішно збережено!');
 
       setTimeout(() => {
-        navigate(`/courses/${id}/announcements`);
+        navigate(-1);
       }, 1500);
     },
     onError: (error) => {

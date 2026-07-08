@@ -49,4 +49,10 @@ export const courseService = {
 
   updateVideoLinks: (courseId: string, videoLinks: string[]) =>
     apiClient.patch(`/courses/${courseId}/video-links`, { videoLinks }).then((res) => res.data),
+
+  updateModule: (moduleId: string, title: string) =>
+    apiClient.put(`/courses/modules/${moduleId}`, { title }).then((res) => res.data),
+
+  deleteModule: (moduleId: string) =>
+    apiClient.delete(`/courses/modules/${moduleId}`).then((res) => res.data),
 };

@@ -6,7 +6,7 @@ interface SecondaryButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElem
   icon?: React.ReactNode;
   children: React.ReactNode;
   themeColor?: string;
-  variantColor?: 'green' | 'yellow' | 'red' | 'default';
+  variantColor?: 'green' | 'yellow' | 'red' | 'default' | 'gray';
 }
 
 export const SecondaryButton: React.FC<SecondaryButtonProps> = ({
@@ -26,6 +26,7 @@ export const SecondaryButton: React.FC<SecondaryButtonProps> = ({
       yellow: { text: '#D97706', bg: '#FEF3C7' },
       red: { text: '#DC2626', bg: '#FEE2E2' },
       default: { text: '#702DFF', bg: '#DCD0FC' },
+      gray: { text: '#4B5563', bg: '#F3F4F6' },
     };
 
     const { text, bg } = variantColors[variantColor];

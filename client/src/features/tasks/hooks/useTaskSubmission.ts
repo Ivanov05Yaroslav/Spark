@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { toast } from '@/libs/configs/Toast';
 import { submissionsService } from '@/api/submissions.service';
+import { useStore } from '@/stores/useStore.ts';
 
 export interface SubmittedFile {
   id: string;
@@ -13,6 +14,7 @@ export const useTaskSubmission = (
   initialStatus: 'Assigned' | 'Turned in' | 'Graded' | 'Missing' = 'Assigned',
 ) => {
   const { taskId } = useParams<{ taskId: string }>();
+  const user = useStore((state) => state.user);
 
   const [submissionStatus, setSubmissionStatus] = useState<
     'Assigned' | 'Turned in' | 'Graded' | 'Missing'
@@ -32,7 +34,8 @@ export const useTaskSubmission = (
     if (!taskId) return;
 
     try {
-      const submission = await submissionsService.getMyTaskSubmission(taskId);
+      const userId = user?.id;
+      const submission = await submissionsService.getStudentSubmissionDetail(taskId!, userId!);
 
       if (submission) {
         setSubmissionId(submission.id);

@@ -12,7 +12,7 @@ export const useTaskSidebarData = () => {
     enabled: !!courseId,
   });
 
-  const subjectId = course?.subject?.id || course?.subjectId;
+  const subjectId = course?.subject?.id || course?.subject.id;
   const classInfo = course?.class;
 
   const { data: modules, isLoading: isModulesLoading } = useQuery({

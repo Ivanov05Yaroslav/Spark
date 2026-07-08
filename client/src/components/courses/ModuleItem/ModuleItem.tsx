@@ -1,6 +1,7 @@
 import React from 'react';
 import { MoreButton } from '@/components/ui/MoreButton/MoreButton';
 import styles from './ModuleItem.module.css';
+import { useStore } from '@/stores/useStore.ts';
 
 interface ModuleItemProps {
   icon: React.ComponentType<{ className?: string }>;

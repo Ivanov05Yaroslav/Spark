@@ -8,6 +8,7 @@ interface BannerProps {
   group: string;
   avatarUrl: string;
   onEditClick?: () => void;
+  showEditButton?: boolean;
 }
 
 export const ProfileBanner: React.FC<BannerProps> = ({ name, group, avatarUrl, onEditClick }) => {
@@ -21,7 +22,7 @@ export const ProfileBanner: React.FC<BannerProps> = ({ name, group, avatarUrl, o
         </div>
       </div>
 
-      <button type="button" className={styles.editButton} onClick={onEditClick}>
+      <button className={styles.editButton} onClick={onEditClick} aria-label="Редагувати курс">
         <EditIcon className={styles.editIcon} />
       </button>
     </div>

@@ -1,5 +1,10 @@
 import { apiClient } from './apiClient';
 import { ApiComment, CreateCommentPayload } from '@/types/comments.types.ts';
+import {
+  CommentReportsQueryParams,
+  CommentReportsResponseDto,
+  ResolveReportPayload,
+} from '@/types/administration.types.ts';
 
 export const commentsService = {
   createComment: async (payload: CreateCommentPayload): Promise<any> => {

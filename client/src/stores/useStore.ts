@@ -9,6 +9,7 @@ interface AppState {
   isTeacher: boolean;
   theme: 'light' | 'dark';
   setAuth: (user: User, accessToken: string, refreshToken: string) => void;
+  updateUser: (partialUser: Partial<User>) => void;
   logout: () => void;
   toggleTheme: () => void;
 }
@@ -34,6 +35,20 @@ export const useStore = create<AppState>((set) => ({
       refreshToken,
       isAuthenticated: true,
       isTeacher: user.roles.includes('TEACHER'),
+    });
+  },
+
+  updateUser: (partialUser) => {
+    set((state) => {
+      if (!state.user) return state;
+
+      const updatedUser = { ...state.user, ...partialUser };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+
+      return {
+        user: updatedUser,
+        isTeacher: updatedUser.roles.includes('TEACHER'),
+      };
     });
   },
 

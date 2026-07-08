@@ -18,6 +18,7 @@ interface OnlineLessonsBlockProps {
   onAdd?: (url: string) => void;
   onEditLink?: (id: string, url: string) => void;
   onDeleteLink?: (id: string) => void;
+  showMoreMenu: boolean;
 }
 
 export const OnlineLessonsBlock: React.FC<OnlineLessonsBlockProps> = ({
@@ -25,6 +26,7 @@ export const OnlineLessonsBlock: React.FC<OnlineLessonsBlockProps> = ({
   onAdd,
   onEditLink,
   onDeleteLink,
+  showMoreMenu,
 }) => {
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [linkInput, setLinkInput] = useState('');
@@ -107,7 +109,7 @@ export const OnlineLessonsBlock: React.FC<OnlineLessonsBlockProps> = ({
     <ContentCard
       title="Посилання на онлайн-уроки"
       headerRightComponent={
-        onAdd ? (
+        showMoreMenu && onAdd ? (
           <button
             className={styles.addButton}
             onClick={handleAddClick}
@@ -128,10 +130,10 @@ export const OnlineLessonsBlock: React.FC<OnlineLessonsBlockProps> = ({
               <div key={link.id} className={styles.linkItem}>
                 <InfoItem
                   icon={VideoIcon}
-                  title={link.title || dynamicTitle}
+                  title={dynamicTitle}
                   subtitle={truncatedUrl}
                   linkUrl={link.url}
-                  showMoreMenu={!!onEditLink || !!onDeleteLink}
+                  showMoreMenu={showMoreMenu}
                   onEdit={() => handleEditClick(link.id)}
                   onDelete={() => handleDeleteClick(link.id)}
                 />

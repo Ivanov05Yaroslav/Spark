@@ -90,6 +90,46 @@ export const TaskSubmissionSection: React.FC<TaskSubmissionSectionProps> = ({
   const handleUploadClick = () => setIsUploadModalOpen(true);
   const handleLinkClick = () => setIsUploadLinkModalOpen(true);
 
+  const handleAttachmentClick = async (
+    e: React.MouseEvent<HTMLAnchorElement>,
+    file: SubmittedFile,
+  ) => {
+    if (!file.url) return;
+
+    const isS3File = file.url.includes('spark-school-system-bucket.s3');
+    const isPdf = file.name.toLowerCase().endsWith('.pdf');
+
+    if (isPdf) {
+      return;
+    }
+
+    if (isS3File) {
+      e.preventDefault();
+
+      try {
+        const response = await fetch(file.url);
+        if (!response.ok) throw new Error('Network response was not ok');
+
+        const arrayBuffer = await response.arrayBuffer();
+        const safeBlob = new Blob([arrayBuffer]);
+        const blobUrl = URL.createObjectURL(safeBlob);
+
+        const downloadLink = document.createElement('a');
+        downloadLink.href = blobUrl;
+        downloadLink.download = file.name;
+        document.body.appendChild(downloadLink);
+
+        downloadLink.click();
+
+        document.body.removeChild(downloadLink);
+        URL.revokeObjectURL(blobUrl);
+      } catch (error) {
+        console.warn('Помилка при завантаженні файлу, відкриваємо у новій вкладці:', error);
+        window.open(file.url, '_blank', 'noopener,noreferrer');
+      }
+    }
+  };
+
   const canEditFiles = !isTeacher && (status === 'Assigned' || status === 'Missing');
 
   return (
@@ -99,6 +139,7 @@ export const TaskSubmissionSection: React.FC<TaskSubmissionSectionProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span className={`${styles.statusLabel} ${getStatusClass()}`}>{getStatusLabel()}</span>
           {status === 'Missing' && <GradeBadge status="late" />}
+          {status === 'Graded' && <GradeBadge status="late" grade={grade} maxGrade={maxGrade} />}
         </div>
       }
     >
@@ -112,12 +153,21 @@ export const TaskSubmissionSection: React.FC<TaskSubmissionSectionProps> = ({
         {submittedFiles.length > 0 ? (
           <div className={styles.filesGrid}>
             {submittedFiles.map((file) => (
-              <FileCard
+              <a
                 key={file.id}
-                fileName={file.name}
-                previewUrl={file.url}
-                onRemove={canEditFiles && onRemoveFile ? () => onRemoveFile(file.id) : undefined}
-              />
+                href={file.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.attachmentLink}
+                onClick={(e) => handleAttachmentClick(e, file)}
+                style={{ textDecoration: 'none', color: 'inherit' }}
+              >
+                <FileCard
+                  fileName={file.name}
+                  previewUrl={file.url}
+                  onRemove={canEditFiles && onRemoveFile ? () => onRemoveFile(file.id) : undefined}
+                />
+              </a>
             ))}
           </div>
         ) : (

@@ -4,7 +4,7 @@ import { toast } from '@/libs/configs/Toast';
 import { courseService } from '@/api/courses.service';
 import { subjectsService } from '@/api/subjects.service';
 import { testsService } from '@/api/tests.service';
-import { CourseDetailDto } from '@/types/courses.types';
+import { CourseDetailDto, CourseDetailResponseDto } from '@/types/courses.types';
 import { ModuleDto } from '@/types/modules.types';
 import { NushGradingGroupDto } from '@/types/subjects.types';
 import { UIQuestion, CreateTestPayload } from '@/types/tests.types.ts';
@@ -28,7 +28,7 @@ const createDefaultQuestion = (): UIQuestion => {
 export const useCreateTestForm = (courseId: string | undefined) => {
   const navigate = useNavigate();
 
-  const [courseInfo, setCourseInfo] = useState<CourseDetailDto | null>(null);
+  const [courseInfo, setCourseInfo] = useState<CourseDetailResponseDto | null>(null);
   const [modules, setModules] = useState<ModuleDto[]>([]);
   const [nusGroups, setNusGroups] = useState<NushGradingGroupDto[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -64,8 +64,8 @@ export const useCreateTestForm = (courseId: string | undefined) => {
         const courseModules = await courseService.getModulesByCourseId(courseId);
         setModules(courseModules || []);
 
-        if (course.subjectId) {
-          const groups = await subjectsService.getGradingGroupsBySubject(course.subjectId);
+        if (course.subject.id) {
+          const groups = await subjectsService.getGradingGroupsBySubject(course.subject.id);
           setNusGroups(groups);
         }
       } catch (error) {

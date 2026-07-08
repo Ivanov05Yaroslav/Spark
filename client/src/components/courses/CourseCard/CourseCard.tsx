@@ -1,36 +1,48 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Badge } from '../../ui/Badge/Badge.tsx';
 import { MoreButton } from '../../ui/MoreButton/MoreButton.tsx';
 import { DEFAULT_THEME_COLORS } from '@/libs/constants/courses.constants.ts';
 import styles from './CourseCard.module.css';
+import { Avatar } from '@/components/ui/Avatar/Avatar.tsx';
 
 interface CourseCardProps {
+  id: string;
   title: string;
   imageUrl?: string | null;
   year: string;
   group?: string;
-  studentsCount: number;
   teacherName: string;
   teacherAvatar?: string;
   themeColor?: string;
   onEdit?: () => void;
   onDelete?: () => void;
+  onArchive?: () => void;
+  onUnArchive?: () => void;
+  onHide?: () => void;
+  onShow?: () => void;
   showMoreButton?: boolean;
 }
 
 export const CourseCard: React.FC<CourseCardProps> = ({
+  id,
   title,
   imageUrl,
   year,
   group,
-  studentsCount,
   teacherName,
   teacherAvatar,
   themeColor = 'purple',
   onEdit,
   onDelete,
+  onArchive,
+  onUnArchive,
+  onHide,
+  onShow,
   showMoreButton = true,
 }) => {
+  const navigate = useNavigate();
+
   const initials = teacherName
     .split(' ')
     .map((n) => n[0])
@@ -48,8 +60,16 @@ export const CourseCard: React.FC<CourseCardProps> = ({
 
   const placeholderStyle = { backgroundColor: finalHexColor };
 
+  const handleCardClick = () => {
+    navigate(`/courses/${id}`);
+  };
+
   return (
-    <div className={`${styles.card} ${styles[themeColor] || ''}`}>
+    <div
+      className={`${styles.card} ${styles[themeColor] || ''}`}
+      onClick={handleCardClick}
+      style={{ cursor: 'pointer' }}
+    >
       <div className={styles.imageWrapper}>
         {imageUrl ? (
           <img
@@ -75,14 +95,25 @@ export const CourseCard: React.FC<CourseCardProps> = ({
         <div className={styles.footer}>
           <div className={styles.teacherInfo}>
             {teacherAvatar ? (
-              <img src={teacherAvatar} alt={teacherName} className={styles.avatar} />
+              <Avatar src={teacherAvatar} size={40} />
             ) : (
               <div className={styles.avatarPlaceholder}>{initials}</div>
             )}
             <span className={styles.teacherName}>{teacherName}</span>
           </div>
 
-          {showMoreButton && <MoreButton onEdit={onEdit} onDelete={onDelete} />}
+          {showMoreButton && (
+            <div onClick={(e) => e.stopPropagation()}>
+              <MoreButton
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onArchive={onArchive}
+                onUnArchive={onUnArchive}
+                onHide={onHide}
+                onShow={onShow}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

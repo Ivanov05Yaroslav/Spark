@@ -1,6 +1,6 @@
 import React from 'react';
-import { Avatar } from '@/components/ui/Avatar/Avatar'; // Перевір шлях до Avatar
-import { MoreButton } from '@/components/ui/MoreButton/MoreButton'; // Перевір шлях до MoreButton
+import { Avatar } from '@/components/ui/Avatar/Avatar';
+import { MoreButton } from '@/components/ui/MoreButton/MoreButton';
 import styles from './AnnouncementCard.module.css';
 
 interface AnnouncementCardProps {
@@ -11,8 +11,8 @@ interface AnnouncementCardProps {
   avatarUrl?: string;
   onEdit?: () => void;
   onDelete?: () => void;
-  // Додаємо onComplaint, якщо в тебе є такий функціонал для студентів
   onComplaint?: () => void;
+  showMoreMenu: boolean;
 }
 
 export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
@@ -24,8 +24,8 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
   onEdit,
   onDelete,
   onComplaint,
+  showMoreMenu,
 }) => {
-  // Генерація ініціалів, якщо немає аватарки
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -37,7 +37,6 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
 
   return (
     <div className={styles.container}>
-      {/* Шапка */}
       <div className={styles.header}>
         <div className={styles.authorSection}>
           {avatarUrl ? (
@@ -54,7 +53,7 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({
         <div className={styles.metaSection}>
           <span className={styles.time}>{time}</span>
 
-          {(onEdit || onDelete || onComplaint) && (
+          {showMoreMenu && (
             <MoreButton onEdit={onEdit} onDelete={onDelete} onComplaint={onComplaint} />
           )}
         </div>

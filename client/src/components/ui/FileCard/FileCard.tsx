@@ -29,23 +29,32 @@ export const FileCard: React.FC<FileCardProps> = ({
   }, [file]);
 
   const handleRemove = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     onRemove?.();
   };
 
   const displayPreviewUrl = localPreview || previewUrl;
 
-  const isImageUrl = (url: string) => {
-    if (url.startsWith('blob:')) return true;
+  const isImage = () => {
+    if (file) {
+      return file.type.startsWith('image/');
+    }
 
-    const cleanUrl = url.split('?')[0].toLowerCase();
+    const pathToCheck = previewUrl || fileName;
+    if (!pathToCheck) return false;
+
+    const cleanPath = pathToCheck.split('?')[0].split('#')[0].toLowerCase();
+
     return (
-      cleanUrl.endsWith('.png') ||
-      cleanUrl.endsWith('.jpg') ||
-      cleanUrl.endsWith('.jpeg') ||
-      cleanUrl.endsWith('.gif') ||
-      cleanUrl.endsWith('.webp') ||
-      cleanUrl.endsWith('.svg')
+      cleanPath.endsWith('.png') ||
+      cleanPath.endsWith('.jpg') ||
+      cleanPath.endsWith('.jpeg') ||
+      cleanPath.endsWith('.gif') ||
+      cleanPath.endsWith('.webp') ||
+      cleanPath.endsWith('.svg') ||
+      cleanPath.endsWith('.bmp') ||
+      cleanPath.endsWith('.heic')
     );
   };
 
@@ -57,7 +66,7 @@ export const FileCard: React.FC<FileCardProps> = ({
     return name;
   };
 
-  const showPreview = displayPreviewUrl && isImageUrl(displayPreviewUrl);
+  const showPreview = displayPreviewUrl && isImage();
 
   return (
     <div className={`${styles.card} ${className}`}>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ContentCard } from '@/components/ui/ContentCard/ContentCard.tsx';
 import { DatePickerField } from '@/components/ui/DatePickerField/DatePickerField.tsx';
 import { CreatableSelect } from '@/components/ui/CreatableSelect/CreatableSelect.tsx';
@@ -37,6 +37,18 @@ export const TaskSidebarSettings: React.FC<TaskSidebarSettingsProps> = ({
   options,
   isLoading,
 }) => {
+  const isNushClass = useMemo(() => {
+    if (!options.class?.label) return false;
+
+    const match = options.class.label.match(/^(\d+)/);
+    if (match) {
+      const gradeNumber = parseInt(match[1], 10);
+      return gradeNumber >= 5 && gradeNumber <= 9;
+    }
+
+    return false;
+  }, [options.class?.label]);
+
   return (
     <ContentCard className={styles.sidebarCard}>
       <SelectField
@@ -73,14 +85,16 @@ export const TaskSidebarSettings: React.FC<TaskSidebarSettingsProps> = ({
         disabled={isLoading}
       />
 
-      <SelectField
-        label="Група оцінювання НУШ"
-        options={options.gradingGroups}
-        value={formState.nusGroup}
-        onChange={formState.setNusGroup}
-        placeholder={isLoading ? 'Завантаження...' : 'Оберіть групу результатів'}
-        disabled={isLoading}
-      />
+      {isNushClass && (
+        <SelectField
+          label="Група оцінювання НУШ"
+          options={options.gradingGroups}
+          value={formState.nusGroup}
+          onChange={formState.setNusGroup}
+          placeholder={isLoading ? 'Завантаження...' : 'Оберіть групу результатів'}
+          disabled={isLoading}
+        />
+      )}
 
       <div className={styles.checkboxGroup}>
         <CustomCheckbox
