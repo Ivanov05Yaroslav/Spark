@@ -119,7 +119,7 @@ function App() {
             />
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+          <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'MODERATOR']} />}>
             <Route path="/admin" element={<AdminUserManagementPage />} />
           </Route>
         </Route>

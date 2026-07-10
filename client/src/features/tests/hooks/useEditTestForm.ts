@@ -195,7 +195,15 @@ export const useEditTestForm = (testId: string | undefined, courseId: string | u
 
   const isValid = useMemo(() => {
     if (!title?.trim()) return false;
-    if (!nusGroupId) return false;
+
+    const className = courseInfo?.class?.name || '';
+    const classNumberMatch = className.match(/\d+/);
+    const classLevel = classNumberMatch ? parseInt(classNumberMatch[0], 10) : null;
+
+    const isNushRequired = classLevel !== null && classLevel >= 1 && classLevel <= 9;
+
+    if (isNushRequired && !nusGroupId) return false;
+
     if (!deadline) return false;
     if (!attempts) return false;
 
@@ -218,7 +226,7 @@ export const useEditTestForm = (testId: string | undefined, courseId: string | u
 
       return true;
     });
-  }, [title, moduleId, nusGroupId, deadline, minutes, hours, attempts, questions]);
+  }, [title, moduleId, nusGroupId, deadline, minutes, hours, attempts, questions, courseInfo]);
 
   return {
     isLoading,

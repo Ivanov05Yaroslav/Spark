@@ -4,6 +4,7 @@
     gap: 12px;
     max-height: 480px;
     overflow-y: auto;
+    padding-right: 8px;
 }
 
 .listContainer::-webkit-scrollbar {

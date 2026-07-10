@@ -4,7 +4,7 @@ import { toast } from '@/libs/configs/Toast';
 import { courseService } from '@/api/courses.service';
 import { subjectsService } from '@/api/subjects.service';
 import { testsService } from '@/api/tests.service';
-import { CourseDetailDto, CourseDetailResponseDto } from '@/types/courses.types';
+import { CourseDetailResponseDto } from '@/types/courses.types';
 import { ModuleDto } from '@/types/modules.types';
 import { NushGradingGroupDto } from '@/types/subjects.types';
 import { UIQuestion, CreateTestPayload } from '@/types/tests.types.ts';
@@ -157,7 +157,15 @@ export const useCreateTestForm = (courseId: string | undefined) => {
 
   const isValid = useMemo(() => {
     if (!title?.trim()) return false;
-    if (!nusGroupId) return false;
+
+    const className = courseInfo?.class?.name || '';
+    const classNumberMatch = className.match(/\d+/);
+    const classLevel = classNumberMatch ? parseInt(classNumberMatch[0], 10) : null;
+
+    const isNushRequired = classLevel !== null && classLevel >= 1 && classLevel <= 9;
+
+    if (isNushRequired && !nusGroupId) return false;
+
     if (!deadline) return false;
     if (!attempts) return false;
 
@@ -181,7 +189,7 @@ export const useCreateTestForm = (courseId: string | undefined) => {
 
       return true;
     });
-  }, [title, moduleId, nusGroupId, deadline, minutes, hours, attempts, questions]);
+  }, [title, moduleId, nusGroupId, deadline, minutes, hours, attempts, questions, courseInfo]);
 
   return {
     isSubmitting,

@@ -26,14 +26,6 @@ type SidebarProps = {
   onOpenNotifications?: () => void;
 };
 
-const ROLE_TRANSLATIONS: Record<string, string> = {
-  TEACHER: 'Учитель',
-  ADMIN: 'Адміністратор',
-  PARENT: 'Батько / Мати',
-  STUDENT: 'Учень',
-  SUPER_ADMIN: 'Адміністратор платформи',
-};
-
 export const Sidebar = ({ isExpanded, setIsExpanded, onOpenNotifications }: SidebarProps) => {
   const navigate = useNavigate();
   const location = useLocation();

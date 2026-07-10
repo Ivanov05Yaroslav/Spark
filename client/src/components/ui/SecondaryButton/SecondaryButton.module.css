@@ -43,8 +43,8 @@
     color: #a0aec0;
 }
 
-.secondaryButton:disabled path{
-    stroke: #a0aec0;
+.secondaryButton svg path {
+     stroke: currentColor;
 }
 
 .iconWrapper {
