@@ -51,42 +51,6 @@ export class CreateLessonDto {
   @IsArray()
   @IsString({ each: true })
   nusGroupIds?: string[];
-
-  @ApiProperty({
-    example: ['https://youtube.com/watch?v=123'],
-    description: 'Масив посилань',
-    required: false,
-  })
-  @IsOptional()
-  @Transform(({ value }) => {
-    if (value === undefined || value === null) return undefined;
-    if (value === '' || value === '[]') return [];
-    if (
-      value === 'string' ||
-      (Array.isArray(value) && value.length === 1 && value[0] === 'string')
-    ) {
-      return [];
-    }
-    if (typeof value === 'string') {
-      return value
-        .split(',')
-        .map((item) => item.trim())
-        .filter(Boolean);
-    }
-    if (Array.isArray(value)) return value;
-    return undefined;
-  })
-  @IsArray()
-  @IsString({ each: true })
-  links?: string[];
-
-  @ApiProperty({
-    type: 'array',
-    items: { type: 'string', format: 'binary' },
-    description: 'Файли-вкладення',
-    required: false,
-  })
-  files?: any[];
 }
 
 export class UpdateLessonDto {
@@ -125,55 +89,4 @@ export class UpdateLessonDto {
   @IsArray()
   @IsString({ each: true })
   nusGroupIds?: string[];
-
-  @ApiProperty({
-    required: false,
-    description: 'Масив ID матеріалів (файлів/лінків), які треба залишити',
-  })
-  @IsOptional()
-  @Transform(({ value }) => {
-    if (!value) return [];
-    if (typeof value === 'string')
-      return value
-        .split(',')
-        .map((i) => i.trim())
-        .filter(Boolean);
-    if (Array.isArray(value)) return value;
-    return [];
-  })
-  @IsArray()
-  @IsString({ each: true })
-  retainedMaterialIds?: string[];
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @Transform(({ value }) => {
-    if (value === undefined || value === null) return undefined;
-    if (value === '' || value === '[]') return [];
-    if (
-      value === 'string' ||
-      (Array.isArray(value) && value.length === 1 && value[0] === 'string')
-    ) {
-      return [];
-    }
-    if (typeof value === 'string') {
-      return value
-        .split(',')
-        .map((item) => item.trim())
-        .filter(Boolean);
-    }
-    if (Array.isArray(value)) return value;
-    return undefined;
-  })
-  @IsArray()
-  @IsString({ each: true })
-  links?: string[];
-
-  @ApiProperty({
-    type: 'array',
-    items: { type: 'string', format: 'binary' },
-    description: 'Нові файли-вкладення',
-    required: false,
-  })
-  files?: any[];
 }

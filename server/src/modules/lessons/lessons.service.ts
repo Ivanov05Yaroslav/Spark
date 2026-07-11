@@ -52,7 +52,7 @@ export class LessonsService {
     return moduleId as string;
   }
 
-  async create(teacherId: string, dto: CreateLessonDto, files?: any[]) {
+  async create(teacherId: string, dto: CreateLessonDto) {
     const course = await this.verifyTeacherWriteAccess(dto.courseId, teacherId);
 
     if (dto.nusGroupIds && dto.nusGroupIds.length > 0) {
@@ -89,40 +89,6 @@ export class LessonsService {
       include: { nusGroups: true },
     });
 
-    if (files && files.length > 0) {
-      for (const file of files) {
-        const fileUrl = await this.awsS3Service.uploadFile(
-          file,
-          `courses/${dto.courseId}/materials`,
-        );
-        await this.prisma.material.create({
-          data: {
-            courseId: dto.courseId,
-            creatorId: teacherId,
-            courseModuleId: finalModuleId,
-            lessonId: lesson.id,
-            title: Buffer.from(file.originalname, 'latin1').toString('utf8'),
-            fileUrl: fileUrl,
-          },
-        });
-      }
-    }
-
-    if (dto.links && dto.links.length > 0) {
-      for (const link of dto.links) {
-        await this.prisma.material.create({
-          data: {
-            courseId: dto.courseId,
-            creatorId: teacherId,
-            courseModuleId: finalModuleId,
-            lessonId: lesson.id,
-            title: 'Посилання',
-            linkUrl: link,
-          },
-        });
-      }
-    }
-
     return this.findOne(teacherId, lesson.id);
   }
 
@@ -131,7 +97,6 @@ export class LessonsService {
       where: { courseId },
       include: {
         nusGroups: true,
-        materials: true,
         task: { select: { id: true, title: true, deadline: true } },
         test: { select: { id: true, title: true, deadline: true } },
       },
@@ -145,7 +110,6 @@ export class LessonsService {
       include: {
         courseModule: true,
         nusGroups: true,
-        materials: true,
         task: true,
         test: true,
       },
@@ -154,10 +118,9 @@ export class LessonsService {
     return lesson;
   }
 
-  async update(teacherId: string, lessonId: string, dto: UpdateLessonDto, files?: any[]) {
+  async update(teacherId: string, lessonId: string, dto: UpdateLessonDto) {
     const lesson = await this.prisma.lesson.findUnique({
       where: { id: lessonId },
-      include: { materials: true },
     });
     if (!lesson) throw new HttpException('Урок не знайдено', HttpStatus.NOT_FOUND);
 
@@ -176,54 +139,6 @@ export class LessonsService {
       }
     }
 
-    const retainedIds = dto.retainedMaterialIds || [];
-    const materialsToDelete = lesson.materials.filter((m) => !retainedIds.includes(m.id));
-
-    for (const material of materialsToDelete) {
-      if (material.fileUrl && material.fileUrl.includes('amazonaws.com')) {
-        try {
-          await this.awsS3Service.deleteFile(material.fileUrl);
-        } catch (e) {
-          console.error('Помилка при видаленні файлу уроку з S3', e);
-        }
-      }
-      await this.prisma.material.delete({ where: { id: material.id } });
-    }
-
-    if (files && files.length > 0) {
-      for (const file of files) {
-        const fileUrl = await this.awsS3Service.uploadFile(
-          file,
-          `courses/${lesson.courseId}/materials`,
-        );
-        await this.prisma.material.create({
-          data: {
-            courseId: lesson.courseId,
-            creatorId: teacherId,
-            courseModuleId: dto.courseModuleId || lesson.courseModuleId,
-            lessonId: lesson.id,
-            title: Buffer.from(file.originalname, 'latin1').toString('utf8'),
-            fileUrl: fileUrl,
-          },
-        });
-      }
-    }
-
-    if (dto.links && dto.links.length > 0) {
-      for (const link of dto.links) {
-        await this.prisma.material.create({
-          data: {
-            courseId: lesson.courseId,
-            creatorId: teacherId,
-            courseModuleId: dto.courseModuleId || lesson.courseModuleId,
-            lessonId: lesson.id,
-            title: 'Посилання',
-            linkUrl: link,
-          },
-        });
-      }
-    }
-
     return this.prisma.lesson.update({
       where: { id: lessonId },
       data: {
@@ -233,28 +148,18 @@ export class LessonsService {
         courseModuleId: dto.courseModuleId || undefined,
         nusGroups: dto.nusGroupIds ? { set: dto.nusGroupIds.map((id) => ({ id })) } : undefined,
       },
-      include: { nusGroups: true, materials: true, task: true, test: true },
+      include: { nusGroups: true, task: true, test: true },
     });
   }
 
   async delete(teacherId: string, lessonId: string) {
     const lesson = await this.prisma.lesson.findUnique({
       where: { id: lessonId },
-      include: { materials: true, task: true },
+      include: { task: true },
     });
     if (!lesson) throw new HttpException('Урок не знайдено', HttpStatus.NOT_FOUND);
 
     await this.verifyTeacherWriteAccess(lesson.courseId, teacherId);
-
-    for (const material of lesson.materials) {
-      if (material.fileUrl && material.fileUrl.includes('amazonaws.com')) {
-        try {
-          await this.awsS3Service.deleteFile(material.fileUrl);
-        } catch (e) {
-          console.error('Не вдалося видалити матеріал з S3 при видаленні уроку', e);
-        }
-      }
-    }
 
     if (lesson.task && lesson.task.attachments.length > 0) {
       const awsUrls = lesson.task.attachments.filter((url) => url.includes('amazonaws.com'));
@@ -268,6 +173,6 @@ export class LessonsService {
     }
 
     await this.prisma.lesson.delete({ where: { id: lessonId } });
-    return { message: "Урок та всі пов'язані з ним матеріали і таски успішно видалено" };
+    return { message: "Урок та всі пов'язані з ним таски і тести успішно видалено" };
   }
 }

@@ -319,7 +319,6 @@ model Lesson {
 
   nusGroups NusGroup[] @relation("LessonNusGroups")
 
-  materials   Material[]
   task        Task?
   test        Test?
   gradebooks  Gradebook[]
@@ -333,7 +332,6 @@ model Material {
   courseId       String
   creatorId      String
   courseModuleId String?
-  lessonId       String?
   title          String
   fileUrl        String?
   linkUrl        String?
@@ -343,7 +341,6 @@ model Material {
   course       Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
   creator      User          @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   courseModule CourseModule? @relation(fields: [courseModuleId], references: [id], onDelete: SetNull)
-  lesson       Lesson?       @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@map("materials")
 }

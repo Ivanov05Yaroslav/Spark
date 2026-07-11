@@ -98,22 +98,22 @@ export class CoursesService {
                 description: true,
                 date: true,
                 nusGroups: { select: { id: true, name: true } },
-                materials: {
-                  select: {
-                    id: true,
-                    title: true,
-                    fileUrl: true,
-                    linkUrl: true,
-                    isHidden: true,
-                    createdAt: true,
-                  },
-                },
                 task: {
                   select: { id: true, title: true, deadline: true, isHidden: true },
                 },
                 test: {
                   select: { id: true, title: true, deadline: true, isHidden: true },
                 },
+              },
+            },
+            materials: {
+              select: {
+                id: true,
+                title: true,
+                fileUrl: true,
+                linkUrl: true,
+                isHidden: true,
+                createdAt: true,
               },
             },
           },
@@ -281,20 +281,16 @@ export class CoursesService {
     const formattedModules = await Promise.all(
       course.modules.map(async (mod) => ({
         ...mod,
-        lessons: await Promise.all(
-          mod.lessons.map(async (lesson) => ({
-            ...lesson,
-            materials: await Promise.all(
-              lesson.materials.map(async (mat) => {
-                let signedFileUrl = mat.fileUrl;
-                if (signedFileUrl && signedFileUrl.includes('amazonaws.com')) {
-                  signedFileUrl = await this.awsS3Service.generatePresignedUrl(signedFileUrl);
-                }
-                return { ...mat, fileUrl: signedFileUrl };
-              }),
-            ),
-          })),
+        materials: await Promise.all(
+          mod.materials.map(async (mat) => {
+            let signedFileUrl = mat.fileUrl;
+            if (signedFileUrl && signedFileUrl.includes('amazonaws.com')) {
+              signedFileUrl = await this.awsS3Service.generatePresignedUrl(signedFileUrl);
+            }
+            return { ...mat, fileUrl: signedFileUrl };
+          }),
         ),
+        lessons: mod.lessons,
       })),
     );
 

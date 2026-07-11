@@ -60,27 +60,18 @@ export class MaterialsService {
   async createLink(teacherId: string, dto: CreateLinkDto) {
     const course = await this.verifyTeacherWriteAccess(dto.courseId, teacherId);
 
-    let finalModuleId: string;
-    if (dto.lessonId) {
-      const lesson = await this.prisma.lesson.findUnique({ where: { id: dto.lessonId } });
-      if (!lesson || lesson.courseId !== dto.courseId) {
-        throw new HttpException('Урок не знайдено', HttpStatus.BAD_REQUEST);
-      }
-      finalModuleId = lesson.courseModuleId;
-    } else {
-      finalModuleId = await this.getOrCreateModuleId(
-        dto.courseId,
-        dto.courseModuleId,
-        dto.newModuleTitle,
-      );
-    }
+    const finalModuleId = await this.getOrCreateModuleId(
+      dto.courseId,
+      dto.courseModuleId,
+      dto.newModuleTitle,
+    );
 
     const newMaterial = await this.prisma.material.create({
       data: {
         courseId: dto.courseId,
         creatorId: teacherId,
         title: dto.title,
-        lessonId: dto.lessonId || null,
+        lessonId: null,
         courseModuleId: finalModuleId,
         linkUrl: dto.linkUrl,
         isHidden: dto.isHidden || false,
@@ -111,20 +102,11 @@ export class MaterialsService {
     if (!file) throw new HttpException("Файл обов'язковий", HttpStatus.BAD_REQUEST);
     const course = await this.verifyTeacherWriteAccess(dto.courseId, teacherId);
 
-    let finalModuleId: string;
-    if (dto.lessonId) {
-      const lesson = await this.prisma.lesson.findUnique({ where: { id: dto.lessonId } });
-      if (!lesson || lesson.courseId !== dto.courseId) {
-        throw new HttpException('Урок не знайдено', HttpStatus.BAD_REQUEST);
-      }
-      finalModuleId = lesson.courseModuleId;
-    } else {
-      finalModuleId = await this.getOrCreateModuleId(
-        dto.courseId,
-        dto.courseModuleId,
-        dto.newModuleTitle,
-      );
-    }
+    const finalModuleId = await this.getOrCreateModuleId(
+      dto.courseId,
+      dto.courseModuleId,
+      dto.newModuleTitle,
+    );
 
     const fileUrl = await this.awsS3Service.uploadFile(file, `courses/${dto.courseId}/materials`);
 
@@ -133,7 +115,7 @@ export class MaterialsService {
         courseId: dto.courseId,
         creatorId: teacherId,
         title: dto.title,
-        lessonId: dto.lessonId || null,
+        lessonId: null,
         courseModuleId: finalModuleId,
         fileUrl: fileUrl,
         isHidden: dto.isHidden || false,
@@ -276,34 +258,13 @@ export class MaterialsService {
       );
     }
 
-    let finalLessonId = material.lessonId;
     let finalModuleId = material.courseModuleId;
-
-    if (dto.lessonId !== undefined) {
-      if (dto.lessonId === null || dto.lessonId === 'null') {
-        finalLessonId = null;
-        if (dto.courseModuleId || dto.newModuleTitle) {
-          finalModuleId = await this.getOrCreateModuleId(
-            material.courseId,
-            dto.courseModuleId,
-            dto.newModuleTitle,
-          );
-        }
-      } else {
-        const lesson = await this.prisma.lesson.findUnique({ where: { id: dto.lessonId } });
-        if (!lesson || lesson.courseId !== material.courseId)
-          throw new HttpException('Урок не знайдено', HttpStatus.BAD_REQUEST);
-        finalLessonId = lesson.id;
-        finalModuleId = lesson.courseModuleId;
-      }
-    } else {
-      if (dto.courseModuleId || dto.newModuleTitle) {
-        finalModuleId = await this.getOrCreateModuleId(
-          material.courseId,
-          dto.courseModuleId,
-          dto.newModuleTitle,
-        );
-      }
+    if (dto.courseModuleId || dto.newModuleTitle) {
+      finalModuleId = await this.getOrCreateModuleId(
+        material.courseId,
+        dto.courseModuleId,
+        dto.newModuleTitle,
+      );
     }
 
     let finalFileUrl = material.fileUrl;
@@ -332,7 +293,7 @@ export class MaterialsService {
         title: dto.title && dto.title !== 'null' ? dto.title : material.title,
         linkUrl: isTryingToAddLink ? safeLinkUrl : material.linkUrl,
         fileUrl: finalFileUrl,
-        lessonId: finalLessonId,
+        lessonId: null,
         courseModuleId: finalModuleId,
         isHidden: safeIsHidden,
       },
