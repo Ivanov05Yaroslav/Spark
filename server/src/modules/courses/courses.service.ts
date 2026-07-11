@@ -317,8 +317,8 @@ export class CoursesService {
       },
       modules: formattedModules,
       upcomingDeadlines,
-      announcements: [],
-      unreadAnnouncementsCount: 0,
+      announcements,
+      unreadAnnouncementsCount,
       unsubmittedWorksCount,
     };
   }
