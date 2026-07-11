@@ -180,10 +180,12 @@ model NusGroup {
   subjectId String
   name      String
 
-  subject Subject     @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  tasks   Task[]
-  tests   Test[]
-  grades  Gradebook[]
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  lessons   Lesson[]    @relation("LessonNusGroups")
+  tasks     Task[]      @relation("TaskNusGroups")
+  questions Question[]  @relation("QuestionNusGroup")
+  grades    Gradebook[]
 
   @@map("nus_groups")
 }
@@ -216,6 +218,7 @@ model Course {
   students   CourseStudent[]
 
   modules       CourseModule[]
+  lessons       Lesson[]
   announcements Announcement[]
   materials     Material[]
   tasks         Task[]
@@ -232,7 +235,9 @@ model CourseModule {
   title     String
   createdAt DateTime @default(now())
 
-  course    Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  lessons   Lesson[]
   materials Material[]
   tasks     Task[]
   tests     Test[]
@@ -293,11 +298,34 @@ model AnnouncementRead {
   @@map("announcement_reads")
 }
 
+model Lesson {
+  id             String   @id @default(uuid())
+  courseId       String
+  courseModuleId String
+  title          String
+  description    String?
+  date           DateTime
+  createdAt      DateTime @default(now())
+
+  course       Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseModule CourseModule @relation(fields: [courseModuleId], references: [id], onDelete: Cascade)
+
+  nusGroups NusGroup[] @relation("LessonNusGroups")
+
+  materials  Material[]
+  task       Task?
+  test       Test?
+  gradebooks Gradebook[]
+
+  @@map("lessons")
+}
+
 model Material {
   id             String   @id @default(uuid())
   courseId       String
   creatorId      String
   courseModuleId String?
+  lessonId       String?
   title          String
   fileUrl        String?
   linkUrl        String?
@@ -307,40 +335,46 @@ model Material {
   course       Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
   creator      User          @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   courseModule CourseModule? @relation(fields: [courseModuleId], references: [id], onDelete: SetNull)
+  lesson       Lesson?       @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@map("materials")
 }
 
 model Task {
-  id             String    @id @default(uuid())
+  id             String  @id @default(uuid())
   courseId       String
   creatorId      String
-  nusGroupId     String?
   courseModuleId String?
-  title          String
-  description    String?
-  deadline       DateTime?
-  createdAt      DateTime  @default(now())
-  isHidden       Boolean   @default(false)
-  attachments    String[]
+  lessonId       String  @unique
+
+  title       String
+  description String?
+  deadline    DateTime?
+  createdAt   DateTime  @default(now())
+  isHidden    Boolean   @default(false)
+  attachments String[]
 
   course       Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
   creator      User          @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  nusGroup     NusGroup?     @relation(fields: [nusGroupId], references: [id], onDelete: SetNull)
   courseModule CourseModule? @relation(fields: [courseModuleId], references: [id], onDelete: SetNull)
-  submissions  Submission[]
-  gradebooks   Gradebook[]
-  comments     Comment[]
+  lesson       Lesson        @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  nusGroups NusGroup[] @relation("TaskNusGroups")
+
+  submissions Submission[]
+  gradebooks  Gradebook[]
+  comments    Comment[]
 
   @@map("tasks")
 }
 
 model Test {
-  id                   String    @id @default(uuid())
-  courseId             String
-  creatorId            String
-  nusGroupId           String?
-  courseModuleId       String?
+  id             String  @id @default(uuid())
+  courseId       String
+  creatorId      String
+  courseModuleId String?
+  lessonId       String  @unique
+
   title                String
   timeLimitMinutes     Int?
   deadline             DateTime?
@@ -355,24 +389,28 @@ model Test {
 
   course       Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
   creator      User          @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  nusGroup     NusGroup?     @relation(fields: [nusGroupId], references: [id], onDelete: SetNull)
   courseModule CourseModule? @relation(fields: [courseModuleId], references: [id], onDelete: SetNull)
-  questions    Question[]
-  submissions  Submission[]
-  gradebooks   Gradebook[]
-  comments     Comment[]
+  lesson       Lesson        @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  questions   Question[]
+  submissions Submission[]
+  gradebooks  Gradebook[]
+  comments    Comment[]
 
   @@map("tests")
 }
 
 model Question {
-  id      String @id @default(uuid())
-  testId  String
-  type    String
-  content String
-  points  Float
+  id         String  @id @default(uuid())
+  testId     String
+  nusGroupId String?
+  type       String
+  content    String
+  points     Float
 
-  test             Test               @relation(fields: [testId], references: [id], onDelete: Cascade)
+  test     Test      @relation(fields: [testId], references: [id], onDelete: Cascade)
+  nusGroup NusGroup? @relation("QuestionNusGroup", fields: [nusGroupId], references: [id], onDelete: SetNull)
+
   answers          Answer[]
   SubmissionAnswer SubmissionAnswer[]
 
@@ -450,6 +488,7 @@ model Gradebook {
   studentId  String
   teacherId  String
   courseId   String
+  lessonId   String?
   taskId     String?
   testId     String?
   nusGroupId String?
@@ -460,6 +499,7 @@ model Gradebook {
   student  User      @relation("StudentGrades", fields: [studentId], references: [id], onDelete: Cascade)
   teacher  User      @relation("TeacherGrades", fields: [teacherId], references: [id], onDelete: Cascade)
   course   Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lesson   Lesson?   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   task     Task?     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   test     Test?     @relation(fields: [testId], references: [id], onDelete: Cascade)
   nusGroup NusGroup? @relation(fields: [nusGroupId], references: [id], onDelete: SetNull)

@@ -2,12 +2,8 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { AwsS3Service } from '../../core/integrations/aws/aws-s3.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { CreateTaskSubmissionDto, GradeSubmissionDto, UpdateTaskSubmissionDto } from './dto/submission.dto';
 import { GetSubmissionsQueryDto } from './dto/submission-query.dto';
-import {
-  CreateTaskSubmissionDto,
-  GradeSubmissionDto,
-  UpdateTaskSubmissionDto,
-} from './dto/submission.dto';
 
 @Injectable()
 export class SubmissionsService {
@@ -426,11 +422,59 @@ export class SubmissionsService {
       data: { score: dto.score, checkedAt: new Date() },
     });
     
-
     if (submission.task) {
+      await this.prisma.gradebook.deleteMany({
+        where: { taskId: submission.task.id, studentId: submission.studentId }
+      });
+
+      const gradebookData: {
+        studentId: string;
+        teacherId: string;
+        courseId: string;
+        lessonId: string;
+        taskId: string;
+        nusGroupId: string | null;
+        gradeType: string;
+        score: number;
+        date: Date;
+      }[] = [];
+
+      if (dto.nusGrades && dto.nusGrades.length > 0) {
+        for (const ng of dto.nusGrades) {
+          gradebookData.push({
+            studentId: submission.studentId,
+            teacherId: teacherId,
+            courseId: submission.task.courseId,
+            lessonId: submission.task.lessonId,
+            taskId: submission.task.id,
+            nusGroupId: ng.nusGroupId || null,
+            gradeType: ng.nusGroupId ? 'NUS' : 'TRADITIONAL',
+            score: ng.score,
+            date: new Date(),
+          });
+        }
+      } else if (dto.score) {
+        const parsedScore = parseFloat(dto.score);
+        if (!isNaN(parsedScore)) {
+          gradebookData.push({
+            studentId: submission.studentId,
+            teacherId: teacherId,
+            courseId: submission.task.courseId,
+            lessonId: submission.task.lessonId, 
+            taskId: submission.task.id,
+            nusGroupId: null,
+            gradeType: 'TRADITIONAL',
+            score: parsedScore,
+            date: new Date(),
+          });
+        }
+      }
+
+      if (gradebookData.length > 0) {
+        await this.prisma.gradebook.createMany({ data: gradebookData });
+      }
 
       const courseName = `${submission.task.course.subject.name} ${submission.task.course.class.name}`;
-
       await this.notificationsService.create({
         senderId: teacherId,
         receiverId: submission.studentId,

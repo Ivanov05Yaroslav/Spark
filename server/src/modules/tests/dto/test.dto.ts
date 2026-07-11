@@ -4,7 +4,6 @@ import {
   IsArray,
   IsBoolean,
   IsEnum,
-  IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -44,7 +43,15 @@ export class CreateQuestionDto {
   @Min(0.1)
   points!: number;
 
-  @ApiProperty({ type: [AnswerDto], description: 'Варіанти відповідей' })
+  @ApiProperty({
+    required: false,
+    description: 'Група НУШ для оцінювання цього конкретного питання',
+  })
+  @IsOptional()
+  @IsString()
+  nusGroupId?: string;
+
+  @ApiProperty({ type: [AnswerDto], description: 'Масив відповідей до питання' })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => AnswerDto)
@@ -57,34 +64,19 @@ export class CreateTestDto {
   @IsNotEmpty()
   courseId!: string;
 
-  @ApiProperty({ example: 'uuid-nus-group', description: 'Група результатів НУШ', required: false })
-  @IsOptional()
+  @ApiProperty({ example: 'uuid-lesson', description: "ID уроку, до якого прив'язано тест" })
   @IsString()
-  nusGroupId?: string;
+  @IsNotEmpty()
+  lessonId!: string;
 
-  @ApiProperty({ example: 'uuid-модуля', required: false, description: 'ID теми/модуля курсу' })
-  @IsOptional()
-  @IsString()
-  courseModuleId?: string;
-
-  @ApiProperty({
-    example: 'Вступ до геометрії',
-    required: false,
-    description: 'Назва нового модуля, якщо його потрібно створити разом із тестом',
-  })
-  @IsOptional()
-  @IsString()
-  newModuleTitle?: string;
-
-  @ApiProperty({ example: 'Тест 1: Вступ до історії' })
+  @ApiProperty({ example: 'Підсумковий тест з геометрії' })
   @IsString()
   @IsNotEmpty()
   title!: string;
 
-  @ApiProperty({ example: 45, description: 'Ліміт часу в хвилинах', required: false })
+  @ApiProperty({ example: 45, required: false, description: 'Час на виконання у хвилинах' })
   @IsOptional()
-  @IsInt()
-  @Min(1)
+  @IsNumber()
   timeLimitMinutes?: number;
 
   @ApiProperty({ example: '2026-05-20T23:59:59.000Z', required: false })
@@ -92,26 +84,23 @@ export class CreateTestDto {
   @IsString()
   deadline?: string;
 
-  @ApiProperty({ example: 1, description: 'Кількість спроб', default: 1 })
+  @ApiProperty({ example: 1, required: false, description: 'Кількість спроб (за замовчуванням 1)' })
   @IsOptional()
-  @IsInt()
+  @IsNumber()
   @Min(1)
   maxAttempts?: number;
 
-  @ApiProperty({ example: false, description: 'Чи прихований загальний бал' })
+  @ApiProperty({ example: false, description: 'Приховати результати після завершення' })
   @IsOptional()
   @IsBoolean()
   isResultHidden?: boolean;
 
-  @ApiProperty({ example: false, description: 'Чи заборонено учню переглядати свою спробу' })
+  @ApiProperty({ example: false, description: 'Приховати використання спроби' })
   @IsOptional()
   @IsBoolean()
   isAttemptHidden?: boolean;
 
-  @ApiProperty({
-    example: true,
-    description: 'Чи показувати учню, де він помилився під час перегляду',
-  })
+  @ApiProperty({ example: true, description: 'Показувати правильні відповіді після тесту' })
   @IsOptional()
   @IsBoolean()
   isShowCorrectAnswers?: boolean;
@@ -126,16 +115,12 @@ export class CreateTestDto {
   @IsBoolean()
   isShuffleAnswers?: boolean;
 
-  @ApiProperty({ example: false, description: 'Приховати сам тест' })
+  @ApiProperty({ example: false, required: false, description: 'Чи прихований тест' })
   @IsOptional()
   @IsBoolean()
   isHidden?: boolean;
 
-  @ApiProperty({
-    type: [CreateQuestionDto],
-    description: 'Масив питань, які будуть створені одразу з тестом',
-    required: false,
-  })
+  @ApiProperty({ type: [CreateQuestionDto], required: false })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
@@ -143,32 +128,15 @@ export class CreateTestDto {
   questions?: CreateQuestionDto[];
 }
 
-export class UpdateAnswerDto {
-  @ApiProperty({
-    example: 'uuid-відповіді',
-    required: false,
-    description: 'Якщо немає - буде створено нову',
-  })
+export class UpsertAnswerDto extends AnswerDto {
+  @ApiProperty({ required: false, description: 'ID існуючої відповіді (для оновлення)' })
   @IsOptional()
   @IsString()
   id?: string;
-
-  @ApiProperty({ example: 'Київ' })
-  @IsString()
-  @IsNotEmpty()
-  content!: string;
-
-  @ApiProperty({ example: true })
-  @IsBoolean()
-  isCorrect!: boolean;
 }
 
 export class UpsertQuestionDto {
-  @ApiProperty({
-    example: 'uuid-питання',
-    required: false,
-    description: 'Якщо немає - буде створено нове',
-  })
+  @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
   id?: string;
@@ -177,91 +145,61 @@ export class UpsertQuestionDto {
   @IsEnum(QuestionType)
   type!: QuestionType;
 
-  @ApiProperty({ example: 'Яке місто є столицею України?' })
+  @ApiProperty()
   @IsString()
   @IsNotEmpty()
   content!: string;
 
-  @ApiProperty({ example: 2.5 })
+  @ApiProperty()
   @IsNumber()
   @Min(0.1)
   points!: number;
 
-  @ApiProperty({ type: [UpdateAnswerDto] })
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => UpdateAnswerDto)
-  answers!: UpdateAnswerDto[];
-}
-
-export class UpdateTestDto {
-  @ApiProperty({ example: 'uuid-nus-group', description: 'Група результатів НУШ', required: false })
+  @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
   nusGroupId?: string;
 
-  @ApiProperty({ example: 'uuid-модуля', required: false, description: 'ID теми/модуля курсу' })
-  @IsOptional()
-  @IsString()
-  courseModuleId?: string;
+  @ApiProperty({ type: [UpsertAnswerDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UpsertAnswerDto)
+  answers!: UpsertAnswerDto[];
+}
 
-  @ApiProperty({
-    example: 'Нова назва модуля',
-    required: false,
-    description: 'Нова назва модуля курсу',
-  })
-  @IsOptional()
-  @IsString()
-  newModuleTitle?: string;
-
-  @ApiProperty({ example: 'Назва тесту', required: false, description: 'Назва тесту' })
+export class UpdateTestDto {
+  @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
   title?: string;
 
-  @ApiProperty({
-    example: 60,
-    required: false,
-    description: 'Ліміт часу на проходження тесту (у хвилинах)',
-  })
+  @ApiProperty({ required: false })
   @IsOptional()
-  @IsInt()
-  @Min(1)
+  @IsNumber()
   timeLimitMinutes?: number;
 
-  @ApiProperty({
-    example: '2026-12-31T23:59:59Z',
-    required: false,
-    description: 'Дата завершення тесту',
-  })
+  @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
   deadline?: string;
 
-  @ApiProperty({
-    example: 3,
-    required: false,
-    description: 'Максимальна кількість спроб проходження тесту',
-  })
+  @ApiProperty({ required: false })
   @IsOptional()
-  @IsInt()
+  @IsNumber()
   @Min(1)
   maxAttempts?: number;
 
-  @ApiProperty({ example: false, description: 'Чи прихований загальний бал' })
+  @ApiProperty({ required: false })
   @IsOptional()
   @IsBoolean()
   isResultHidden?: boolean;
 
-  @ApiProperty({ example: false, description: 'Чи заборонено учню переглядати свою спробу' })
+  @ApiProperty({ required: false })
   @IsOptional()
   @IsBoolean()
   isAttemptHidden?: boolean;
 
-  @ApiProperty({
-    example: true,
-    description: 'Чи показувати учню, де він помилився під час перегляду',
-  })
+  @ApiProperty({ required: false })
   @IsOptional()
   @IsBoolean()
   isShowCorrectAnswers?: boolean;
@@ -284,7 +222,7 @@ export class UpdateTestDto {
   @ApiProperty({
     type: [UpsertQuestionDto],
     description:
-      'Масив поточних питань. Питання/відповіді з id будуть оновлені, без id - створені. Ті, що відсутні в масиві, будуть видалені з бази.',
+      'Масив поточних питань. Питання/відповіді з id будуть оновлені, без id - створені. Ті, що відсутні в масиві, будуть видалені.',
     required: false,
   })
   @IsOptional()
@@ -307,18 +245,15 @@ export class AnswerSelectionDto {
 }
 
 export class SubmitTestDto {
-  @ApiProperty({ type: [AnswerSelectionDto] })
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => AnswerSelectionDto)
-  answers!: AnswerSelectionDto[];
-
   @ApiProperty({
-    example: 120,
-    description: 'Час, витрачений на проходження тесту (у секундах)',
-    required: false,
+    description: 'Об`єкт, де ключ - id питання, значення - масив id обраних відповідей',
+    example: { 'question-id-1': ['answer-id-1'], 'question-id-2': ['answer-id-3', 'answer-id-4'] },
   })
+  @IsNotEmpty()
+  answers!: Record<string, string[]>;
+
+  @ApiProperty({ required: false, description: 'Час виконання тесту в секундах' })
   @IsOptional()
-  @IsInt()
+  @IsNumber()
   duration?: number;
 }
