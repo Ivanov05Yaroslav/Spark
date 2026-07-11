@@ -75,6 +75,7 @@ export class MaterialsService {
         linkUrl: dto.linkUrl,
         isHidden: dto.isHidden || false,
       },
+      include: { creator: true },
     });
 
     if (!newMaterial.isHidden) {
@@ -94,7 +95,15 @@ export class MaterialsService {
       await this.notificationsService.createMany(notifications);
     }
 
-    return newMaterial;
+    return {
+      ...newMaterial,
+      creator: {
+        ...newMaterial.creator,
+        avatarUrl: newMaterial.creator.avatarUrl
+          ? await this.awsS3Service.generatePresignedUrl(newMaterial.creator.avatarUrl)
+          : null,
+      },
+    };
   }
 
   async createFileMaterial(teacherId: string, dto: CreateFileMaterialDto, file: any) {
@@ -118,6 +127,7 @@ export class MaterialsService {
         fileUrl: fileUrl,
         isHidden: dto.isHidden || false,
       },
+      include: { creator: true },
     });
 
     if (!newMaterial.isHidden) {
@@ -137,7 +147,18 @@ export class MaterialsService {
       await this.notificationsService.createMany(notifications);
     }
 
-    return newMaterial;
+    return {
+      ...newMaterial,
+      fileUrl: newMaterial.fileUrl
+        ? await this.awsS3Service.generatePresignedUrl(newMaterial.fileUrl)
+        : null,
+      creator: {
+        ...newMaterial.creator,
+        avatarUrl: newMaterial.creator.avatarUrl
+          ? await this.awsS3Service.generatePresignedUrl(newMaterial.creator.avatarUrl)
+          : null,
+      },
+    };
   }
 
   async findOne(userId: string, materialId: string) {
@@ -209,14 +230,27 @@ export class MaterialsService {
       whereClause.isHidden = false;
     }
 
-    return this.prisma.material.findMany({
+    const materials = await this.prisma.material.findMany({
       where: whereClause,
       orderBy: { createdAt: 'desc' },
       include: {
-        creator: { select: { id: true, firstName: true, lastName: true } },
+        creator: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
         courseModule: { select: { id: true, title: true } },
       },
     });
+
+    return Promise.all(
+      materials.map(async (m) => ({
+        ...m,
+        fileUrl: m.fileUrl ? await this.awsS3Service.generatePresignedUrl(m.fileUrl) : null,
+        creator: {
+          ...m.creator,
+          avatarUrl: m.creator.avatarUrl
+            ? await this.awsS3Service.generatePresignedUrl(m.creator.avatarUrl)
+            : null,
+        },
+      })),
+    );
   }
 
   async update(userId: string, materialId: string, dto: UpdateMaterialDto, file?: any) {
@@ -285,7 +319,7 @@ export class MaterialsService {
         ? material.isHidden
         : String(dto.isHidden) === 'true';
 
-    return this.prisma.material.update({
+    const updatedMaterial = await this.prisma.material.update({
       where: { id: materialId },
       data: {
         title: dto.title && dto.title !== 'null' ? dto.title : material.title,
@@ -294,7 +328,21 @@ export class MaterialsService {
         courseModuleId: finalModuleId,
         isHidden: safeIsHidden,
       },
+      include: { creator: true },
     });
+
+    return {
+      ...updatedMaterial,
+      fileUrl: updatedMaterial.fileUrl
+        ? await this.awsS3Service.generatePresignedUrl(updatedMaterial.fileUrl)
+        : null,
+      creator: {
+        ...updatedMaterial.creator,
+        avatarUrl: updatedMaterial.creator.avatarUrl
+          ? await this.awsS3Service.generatePresignedUrl(updatedMaterial.creator.avatarUrl)
+          : null,
+      },
+    };
   }
 
   async delete(userId: string, materialId: string) {

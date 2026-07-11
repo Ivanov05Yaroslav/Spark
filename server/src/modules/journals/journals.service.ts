@@ -1,4 +1,5 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { AwsS3Service } from '../../core/integrations/aws/aws-s3.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { AttendanceMarkDto, SaveLessonJournalDto } from './dto/journal.dto';
 
@@ -18,7 +19,10 @@ type AverageCell = {
 
 @Injectable()
 export class JournalService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly awsS3Service: AwsS3Service,
+  ) {}
 
   private async getTeacherCourse(courseId: string, teacherId: string) {
     const course = await this.prisma.course.findUnique({
@@ -100,7 +104,6 @@ export class JournalService {
   async getLessonJournal(teacherId: string, courseId: string, lessonId: string) {
     const course = await this.getTeacherCourse(courseId, teacherId);
 
-    // ЗМІНЕНО: Отримуємо урок з його модулем, НУШ групами та вкладеними тасками і тестами
     const lesson = await this.prisma.lesson.findFirst({
       where: { id: lessonId, courseId },
       include: {
@@ -124,7 +127,7 @@ export class JournalService {
 
     const [attendanceRows, gradeRows, lessonNavigation] = await Promise.all([
       this.prisma.attendance.findMany({ where: { courseId, lessonId } }),
-      // Витягуємо всі оцінки, які прив'язані до цього Уроку
+
       this.prisma.gradebook.findMany({
         where: { courseId, lessonId },
         orderBy: [{ date: 'asc' }, { id: 'asc' }],
@@ -136,15 +139,12 @@ export class JournalService {
       }),
     ]);
 
-    // Колонки для виставлення оцінок за сам УРОК (ручне оцінювання вчителем на уроці)
     const lessonColumns = this.uniqueColumns(lesson.nusGroups, lesson.nusGroups.length === 0);
 
-    // Колонки для ТАСКИ
     const taskColumns = lesson.task
       ? this.uniqueColumns(lesson.task.nusGroups, lesson.task.nusGroups.length === 0)
       : [];
 
-    // Колонки для ТЕСТУ
     const testGroups =
       lesson.test?.questions
         .map((question) => question.nusGroup)
@@ -164,7 +164,7 @@ export class JournalService {
 
     for (const grade of gradeRows) {
       if (grade.score === null) continue;
-      // Розподіляємо оцінки по відповідних мапах (Урок, Таска, Тест)
+
       const target = grade.taskId ? taskGrades : grade.testId ? testGrades : lessonGrades;
       const studentMap = target.get(grade.studentId) ?? new Map<string, number>();
       studentMap.set(this.gradeKey(grade.nusGroupId), grade.score);
@@ -177,6 +177,22 @@ export class JournalService {
       navigationIndex >= 0 && navigationIndex < lessonNavigation.length - 1
         ? lessonNavigation[navigationIndex + 1]
         : null;
+
+    const formattedStudents = await Promise.all(
+      course.students.map(async ({ student }) => ({
+        id: student.id,
+        firstName: student.firstName,
+        middleName: student.middleName,
+        lastName: student.lastName,
+        avatarUrl: student.avatarUrl
+          ? await this.awsS3Service.generatePresignedUrl(student.avatarUrl)
+          : null,
+        attendance: attendanceByStudent.get(student.id) ?? null,
+        lessonGrades: Object.fromEntries(lessonGrades.get(student.id) ?? []),
+        taskGrades: Object.fromEntries(taskGrades.get(student.id) ?? []),
+        testGrades: Object.fromEntries(testGrades.get(student.id) ?? []),
+      })),
+    );
 
     return {
       lesson: {
@@ -210,21 +226,10 @@ export class JournalService {
           ? { id: lesson.test.id, title: lesson.test.title, editable: false, groups: testColumns }
           : null,
       },
-      students: course.students.map(({ student }) => ({
-        id: student.id,
-        firstName: student.firstName,
-        middleName: student.middleName,
-        lastName: student.lastName,
-        avatarUrl: student.avatarUrl,
-        attendance: attendanceByStudent.get(student.id) ?? null,
-        lessonGrades: Object.fromEntries(lessonGrades.get(student.id) ?? []),
-        taskGrades: Object.fromEntries(taskGrades.get(student.id) ?? []),
-        testGrades: Object.fromEntries(testGrades.get(student.id) ?? []),
-      })),
+      students: formattedStudents,
     };
   }
 
-  // Збереження оцінок виставлених вчителем вручну (за сам урок)
   async saveLessonJournal(
     teacherId: string,
     courseId: string,
@@ -244,9 +249,8 @@ export class JournalService {
 
     await this.prisma.$transaction(async (tx) => {
       for (const change of dto.changes) {
-        if (!enrolledStudentIds.has(change.studentId)) continue; // Ігноруємо невалідних студентів
+        if (!enrolledStudentIds.has(change.studentId)) continue;
 
-        // 1. Відвідуваність
         if (change.attendance !== undefined) {
           await tx.attendance.deleteMany({
             where: { lessonId, studentId: change.studentId },
@@ -264,11 +268,8 @@ export class JournalService {
           }
         }
 
-        // 2. Оцінки за УРОК (без taskId та testId)
         for (const grade of change.lessonGrades ?? []) {
           const nusGroupId = grade.nusGroupId ?? null;
-
-          // Видаляємо стару оцінку саме за урок (taskId: null, testId: null)
           await tx.gradebook.deleteMany({
             where: {
               studentId: change.studentId,
@@ -302,7 +303,6 @@ export class JournalService {
     return this.getLessonJournal(teacherId, courseId, lessonId);
   }
 
-  // Зведення за модулями (Аналітика НУШ)
   async getSummary(teacherId: string, courseId: string, semester = 1) {
     const course = await this.getTeacherCourse(courseId, teacherId);
 
@@ -389,18 +389,8 @@ export class JournalService {
       for (const lesson of module.lessons) moduleByLessonId.set(lesson.id, module.id);
     }
 
-    return {
-      semester,
-      groups,
-      modules: modules.map((module, index) => ({
-        id: module.id,
-        title: module.title,
-        number: index + 1,
-        currentLabel: `ПО Т${index + 1}`,
-        thematicLabel: `ТО Т${index + 1}`,
-        overallLabel: `ТО Т${index + 1} заг.`,
-      })),
-      students: course.students.map(({ student }) => {
+    const formattedStudents = await Promise.all(
+      course.students.map(async ({ student }) => {
         const studentGrades = effectiveGrades.filter(
           (grade) => grade.studentId === student.id && grade.score !== null,
         );
@@ -454,7 +444,9 @@ export class JournalService {
           firstName: student.firstName,
           middleName: student.middleName,
           lastName: student.lastName,
-          avatarUrl: student.avatarUrl,
+          avatarUrl: student.avatarUrl
+            ? await this.awsS3Service.generatePresignedUrl(student.avatarUrl)
+            : null,
           modules: moduleResults,
           overallGroups,
           semesterGrade:
@@ -462,6 +454,20 @@ export class JournalService {
             this.average(moduleResults.map((moduleResult) => moduleResult.overall?.average)),
         };
       }),
+    );
+
+    return {
+      semester,
+      groups,
+      modules: modules.map((module, index) => ({
+        id: module.id,
+        title: module.title,
+        number: index + 1,
+        currentLabel: `ПО Т${index + 1}`,
+        thematicLabel: `ТО Т${index + 1}`,
+        overallLabel: `ТО Т${index + 1} заг.`,
+      })),
+      students: formattedStudents,
     };
   }
 }

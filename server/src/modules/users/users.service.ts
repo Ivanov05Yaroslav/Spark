@@ -48,9 +48,22 @@ export class UsersService {
   }
 
   async getAllUsers() {
-    return this.prisma.user.findMany({
+    const users = await this.prisma.user.findMany({
       include: { userRoles: { include: { role: true } } },
     });
+
+    return Promise.all(
+      users.map(async (user) => {
+        const { password, userRoles, ...rest } = user as any;
+        return {
+          ...rest,
+          avatarUrl: user.avatarUrl
+            ? await this.awsS3Service.generatePresignedUrl(user.avatarUrl)
+            : null,
+          roles: userRoles.map((ur: any) => ur.role.name),
+        };
+      }),
+    );
   }
 
   private calculateSemesterStats(grades: any[], modules: any[], nusGroups: any[]) {
@@ -496,7 +509,7 @@ export class UsersService {
   }
 
   async getSchoolTeachers(schoolId: string) {
-    return this.prisma.user.findMany({
+    const teachers = await this.prisma.user.findMany({
       where: {
         schoolId,
         userRoles: { some: { role: { name: 'TEACHER' } } },
@@ -512,10 +525,19 @@ export class UsersService {
       },
       orderBy: { lastName: 'asc' },
     });
+
+    return Promise.all(
+      teachers.map(async (teacher) => ({
+        ...teacher,
+        avatarUrl: teacher.avatarUrl
+          ? await this.awsS3Service.generatePresignedUrl(teacher.avatarUrl)
+          : null,
+      })),
+    );
   }
 
   async getTeachersBySubject(schoolId: string, subjectId: string, currentTeacherId: string) {
-    return this.prisma.user.findMany({
+    const teachers = await this.prisma.user.findMany({
       where: {
         schoolId,
         id: { not: currentTeacherId },
@@ -532,6 +554,15 @@ export class UsersService {
       },
       orderBy: { lastName: 'asc' },
     });
+
+    return Promise.all(
+      teachers.map(async (teacher) => ({
+        ...teacher,
+        avatarUrl: teacher.avatarUrl
+          ? await this.awsS3Service.generatePresignedUrl(teacher.avatarUrl)
+          : null,
+      })),
+    );
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto, file?: any) {
@@ -593,7 +624,11 @@ export class UsersService {
     });
 
     const { password, userRoles: ur, ...result } = updatedUser as any;
-    return result;
+
+    return {
+      ...result,
+      avatarUrl: await this.awsS3Service.generatePresignedUrl(result.avatarUrl),
+    };
   }
 
   async addRole(userId: string, roleName: string) {

@@ -71,11 +71,25 @@ export class CoursesService {
     };
   }
 
-  private formatCourseList(courses: any[]) {
-    return courses.map((course) => ({
-      ...course,
-      coTeachers: course.coTeachers.map((ct: any) => ct.teacher),
-    }));
+  private async formatCourseList(courses: any[]) {
+    return Promise.all(
+      courses.map(async (course) => {
+        return {
+          ...course,
+          backgroundUrl: await this.awsS3Service.generatePresignedUrl(course.backgroundUrl),
+          creator: {
+            ...course.creator,
+            avatarUrl: await this.awsS3Service.generatePresignedUrl(course.creator.avatarUrl),
+          },
+          coTeachers: await Promise.all(
+            course.coTeachers.map(async (ct: any) => ({
+              ...ct.teacher,
+              avatarUrl: await this.awsS3Service.generatePresignedUrl(ct.teacher.avatarUrl),
+            })),
+          ),
+        };
+      }),
+    );
   }
 
   async getCourseById(userId: string, courseId: string) {
@@ -746,41 +760,22 @@ export class CoursesService {
 
     switch (filter) {
       case 'PAST':
-        where.AND.push({
-          endDate: { lt: now },
-          isArchived: false,
-        });
+        where.AND.push({ endDate: { lt: now }, isArchived: false });
         break;
       case 'ARCHIVED':
-        where.AND.push({
-          endDate: { lt: now },
-          isArchived: true,
-        });
+        where.AND.push({ endDate: { lt: now }, isArchived: true });
         break;
       case 'ACTIVE':
-        where.AND.push({
-          startDate: { lte: now },
-          endDate: { gte: now },
-          isHidden: false,
-        });
+        where.AND.push({ startDate: { lte: now }, endDate: { gte: now }, isHidden: false });
         break;
       case 'UPCOMING':
-        where.AND.push({
-          startDate: { gt: now },
-          isHidden: false,
-        });
+        where.AND.push({ startDate: { gt: now }, isHidden: false });
         break;
       case 'HIDDEN':
-        where.AND.push({
-          endDate: { gte: now },
-          isHidden: true,
-        });
+        where.AND.push({ endDate: { gte: now }, isHidden: true });
         break;
       case 'ALL':
-        where.AND.push({
-          isHidden: false,
-          isArchived: false,
-        });
+        where.AND.push({ isHidden: false, isArchived: false });
       default:
         break;
     }
@@ -814,7 +809,7 @@ export class CoursesService {
     ]);
 
     return {
-      data: this.formatCourseList(courses),
+      data: await this.formatCourseList(courses),
       meta: {
         total,
         page,

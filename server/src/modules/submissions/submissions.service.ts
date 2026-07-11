@@ -214,7 +214,19 @@ export class SubmissionsService {
       }),
     ]);
 
-    return this.paginateResponse(data, total, page, limit);
+    const formattedData = await Promise.all(
+      data.map(async (sub) => ({
+        ...sub,
+        student: {
+          ...sub.student,
+          avatarUrl: sub.student.avatarUrl
+            ? await this.awsS3Service.generatePresignedUrl(sub.student.avatarUrl)
+            : null,
+        },
+      })),
+    );
+
+    return this.paginateResponse(formattedData, total, page, limit);
   }
 
   async getSubmissionsByTest(teacherId: string, testId: string, query: GetSubmissionsQueryDto) {
@@ -271,7 +283,19 @@ export class SubmissionsService {
       }),
     ]);
 
-    return this.paginateResponse(data, total, page, limit);
+    const formattedData = await Promise.all(
+      data.map(async (sub) => ({
+        ...sub,
+        student: {
+          ...sub.student,
+          avatarUrl: sub.student.avatarUrl
+            ? await this.awsS3Service.generatePresignedUrl(sub.student.avatarUrl)
+            : null,
+        },
+      })),
+    );
+
+    return this.paginateResponse(formattedData, total, page, limit);
   }
 
   async getUngradedSubmissionsByCourse(teacherId: string, courseId: string) {
@@ -286,7 +310,7 @@ export class SubmissionsService {
     if (!isTeacher)
       throw new HttpException('У вас немає прав для перегляду цього курсу', HttpStatus.FORBIDDEN);
 
-    return this.prisma.submission.findMany({
+    const submissions = await this.prisma.submission.findMany({
       where: {
         OR: [{ task: { courseId } }, { test: { courseId } }],
         checkedAt: null,
@@ -305,6 +329,18 @@ export class SubmissionsService {
       },
       orderBy: { submittedAt: 'asc' },
     });
+
+    return Promise.all(
+      submissions.map(async (sub) => ({
+        ...sub,
+        student: {
+          ...sub.student,
+          avatarUrl: sub.student.avatarUrl
+            ? await this.awsS3Service.generatePresignedUrl(sub.student.avatarUrl)
+            : null,
+        },
+      })),
+    );
   }
 
   async getStudentSubmissionsByCourse(userId: string, courseId: string, studentId: string) {
@@ -424,7 +460,7 @@ export class SubmissionsService {
 
     if (!submission.task) {
       throw new HttpException(
-        'Ручне оцінювання через цей endpoint дозволене тільки для завдань',
+        'Цей endpoint використовується тільки для оцінювання відкритих завдань',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -443,22 +479,19 @@ export class SubmissionsService {
     const parsedOverall = dto.score === undefined ? null : Number(dto.score);
 
     if (nusGrades.length === 0 && (parsedOverall === null || Number.isNaN(parsedOverall))) {
-      throw new HttpException('Передайте загальну оцінку або оцінки НУШ', HttpStatus.BAD_REQUEST);
+      throw new HttpException('Оцінка не може бути порожньою', HttpStatus.BAD_REQUEST);
     }
 
     if (
       parsedOverall !== null &&
       (!Number.isFinite(parsedOverall) || parsedOverall < 1 || parsedOverall > 12)
     ) {
-      throw new HttpException('Загальна оцінка має бути від 1 до 12', HttpStatus.BAD_REQUEST);
+      throw new HttpException('Загальна оцінка повинна бути від 1 до 12', HttpStatus.BAD_REQUEST);
     }
 
     for (const grade of nusGrades) {
       if (!grade.nusGroupId || !selectedGroupIds.has(grade.nusGroupId)) {
-        throw new HttpException(
-          'Передана група НУШ не вибрана для цього завдання',
-          HttpStatus.BAD_REQUEST,
-        );
+        throw new HttpException('Передано невірну або відсутню групу НУШ', HttpStatus.BAD_REQUEST);
       }
     }
 

@@ -1,4 +1,5 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { AwsS3Service } from '../../core/integrations/aws/aws-s3.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateAnnouncementDto, UpdateAnnouncementDto } from './dto/announcement.dto';
@@ -7,6 +8,7 @@ import { CreateAnnouncementDto, UpdateAnnouncementDto } from './dto/announcement
 export class AnnouncementsService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly awsS3Service: AwsS3Service,
     private readonly notificationsService: NotificationsService,
   ) {}
 
@@ -30,8 +32,6 @@ export class AnnouncementsService {
   }
 
   async create(teacherId: string, dto: CreateAnnouncementDto) {
-    await this.verifyTeacherWriteAccess(dto.courseId, teacherId);
-
     const course = await this.verifyTeacherWriteAccess(dto.courseId, teacherId);
 
     const result = await this.prisma.announcement.create({
@@ -74,7 +74,15 @@ export class AnnouncementsService {
     }));
     await this.notificationsService.createMany(notifications);
 
-    return result;
+    return {
+      ...result,
+      creator: {
+        ...result.creator,
+        avatarUrl: result.creator.avatarUrl
+          ? await this.awsS3Service.generatePresignedUrl(result.creator.avatarUrl)
+          : null,
+      },
+    };
   }
 
   async findAllByCourse(userId: string, courseId: string) {
@@ -98,7 +106,7 @@ export class AnnouncementsService {
       throw new HttpException('Ви не є учасником цього курсу', HttpStatus.FORBIDDEN);
     }
 
-    return this.prisma.announcement.findMany({
+    const announcements = await this.prisma.announcement.findMany({
       where: { courseId },
       include: {
         creator: {
@@ -112,6 +120,18 @@ export class AnnouncementsService {
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    return Promise.all(
+      announcements.map(async (a) => ({
+        ...a,
+        creator: {
+          ...a.creator,
+          avatarUrl: a.creator.avatarUrl
+            ? await this.awsS3Service.generatePresignedUrl(a.creator.avatarUrl)
+            : null,
+        },
+      })),
+    );
   }
 
   async findOne(userId: string, announcementId: string) {
@@ -148,11 +168,19 @@ export class AnnouncementsService {
     const isHomeroom = course.class.homeroomTeacherId === userId;
 
     if (!isCreator && !isCoTeacher && !isStudent && !isHomeroom) {
-      throw new HttpException('У вас немає доступу до цього оголошення', HttpStatus.FORBIDDEN);
+      throw new HttpException('Ви не є учасником цього курсу', HttpStatus.FORBIDDEN);
     }
 
     const { course: _, ...result } = announcement;
-    return result;
+    return {
+      ...result,
+      creator: {
+        ...result.creator,
+        avatarUrl: result.creator.avatarUrl
+          ? await this.awsS3Service.generatePresignedUrl(result.creator.avatarUrl)
+          : null,
+      },
+    };
   }
 
   async update(userId: string, announcementId: string, dto: UpdateAnnouncementDto) {
@@ -165,7 +193,7 @@ export class AnnouncementsService {
       throw new HttpException('Ви можете редагувати лише власні оголошення', HttpStatus.FORBIDDEN);
     }
 
-    return this.prisma.announcement.update({
+    const updated = await this.prisma.announcement.update({
       where: { id: announcementId },
       data: dto,
       include: {
@@ -179,6 +207,16 @@ export class AnnouncementsService {
         },
       },
     });
+
+    return {
+      ...updated,
+      creator: {
+        ...updated.creator,
+        avatarUrl: updated.creator.avatarUrl
+          ? await this.awsS3Service.generatePresignedUrl(updated.creator.avatarUrl)
+          : null,
+      },
+    };
   }
 
   async delete(userId: string, announcementId: string) {
