@@ -50,56 +50,32 @@ export class TasksService {
     return { ...creator, avatarUrl };
   }
 
-  private async getOrCreateModuleId(courseId: string, moduleId?: string, newTitle?: string) {
-    if (!moduleId && (!newTitle || newTitle.trim() === '')) {
+  async create(teacherId: string, dto: CreateTaskDto, files: any[]) {
+    const course = await this.verifyTeacherWriteAccess(dto.courseId, teacherId);
+
+    const lesson = await this.prisma.lesson.findUnique({ where: { id: dto.lessonId } });
+    if (!lesson || lesson.courseId !== dto.courseId) {
       throw new HttpException(
-        "Завдання обов'язково має належати до модуля (теми)",
+        'Урок не знайдено, або він не належить до цього курсу',
         HttpStatus.BAD_REQUEST,
       );
     }
 
-    if (newTitle && newTitle.trim() !== '') {
-      const cleanedTitle = newTitle.trim();
-      const existingModule = await this.prisma.courseModule.findFirst({
-        where: { courseId, title: { equals: cleanedTitle, mode: 'insensitive' } },
+    if (dto.nusGroupIds && dto.nusGroupIds.length > 0) {
+      const nusGroups = await this.prisma.nusGroup.findMany({
+        where: { id: { in: dto.nusGroupIds } },
       });
-
-      if (existingModule) {
-        return existingModule.id;
-      } else {
-        const newModule = await this.prisma.courseModule.create({
-          data: { courseId, title: cleanedTitle },
-        });
-        return newModule.id;
-      }
-    }
-
-    return moduleId as string;
-  }
-
-  async create(teacherId: string, dto: CreateTaskDto, files: any[]) {
-    const course = await this.verifyTeacherWriteAccess(dto.courseId, teacherId);
-
-    if (dto.nusGroupId) {
-      const nusGroup = await this.prisma.nusGroup.findUnique({
-        where: { id: dto.nusGroupId },
-      });
-      if (!nusGroup) throw new HttpException('Групу НУШ не знайдено', HttpStatus.NOT_FOUND);
-      if (nusGroup.subjectId !== course.subjectId) {
+      const invalidGroups = nusGroups.filter((g) => g.subjectId !== course.subjectId);
+      if (invalidGroups.length > 0) {
         throw new HttpException(
-          'Помилка: Ця група результатів НУШ належить до іншого предмету!',
+          'Помилка: Деякі групи результатів НУШ належать до іншого предмету!',
           HttpStatus.BAD_REQUEST,
         );
       }
     }
 
-    const finalModuleId = await this.getOrCreateModuleId(
-      dto.courseId,
-      dto.courseModuleId,
-      dto.newModuleTitle,
-    );
-
     const attachments: string[] = [];
+
     if (dto.links && dto.links.length > 0) {
       attachments.push(...dto.links);
     }
@@ -115,22 +91,27 @@ export class TasksService {
       data: {
         courseId: dto.courseId,
         creatorId: teacherId,
+        lessonId: lesson.id,
+        courseModuleId: lesson.courseModuleId,
         title: dto.title,
         description: dto.description,
         deadline: dto.deadline ? new Date(dto.deadline) : null,
-        nusGroupId: dto.nusGroupId || null,
-        courseModuleId: finalModuleId,
         isHidden: dto.isHidden || false,
         attachments,
+        nusGroups:
+          dto.nusGroupIds && dto.nusGroupIds.length > 0
+            ? { connect: dto.nusGroupIds.map((id) => ({ id })) }
+            : undefined,
       },
+      include: { nusGroups: true },
     });
 
     const courseName = `${course.subject.name} ${course.class.name}`;
-
     const participants = await this.notificationsService.getCourseParticipants(
       dto.courseId,
       teacherId,
     );
+
     const notifications = participants.map((id) => ({
       senderId: teacherId,
       receiverId: id,
@@ -139,8 +120,8 @@ export class TasksService {
       type: 'TASK',
       metadata: { courseId: dto.courseId, taskId: task.id },
     }));
-    await this.notificationsService.createMany(notifications);
 
+    await this.notificationsService.createMany(notifications);
     return task;
   }
 
@@ -168,8 +149,9 @@ export class TasksService {
       orderBy: { createdAt: 'desc' },
       include: {
         creator: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
-        nusGroup: true,
+        nusGroups: true,
         courseModule: { select: { id: true, title: true } },
+        lesson: { select: { id: true, title: true } },
       },
     });
 
@@ -188,8 +170,9 @@ export class TasksService {
       include: {
         course: { include: { students: true, coTeachers: true, class: true } },
         creator: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
-        nusGroup: true,
+        nusGroups: true,
         courseModule: { select: { id: true, title: true } },
+        lesson: { select: { id: true, title: true } },
       },
     });
     if (!task) throw new HttpException('Завдання не знайдено', HttpStatus.NOT_FOUND);
@@ -203,6 +186,7 @@ export class TasksService {
     if (!isTeacher && !isStudent && !isHomeroom) {
       throw new HttpException('Ви не є учасником цього курсу', HttpStatus.FORBIDDEN);
     }
+
     if (!isTeacher && task.isHidden) {
       throw new HttpException(
         'Доступ до цього завдання заборонено (воно приховане)',
@@ -211,6 +195,7 @@ export class TasksService {
     }
 
     const { course: _, ...result } = task;
+
     return {
       ...result,
       creator: await this.signCreatorAvatar(result.creator),
@@ -221,30 +206,24 @@ export class TasksService {
   async update(userId: string, taskId: string, dto: UpdateTaskDto, files?: any[]) {
     const task = await this.prisma.task.findUnique({
       where: { id: taskId },
-      include: { course: { include: { subject: true, class: true } } },
+      include: { course: { include: { subject: true, class: true } }, lesson: true },
     });
     if (!task) throw new HttpException('Завдання не знайдено', HttpStatus.NOT_FOUND);
 
     const course = await this.verifyTeacherWriteAccess(task.courseId, userId);
 
-    if (dto.nusGroupId && dto.nusGroupId !== task.nusGroupId) {
-      const nusGroup = await this.prisma.nusGroup.findUnique({
-        where: { id: dto.nusGroupId },
+    if (dto.nusGroupIds && dto.nusGroupIds.length > 0) {
+      const nusGroups = await this.prisma.nusGroup.findMany({
+        where: { id: { in: dto.nusGroupIds } },
       });
-      if (!nusGroup) throw new HttpException('Групу НУШ не знайдено', HttpStatus.NOT_FOUND);
-      if (nusGroup.subjectId !== course.subjectId) {
+      const invalidGroups = nusGroups.filter((g) => g.subjectId !== course.subjectId);
+      if (invalidGroups.length > 0) {
         throw new HttpException(
           'Ця група результатів НУШ належить до іншого предмету!',
           HttpStatus.BAD_REQUEST,
         );
       }
     }
-
-    const finalModuleId = await this.getOrCreateModuleId(
-      task.courseId,
-      (dto.courseModuleId !== undefined ? dto.courseModuleId : task.courseModuleId) || undefined,
-      dto.newModuleTitle,
-    );
 
     const finalAttachments: string[] = [];
     const retained = dto.retainedAttachments || [];
@@ -304,13 +283,13 @@ export class TasksService {
         title: dto.title,
         description: dto.description,
         deadline: dto.deadline ? new Date(dto.deadline) : undefined,
-        nusGroupId: dto.nusGroupId,
-        courseModuleId: finalModuleId,
         isHidden: dto.isHidden,
         attachments: finalAttachments,
+        courseModuleId: task.lesson.courseModuleId,
+        nusGroups: dto.nusGroupIds ? { set: dto.nusGroupIds.map((id) => ({ id })) } : undefined,
       },
       include: {
-        nusGroup: true,
+        nusGroups: true,
         courseModule: { select: { id: true, title: true, createdAt: true } },
       },
     });

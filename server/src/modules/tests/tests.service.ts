@@ -21,6 +21,12 @@ export class TestsService {
     return shuffled;
   }
 
+  private calculateNusGrade(scored: number, max: number): number {
+    if (max === 0) return 0;
+    const grade = (scored / max) * 12;
+    return Math.round(grade);
+  }
+
   private async verifyTeacherWriteAccess(courseId: string, teacherId: string) {
     const course = await this.prisma.course.findUnique({
       where: { id: courseId },
@@ -40,31 +46,20 @@ export class TestsService {
     return course;
   }
 
-  private async getOrCreateModuleId(courseId: string, moduleId?: string, newTitle?: string) {
-    if (!moduleId && (!newTitle || newTitle.trim() === '')) {
-      throw new HttpException(
-        "Тест обов'язково має належати до модуля (теми)",
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    if (newTitle && newTitle.trim() !== '') {
-      const cleanedTitle = newTitle.trim();
-      const existingModule = await this.prisma.courseModule.findFirst({
-        where: { courseId, title: { equals: cleanedTitle, mode: 'insensitive' } },
+  private async validateQuestionsNusGroups(questions: any[], subjectId: string) {
+    const nusGroupIds = [...new Set(questions.map((q) => q.nusGroupId).filter(Boolean))];
+    if (nusGroupIds.length > 0) {
+      const nusGroups = await this.prisma.nusGroup.findMany({
+        where: { id: { in: nusGroupIds } },
       });
-
-      if (existingModule) {
-        return existingModule.id;
-      } else {
-        const newModule = await this.prisma.courseModule.create({
-          data: { courseId, title: cleanedTitle },
-        });
-        return newModule.id;
+      const invalidGroups = nusGroups.filter((g) => g.subjectId !== subjectId);
+      if (invalidGroups.length > 0) {
+        throw new HttpException(
+          'Помилка: Деякі групи результатів НУШ у питаннях належать до іншого предмету!',
+          HttpStatus.BAD_REQUEST,
+        );
       }
     }
-
-    return moduleId as string;
   }
 
   private async signCreatorAvatar(creator: any) {
@@ -77,18 +72,25 @@ export class TestsService {
 
   async createTest(teacherId: string, dto: CreateTestDto) {
     const course = await this.verifyTeacherWriteAccess(dto.courseId, teacherId);
-    const finalModuleId = await this.getOrCreateModuleId(
-      dto.courseId,
-      dto.courseModuleId,
-      dto.newModuleTitle,
-    );
+
+    const lesson = await this.prisma.lesson.findUnique({ where: { id: dto.lessonId } });
+    if (!lesson || lesson.courseId !== dto.courseId) {
+      throw new HttpException(
+        'Урок не знайдено, або він не належить до цього курсу',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (dto.questions && dto.questions.length > 0) {
+      await this.validateQuestionsNusGroups(dto.questions, course.subjectId);
+    }
 
     const newTest = await this.prisma.test.create({
       data: {
         courseId: dto.courseId,
         creatorId: teacherId,
-        nusGroupId: dto.nusGroupId,
-        courseModuleId: finalModuleId,
+        lessonId: lesson.id,
+        courseModuleId: lesson.courseModuleId,
         title: dto.title,
         timeLimitMinutes: dto.timeLimitMinutes,
         deadline: dto.deadline ? new Date(dto.deadline) : null,
@@ -105,6 +107,7 @@ export class TestsService {
               type: q.type,
               content: q.content,
               points: q.points,
+              nusGroupId: q.nusGroupId || null,
               answers: {
                 create: q.answers.map((a) => ({
                   content: a.content,
@@ -161,6 +164,7 @@ export class TestsService {
         creator: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
         _count: { select: { questions: true } },
         courseModule: { select: { id: true, title: true } },
+        lesson: { select: { id: true, title: true } },
       },
     });
 
@@ -178,10 +182,10 @@ export class TestsService {
       include: {
         course: { include: { students: true, coTeachers: true, class: true } },
         creator: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
-        nusGroup: true,
         courseModule: { select: { id: true, title: true } },
+        lesson: { select: { id: true, title: true } },
         questions: {
-          include: { answers: true },
+          include: { answers: true, nusGroup: true },
           orderBy: { id: 'asc' },
         },
       },
@@ -244,26 +248,27 @@ export class TestsService {
   async updateTest(teacherId: string, testId: string, dto: UpdateTestDto) {
     const test = await this.prisma.test.findUnique({
       where: { id: testId },
-      include: { course: { include: { subject: true, class: true } } },
+      include: {
+        questions: { include: { answers: true } },
+        course: { include: { subject: true, class: true } },
+        lesson: true,
+      },
     });
     if (!test) throw new HttpException('Тест не знайдено', HttpStatus.NOT_FOUND);
 
-    await this.verifyTeacherWriteAccess(test.courseId, teacherId);
+    const course = await this.verifyTeacherWriteAccess(test.courseId, teacherId);
+
+    if (dto.questions && dto.questions.length > 0) {
+      await this.validateQuestionsNusGroups(dto.questions, course.subjectId);
+    }
 
     const isDeadlineChanged =
       dto.deadline && test.deadline && new Date(dto.deadline).getTime() !== test.deadline.getTime();
 
-    const finalModuleId = await this.getOrCreateModuleId(
-      test.courseId,
-      (dto.courseModuleId !== undefined ? dto.courseModuleId : test.courseModuleId) || undefined,
-      dto.newModuleTitle,
-    );
-
-    await this.prisma.test.update({
+    const updatedTest = await this.prisma.test.update({
       where: { id: testId },
       data: {
-        nusGroupId: dto.nusGroupId,
-        courseModuleId: finalModuleId,
+        courseModuleId: test.lesson.courseModuleId,
         title: dto.title,
         timeLimitMinutes: dto.timeLimitMinutes,
         deadline: dto.deadline ? new Date(dto.deadline) : undefined,
@@ -279,57 +284,61 @@ export class TestsService {
 
     if (dto.questions) {
       const incomingQuestionIds = dto.questions.map((q) => q.id).filter(Boolean) as string[];
+      const questionsToDelete = test.questions.filter((q) => !incomingQuestionIds.includes(q.id));
 
-      await this.prisma.question.deleteMany({
-        where: {
-          testId: testId,
-          id: { notIn: incomingQuestionIds },
-        },
-      });
+      if (questionsToDelete.length > 0) {
+        await this.prisma.question.deleteMany({
+          where: { id: { in: questionsToDelete.map((q) => q.id) } },
+        });
+      }
 
-      for (const q of dto.questions) {
-        if (q.id) {
-          const incomingAnswerIds = q.answers.map((a) => a.id).filter(Boolean) as string[];
-          await this.prisma.answer.deleteMany({
-            where: {
-              questionId: q.id,
-              id: { notIn: incomingAnswerIds },
-            },
-          });
-
+      for (const qDto of dto.questions) {
+        if (qDto.id) {
           await this.prisma.question.update({
-            where: { id: q.id },
+            where: { id: qDto.id },
             data: {
-              content: q.content,
-              points: q.points,
+              type: qDto.type,
+              content: qDto.content,
+              points: qDto.points,
+              nusGroupId: qDto.nusGroupId || null,
             },
           });
 
-          for (const a of q.answers) {
-            if (a.id) {
+          const incomingAnswerIds = qDto.answers.map((a) => a.id).filter(Boolean) as string[];
+          const existingQuestion = test.questions.find((q) => q.id === qDto.id);
+          if (existingQuestion) {
+            const answersToDelete = existingQuestion.answers.filter(
+              (a) => !incomingAnswerIds.includes(a.id),
+            );
+            if (answersToDelete.length > 0) {
+              await this.prisma.answer.deleteMany({
+                where: { id: { in: answersToDelete.map((a) => a.id) } },
+              });
+            }
+          }
+
+          for (const aDto of qDto.answers) {
+            if (aDto.id) {
               await this.prisma.answer.update({
-                where: { id: a.id },
-                data: { content: a.content, isCorrect: a.isCorrect },
+                where: { id: aDto.id },
+                data: { content: aDto.content, isCorrect: aDto.isCorrect },
               });
             } else {
               await this.prisma.answer.create({
-                data: {
-                  questionId: q.id,
-                  content: a.content,
-                  isCorrect: a.isCorrect,
-                },
+                data: { questionId: qDto.id, content: aDto.content, isCorrect: aDto.isCorrect },
               });
             }
           }
         } else {
           await this.prisma.question.create({
             data: {
-              testId: testId,
-              type: q.type,
-              content: q.content,
-              points: q.points,
+              testId,
+              type: qDto.type,
+              content: qDto.content,
+              points: qDto.points,
+              nusGroupId: qDto.nusGroupId || null,
               answers: {
-                create: q.answers.map((a) => ({
+                create: qDto.answers.map((a) => ({
                   content: a.content,
                   isCorrect: a.isCorrect,
                 })),
@@ -359,14 +368,146 @@ export class TestsService {
         senderId: teacherId,
         receiverId: id,
         title: 'Зміна дедлайну',
-        content: `Змінено дедлайн для тесту "${dto.title || test.title}" у курсі "${courseName}". Новий термін: ${formattedDate}.`,
+        content: `Змінено дедлайн для тесту "${updatedTest.title}" у курсі "${courseName}". Новий термін: ${formattedDate}.`,
         type: 'TEST',
-        metadata: { courseId: test.courseId, testId: test.id },
+        metadata: { courseId: updatedTest.courseId, testId: updatedTest.id },
       }));
       await this.notificationsService.createMany(notifications);
     }
 
     return this.getTestDetails(teacherId, testId);
+  }
+
+  async submitTest(studentId: string, testId: string, dto: SubmitTestDto) {
+    return await this.prisma.$transaction(async (tx) => {
+      const test = await tx.test.findUnique({
+        where: { id: testId },
+        include: {
+          course: { include: { students: true } },
+          questions: { include: { answers: true } },
+        },
+      });
+
+      if (!test) throw new HttpException('Тест не знайдено', HttpStatus.NOT_FOUND);
+
+      const isStudent = test.course.students.some((s) => s.studentId === studentId);
+      if (!isStudent) {
+        throw new HttpException('Ви не є учнем цього курсу', HttpStatus.FORBIDDEN);
+      }
+
+      const previousAttempts = await tx.submission.count({
+        where: { studentId, testId },
+      });
+
+      if (previousAttempts >= test.maxAttempts) {
+        throw new HttpException('Вичерпано ліміт спроб', HttpStatus.FORBIDDEN);
+      }
+
+      const stats: Record<string, { scored: number; max: number }> = {};
+      let totalScoredOverall = 0;
+      let totalMaxOverall = 0;
+
+      for (const [qId, selectedIds] of Object.entries(dto.answers)) {
+        const question = test.questions.find((q) => q.id === qId);
+        if (!question) continue;
+
+        const questionMax = question.points;
+        let questionScored = 0;
+
+        if (selectedIds && selectedIds.length > 0) {
+          if (question.type === 'ONE_CHOICE') {
+            const answer = question.answers.find((a) => a.id === selectedIds[0]);
+            if (answer && answer.isCorrect) {
+              questionScored = questionMax;
+            }
+          } else if (question.type === 'MULTIPLE_CHOICE') {
+            const correctAnswers = question.answers.filter((a) => a.isCorrect);
+            const incorrectAnswers = question.answers.filter((a) => !a.isCorrect);
+
+            let studentCorrectHits = 0;
+            let studentIncorrectHits = 0;
+
+            for (const answerId of selectedIds) {
+              if (correctAnswers.some((ca) => ca.id === answerId)) studentCorrectHits++;
+              if (incorrectAnswers.some((ia) => ia.id === answerId)) studentIncorrectHits++;
+            }
+
+            const netHits = Math.max(0, studentCorrectHits - studentIncorrectHits);
+            if (correctAnswers.length > 0) {
+              questionScored = (netHits / correctAnswers.length) * questionMax;
+            }
+          }
+        }
+
+        totalScoredOverall += questionScored;
+        totalMaxOverall += questionMax;
+
+        const gId = question.nusGroupId || 'GENERAL';
+        if (!stats[gId]) {
+          stats[gId] = { scored: 0, max: 0 };
+        }
+        stats[gId].max += questionMax;
+        stats[gId].scored += questionScored;
+      }
+
+      const submissionScoreStr = `${totalScoredOverall.toFixed(2)}/${totalMaxOverall.toFixed(2)}`;
+
+      const testAnswersData: { questionId: string; answerId: string }[] = [];
+      for (const [qId, ansIds] of Object.entries(dto.answers)) {
+        for (const aId of ansIds) {
+          testAnswersData.push({ questionId: qId, answerId: aId });
+        }
+      }
+
+      const submission = await tx.submission.create({
+        data: {
+          testId,
+          studentId,
+          score: submissionScoreStr,
+          duration: dto.duration,
+          checkedAt: new Date(),
+          attachments: [],
+          testAnswers: {
+            create: testAnswersData,
+          },
+        },
+      });
+
+      const gradebookData: {
+        studentId: string;
+        teacherId: string;
+        courseId: string;
+        lessonId: string;
+        testId: string;
+        nusGroupId: string | null;
+        gradeType: string;
+        score: number;
+        date: Date;
+      }[] = [];
+
+      for (const [groupId, stat] of Object.entries(stats)) {
+        if (stat.max > 0) {
+          const grade12 = this.calculateNusGrade(stat.scored, stat.max);
+          gradebookData.push({
+            studentId,
+            teacherId: test.creatorId,
+            courseId: test.courseId,
+            lessonId: test.lessonId,
+            testId: test.id,
+            nusGroupId: groupId === 'GENERAL' ? null : groupId,
+            gradeType: groupId === 'GENERAL' ? 'TRADITIONAL' : 'NUS',
+            score: grade12,
+            date: new Date(),
+          });
+        }
+      }
+
+      if (gradebookData.length > 0) {
+        await tx.gradebook.createMany({ data: gradebookData });
+      }
+
+      return submission;
+    });
   }
 
   async deleteTest(teacherId: string, testId: string) {
@@ -375,248 +516,7 @@ export class TestsService {
 
     await this.verifyTeacherWriteAccess(test.courseId, teacherId);
     await this.prisma.test.delete({ where: { id: testId } });
+
     return { message: 'Тест успішно видалено' };
-  }
-
-  // async addQuestion(teacherId: string, testId: string, dto: CreateQuestionDto) {
-  //   const test = await this.prisma.test.findUnique({ where: { id: testId } });
-  //   if (!test) throw new HttpException('Тест не знайдено', HttpStatus.NOT_FOUND);
-
-  //   await this.verifyTeacherWriteAccess(test.courseId, teacherId);
-
-  //   if (dto.type === QuestionType.ONE_CHOICE) {
-  //     if (dto.answers.length !== 4) {
-  //       throw new HttpException(
-  //         'Для питання з однією правильною відповіддю має бути рівно 4 варіанти',
-  //         HttpStatus.BAD_REQUEST,
-  //       );
-  //     }
-  //     const correctAnswersCount = dto.answers.filter((a) => a.isCorrect).length;
-  //     if (correctAnswersCount !== 1) {
-  //       throw new HttpException(
-  //         'Для цього типу питання має бути рівно 1 правильна відповідь',
-  //         HttpStatus.BAD_REQUEST,
-  //       );
-  //     }
-  //   }
-
-  //   return this.prisma.question.create({
-  //     data: {
-  //       testId: testId,
-  //       type: dto.type,
-  //       content: dto.content,
-  //       points: dto.points,
-  //       answers: {
-  //         create: dto.answers.map((a) => ({
-  //           content: a.content,
-  //           isCorrect: a.isCorrect,
-  //         })),
-  //       },
-  //     },
-  //     include: { answers: true },
-  //   });
-  // }
-
-  // async addQuestionsBulk(teacherId: string, testId: string, dto: BulkCreateQuestionDto) {
-  //   const test = await this.prisma.test.findUnique({ where: { id: testId } });
-  //   if (!test) throw new HttpException('Тест не знайдено', HttpStatus.NOT_FOUND);
-
-  //   await this.verifyTeacherWriteAccess(test.courseId, teacherId);
-
-  //   for (const [index, q] of dto.questions.entries()) {
-  //     if (q.type === QuestionType.ONE_CHOICE) {
-  //       if (q.answers.length !== 4) {
-  //         throw new HttpException(
-  //           `Питання №${index + 1} ("${q.content}") має містити рівно 4 варіанти відповіді`,
-  //           HttpStatus.BAD_REQUEST,
-  //         );
-  //       }
-  //       const correctAnswersCount = q.answers.filter((a) => a.isCorrect).length;
-  //       if (correctAnswersCount !== 1) {
-  //         throw new HttpException(
-  //           `Питання №${index + 1} ("${q.content}") має містити рівно 1 правильну відповідь`,
-  //           HttpStatus.BAD_REQUEST,
-  //         );
-  //       }
-  //     }
-  //   }
-
-  //   const createdQuestions = await this.prisma.$transaction(
-  //     dto.questions.map((q) =>
-  //       this.prisma.question.create({
-  //         data: {
-  //           testId: testId,
-  //           type: q.type,
-  //           content: q.content,
-  //           points: q.points,
-  //           answers: {
-  //             create: q.answers.map((a) => ({
-  //               content: a.content,
-  //               isCorrect: a.isCorrect,
-  //             })),
-  //           },
-  //         },
-  //         include: { answers: true },
-  //       }),
-  //     ),
-  //   );
-
-  //   return {
-  //     message: `Успішно додано ${createdQuestions.length} питань до тесту`,
-  //     questions: createdQuestions,
-  //   };
-  // }
-
-  // async updateQuestion(
-  //   teacherId: string,
-  //   testId: string,
-  //   questionId: string,
-  //   dto: UpdateQuestionDto,
-  // ) {
-  //   const test = await this.prisma.test.findUnique({ where: { id: testId } });
-  //   if (!test) throw new HttpException('Тест не знайдено', HttpStatus.NOT_FOUND);
-
-  //   await this.verifyTeacherWriteAccess(test.courseId, teacherId);
-
-  //   const question = await this.prisma.question.findUnique({
-  //     where: { id: questionId },
-  //     include: { answers: true },
-  //   });
-
-  //   if (!question || question.testId !== testId) {
-  //     throw new HttpException('Питання не знайдено в цьому тесті', HttpStatus.NOT_FOUND);
-  //   }
-
-  //   const newType = dto.type || (question.type as QuestionType);
-  //   if (newType === QuestionType.ONE_CHOICE && dto.answers) {
-  //     if (dto.answers.length !== 4) {
-  //       throw new HttpException(
-  //         'Для питання з однією правильною відповіддю має бути рівно 4 варіанти',
-  //         HttpStatus.BAD_REQUEST,
-  //       );
-  //     }
-  //     const correctAnswersCount = dto.answers.filter((a) => a.isCorrect).length;
-  //     if (correctAnswersCount !== 1) {
-  //       throw new HttpException(
-  //         'Для цього типу питання має бути рівно 1 правильна відповідь',
-  //         HttpStatus.BAD_REQUEST,
-  //       );
-  //     }
-  //   }
-
-  //   const updateData: any = {};
-  //   if (dto.type) updateData.type = dto.type;
-  //   if (dto.content) updateData.content = dto.content;
-  //   if (dto.points !== undefined) updateData.points = dto.points;
-
-  //   if (dto.answers) {
-  //     updateData.answers = {
-  //       deleteMany: {},
-  //       create: dto.answers.map((a) => ({
-  //         content: a.content,
-  //         isCorrect: a.isCorrect,
-  //       })),
-  //     };
-  //   }
-
-  //   return this.prisma.question.update({
-  //     where: { id: questionId },
-  //     data: updateData,
-  //     include: { answers: true },
-  //   });
-  // }
-
-  // async deleteQuestion(teacherId: string, testId: string, questionId: string) {
-  //   const test = await this.prisma.test.findUnique({ where: { id: testId } });
-  //   if (!test) throw new HttpException('Тест не знайдено', HttpStatus.NOT_FOUND);
-  //   await this.verifyTeacherWriteAccess(test.courseId, teacherId);
-
-  //   await this.prisma.question.delete({ where: { id: questionId } });
-  //   return { message: 'Питання видалено' };
-  // }
-
-  async submitTest(studentId: string, testId: string, dto: SubmitTestDto) {
-    const test = await this.prisma.test.findUnique({
-      where: { id: testId },
-      include: {
-        course: { include: { students: true } },
-        questions: { include: { answers: true } },
-      },
-    });
-
-    if (!test) throw new HttpException('Тест не знайдено', HttpStatus.NOT_FOUND);
-
-    const isStudent = test.course.students.some((s) => s.studentId === studentId);
-    if (!isStudent) throw new HttpException('Ви не є учнем цього курсу', HttpStatus.FORBIDDEN);
-
-    if (test.deadline && new Date() > test.deadline) {
-      throw new HttpException(
-        'Час на виконання тесту вичерпано (дедлайн минув)',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const attemptsCount = await this.prisma.submission.count({ where: { testId, studentId } });
-    if (attemptsCount >= test.maxAttempts) {
-      throw new HttpException('Ви використали всі доступні спроби', HttpStatus.BAD_REQUEST);
-    }
-
-    let totalScore = 0;
-    const userAnswersByQuestion: Record<string, string[]> = {};
-    for (const selection of dto.answers) {
-      if (!userAnswersByQuestion[selection.questionId]) {
-        userAnswersByQuestion[selection.questionId] = [];
-      }
-      userAnswersByQuestion[selection.questionId].push(selection.answerId);
-    }
-
-    for (const question of test.questions) {
-      const selectedAnswerIds = userAnswersByQuestion[question.id] || [];
-      if (selectedAnswerIds.length === 0) continue;
-
-      if (question.type === 'ONE_CHOICE') {
-        const answer = question.answers.find((a) => a.id === selectedAnswerIds[0]);
-        if (answer && answer.isCorrect) {
-          totalScore += question.points;
-        }
-      } else if (question.type === 'MULTIPLE_CHOICE') {
-        const correctAnswers = question.answers.filter((a) => a.isCorrect);
-        const incorrectAnswers = question.answers.filter((a) => !a.isCorrect);
-
-        let studentCorrectHits = 0;
-        let studentIncorrectHits = 0;
-
-        for (const answerId of selectedAnswerIds) {
-          if (correctAnswers.some((ca) => ca.id === answerId)) studentCorrectHits++;
-          if (incorrectAnswers.some((ia) => ia.id === answerId)) studentIncorrectHits++;
-        }
-
-        const netHits = Math.max(0, studentCorrectHits - studentIncorrectHits);
-
-        if (correctAnswers.length > 0) {
-          const partialScore = (netHits / correctAnswers.length) * question.points;
-          totalScore += partialScore;
-        }
-      }
-    }
-
-    const finalScoreStr = Number(totalScore.toFixed(2)).toString();
-
-    return this.prisma.submission.create({
-      data: {
-        testId,
-        studentId,
-        score: finalScoreStr,
-        duration: dto.duration,
-        checkedAt: new Date(),
-        attachments: [],
-        testAnswers: {
-          create: dto.answers.map((ans) => ({
-            questionId: ans.questionId,
-            answerId: ans.answerId,
-          })),
-        },
-      },
-    });
   }
 }

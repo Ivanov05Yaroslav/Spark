@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
-import { IsArray, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { Type, Transform } from 'class-transformer';
+import { IsArray, IsNumber, IsNotEmpty, IsOptional, IsString, ValidateNested } from 'class-validator';
 
 export class CreateTaskSubmissionDto {
   @ApiProperty({ example: 'uuid-завдання' })
@@ -99,9 +99,27 @@ export class UpdateTaskSubmissionDto {
   files?: any[];
 }
 
+export class GradeNusDto {
+  @ApiProperty({ required: false, description: 'ID групи НУШ (якщо є)' })
+  @IsOptional()
+  @IsString()
+  nusGroupId?: string;
+
+  @ApiProperty({ description: 'Кількість балів' })
+  @IsNumber()
+  score!: number;
+}
+
 export class GradeSubmissionDto {
-  @ApiProperty({ example: '12', description: 'Оцінка (Рівень або Бали)', required: false })
+  @ApiProperty({ example: '12', description: 'Загальна оцінка (Рівень або Бали) як текст', required: false })
   @IsOptional()
   @IsString()
   score?: string;
+
+  @ApiProperty({ type: [GradeNusDto], required: false, description: 'Масив оцінок по групах НУШ' })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GradeNusDto)
+  nusGrades?: GradeNusDto[];
 }

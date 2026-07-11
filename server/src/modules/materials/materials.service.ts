@@ -54,23 +54,33 @@ export class MaterialsService {
         return newModule.id;
       }
     }
-
     return moduleId as string;
   }
 
   async createLink(teacherId: string, dto: CreateLinkDto) {
     const course = await this.verifyTeacherWriteAccess(dto.courseId, teacherId);
-    const finalModuleId = await this.getOrCreateModuleId(
-      dto.courseId,
-      dto.courseModuleId,
-      dto.newModuleTitle,
-    );
+
+    let finalModuleId: string;
+    if (dto.lessonId) {
+      const lesson = await this.prisma.lesson.findUnique({ where: { id: dto.lessonId } });
+      if (!lesson || lesson.courseId !== dto.courseId) {
+        throw new HttpException('Урок не знайдено', HttpStatus.BAD_REQUEST);
+      }
+      finalModuleId = lesson.courseModuleId;
+    } else {
+      finalModuleId = await this.getOrCreateModuleId(
+        dto.courseId,
+        dto.courseModuleId,
+        dto.newModuleTitle,
+      );
+    }
 
     const newMaterial = await this.prisma.material.create({
       data: {
         courseId: dto.courseId,
         creatorId: teacherId,
         title: dto.title,
+        lessonId: dto.lessonId || null,
         courseModuleId: finalModuleId,
         linkUrl: dto.linkUrl,
         isHidden: dto.isHidden || false,
@@ -100,11 +110,21 @@ export class MaterialsService {
   async createFileMaterial(teacherId: string, dto: CreateFileMaterialDto, file: any) {
     if (!file) throw new HttpException("Файл обов'язковий", HttpStatus.BAD_REQUEST);
     const course = await this.verifyTeacherWriteAccess(dto.courseId, teacherId);
-    const finalModuleId = await this.getOrCreateModuleId(
-      dto.courseId,
-      dto.courseModuleId,
-      dto.newModuleTitle,
-    );
+
+    let finalModuleId: string;
+    if (dto.lessonId) {
+      const lesson = await this.prisma.lesson.findUnique({ where: { id: dto.lessonId } });
+      if (!lesson || lesson.courseId !== dto.courseId) {
+        throw new HttpException('Урок не знайдено', HttpStatus.BAD_REQUEST);
+      }
+      finalModuleId = lesson.courseModuleId;
+    } else {
+      finalModuleId = await this.getOrCreateModuleId(
+        dto.courseId,
+        dto.courseModuleId,
+        dto.newModuleTitle,
+      );
+    }
 
     const fileUrl = await this.awsS3Service.uploadFile(file, `courses/${dto.courseId}/materials`);
 
@@ -113,6 +133,7 @@ export class MaterialsService {
         courseId: dto.courseId,
         creatorId: teacherId,
         title: dto.title,
+        lessonId: dto.lessonId || null,
         courseModuleId: finalModuleId,
         fileUrl: fileUrl,
         isHidden: dto.isHidden || false,
@@ -233,28 +254,21 @@ export class MaterialsService {
       dto.linkUrl.trim() === ''
         ? null
         : dto.linkUrl.trim();
-
     const isTryingToAddLink = safeLinkUrl !== null;
-
     const isValidFile = file && file.fieldname && file.size > 0;
 
     if (
       material.linkUrl &&
       (dto.linkUrl === '' || dto.linkUrl === 'null' || dto.linkUrl === null)
     ) {
-      throw new HttpException(
-        'Посилання не може бути порожнім. Видаліть матеріал повністю, якщо він більше не потрібен.',
-        HttpStatus.BAD_REQUEST,
-      );
+      throw new HttpException('Посилання не може бути порожнім.', HttpStatus.BAD_REQUEST);
     }
-
     if (material.fileUrl && isTryingToAddLink) {
       throw new HttpException(
         'Цей матеріал є файлом. Ви не можете замінити його на посилання.',
         HttpStatus.BAD_REQUEST,
       );
     }
-
     if (material.linkUrl && isValidFile) {
       throw new HttpException(
         'Цей матеріал є посиланням. Ви не можете замінити його на файл.',
@@ -262,22 +276,37 @@ export class MaterialsService {
       );
     }
 
-    const safeModuleId =
-      dto.courseModuleId === 'null' || dto.courseModuleId === 'undefined'
-        ? undefined
-        : dto.courseModuleId;
-    const safeNewTitle =
-      dto.newModuleTitle === 'null' || dto.newModuleTitle === 'undefined'
-        ? undefined
-        : dto.newModuleTitle;
-
+    let finalLessonId = material.lessonId;
     let finalModuleId = material.courseModuleId;
-    if (safeModuleId || safeNewTitle) {
-      finalModuleId = await this.getOrCreateModuleId(material.courseId, safeModuleId, safeNewTitle);
+
+    if (dto.lessonId !== undefined) {
+      if (dto.lessonId === null || dto.lessonId === 'null') {
+        finalLessonId = null;
+        if (dto.courseModuleId || dto.newModuleTitle) {
+          finalModuleId = await this.getOrCreateModuleId(
+            material.courseId,
+            dto.courseModuleId,
+            dto.newModuleTitle,
+          );
+        }
+      } else {
+        const lesson = await this.prisma.lesson.findUnique({ where: { id: dto.lessonId } });
+        if (!lesson || lesson.courseId !== material.courseId)
+          throw new HttpException('Урок не знайдено', HttpStatus.BAD_REQUEST);
+        finalLessonId = lesson.id;
+        finalModuleId = lesson.courseModuleId;
+      }
+    } else {
+      if (dto.courseModuleId || dto.newModuleTitle) {
+        finalModuleId = await this.getOrCreateModuleId(
+          material.courseId,
+          dto.courseModuleId,
+          dto.newModuleTitle,
+        );
+      }
     }
 
     let finalFileUrl = material.fileUrl;
-
     if (isValidFile) {
       if (material.fileUrl) {
         try {
@@ -303,6 +332,7 @@ export class MaterialsService {
         title: dto.title && dto.title !== 'null' ? dto.title : material.title,
         linkUrl: isTryingToAddLink ? safeLinkUrl : material.linkUrl,
         fileUrl: finalFileUrl,
+        lessonId: finalLessonId,
         courseModuleId: finalModuleId,
         isHidden: safeIsHidden,
       },

@@ -1,34 +1,42 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsArray, IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsDateString, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
-export class CreateTaskDto {
-  @ApiProperty({ example: 'uuid-курсу' })
+export class CreateLessonDto {
+  @ApiProperty({ example: 'uuid-course' })
   @IsString()
   @IsNotEmpty()
   courseId!: string;
 
-  @ApiProperty({ example: 'uuid-lesson', description: "ID уроку, до якого прив'язано завдання" })
+  @ApiProperty({ required: false, description: 'ID існуючого модуля (теми)' })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  lessonId!: string;
+  courseModuleId?: string;
 
-  @ApiProperty({ example: 'Домашнє завдання №1: Дроби' })
+  @ApiProperty({
+    required: false,
+    description: 'Назва нового модуля (теми), якщо створюється новий',
+  })
+  @IsOptional()
+  @IsString()
+  newModuleTitle?: string;
+
+  @ApiProperty({ example: 'Вступ до геометрії' })
   @IsString()
   @IsNotEmpty()
   title!: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, description: 'Опис уроку' })
   @IsOptional()
   @IsString()
   description?: string;
 
-  @ApiProperty({ example: '2026-05-20T23:59:59.000Z', required: false })
-  @IsOptional()
-  @IsString()
-  deadline?: string;
+  @ApiProperty({ example: '2026-09-01T10:00:00Z', description: 'Дата та час уроку' })
+  @IsDateString()
+  @IsNotEmpty()
+  date!: string;
 
-  @ApiProperty({ example: ['uuid-nus-1', 'uuid-nus-2'], required: false })
+  @ApiProperty({ required: false, type: [String], description: 'Масив ID груп НУШ' })
   @IsOptional()
   @Transform(({ value }) => {
     if (!value) return [];
@@ -43,12 +51,6 @@ export class CreateTaskDto {
   @IsArray()
   @IsString({ each: true })
   nusGroupIds?: string[];
-
-  @ApiProperty({ required: false, default: false })
-  @IsOptional()
-  @Transform(({ value }) => value === 'true' || value === true)
-  @IsBoolean()
-  isHidden?: boolean;
 
   @ApiProperty({
     example: ['https://youtube.com/watch?v=123'],
@@ -87,7 +89,7 @@ export class CreateTaskDto {
   files?: any[];
 }
 
-export class UpdateTaskDto {
+export class UpdateLessonDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
@@ -100,10 +102,15 @@ export class UpdateTaskDto {
 
   @ApiProperty({ required: false })
   @IsOptional()
-  @IsString()
-  deadline?: string;
+  @IsDateString()
+  date?: string;
 
-  @ApiProperty({ example: ['uuid-nus-1', 'uuid-nus-2'], required: false })
+  @ApiProperty({ required: false, description: 'ID нового модуля (теми)' })
+  @IsOptional()
+  @IsString()
+  courseModuleId?: string;
+
+  @ApiProperty({ required: false })
   @IsOptional()
   @Transform(({ value }) => {
     if (!value) return [];
@@ -119,38 +126,24 @@ export class UpdateTaskDto {
   @IsString({ each: true })
   nusGroupIds?: string[];
 
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @Transform(({ value }) => value === 'true' || value === true)
-  @IsBoolean()
-  isHidden?: boolean;
-
   @ApiProperty({
     required: false,
-    description: 'Масив URL існуючих файлів/посилань, які треба залишити',
+    description: 'Масив ID матеріалів (файлів/лінків), які треба залишити',
   })
   @IsOptional()
   @Transform(({ value }) => {
-    if (value === undefined || value === null) return undefined;
-    if (value === '' || value === '[]') return [];
-    if (
-      value === 'string' ||
-      (Array.isArray(value) && value.length === 1 && value[0] === 'string')
-    ) {
-      return [];
-    }
-    if (typeof value === 'string') {
+    if (!value) return [];
+    if (typeof value === 'string')
       return value
         .split(',')
-        .map((item) => item.trim())
+        .map((i) => i.trim())
         .filter(Boolean);
-    }
     if (Array.isArray(value)) return value;
-    return undefined;
+    return [];
   })
   @IsArray()
   @IsString({ each: true })
-  retainedAttachments?: string[];
+  retainedMaterialIds?: string[];
 
   @ApiProperty({ required: false })
   @IsOptional()
