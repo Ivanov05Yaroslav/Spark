@@ -5,10 +5,7 @@ import { useStore } from '../../../stores/useStore';
 import { Avatar } from '@/components/ui/Avatar/Avatar';
 import SparkLogo from '../../../assets/logo.svg?react';
 import DashboardIcon from '../../../assets/dashboard.svg?react';
-import JournalIcon from '../../../assets/journal.svg?react';
 import NotificationsIcon from '../../../assets/notifications.svg?react';
-import ChatsIcon from '../../../assets/chats.svg?react';
-import StatisticsIcon from '../../../assets/statistics.svg?react';
 import AdminIcon from '../../../assets/admin.svg?react';
 import LogoutIcon from '../../../assets/logout.svg?react';
 import { ROLE_LABELS } from '@/libs/constants/users.constants';
@@ -33,12 +30,15 @@ export const Sidebar = ({ isExpanded, setIsExpanded, onOpenNotifications }: Side
   const user = useStore((state) => state.user);
   const logout = useStore((state) => state.logout);
 
+  const hasAdminAccess = user?.roles?.some((role: string) => {
+    const cleanRole = role.replace('ROLE_', '');
+    return ['ADMIN', 'SUPER_ADMIN', 'MODERATOR'].includes(cleanRole);
+  });
+
   const navItems: NavItem[] = [
     { id: 1, label: 'Мої курси', icon: DashboardIcon, path: '/courses' },
-    { id: 2, label: 'Журнал', icon: JournalIcon, path: '/journal' },
     { id: 3, label: 'Сповіщення', icon: NotificationsIcon },
-    { id: 5, label: 'Статистика', icon: StatisticsIcon, path: '/statistics' },
-    { id: 6, label: 'Адмін панель', icon: AdminIcon, path: '/admin' },
+    ...(hasAdminAccess ? [{ id: 4, label: 'Адмін панель', icon: AdminIcon, path: '/admin' }] : []),
   ];
 
   const handleItemClick = (label: string, path?: string) => {
@@ -55,7 +55,7 @@ export const Sidebar = ({ isExpanded, setIsExpanded, onOpenNotifications }: Side
   };
 
   const fullName = user
-    ? `${user.lastName} ${user.firstName} ${user.middleName}`.trim()
+    ? `${user.lastName} ${user.firstName} ${user.middleName || ''}`.trim()
     : 'Завантаження...';
 
   const roleString = user?.roles?.[0] || '';

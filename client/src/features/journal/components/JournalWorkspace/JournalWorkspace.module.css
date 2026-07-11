@@ -1,0 +1,53 @@
+.workspace {
+    display: flex;
+    flex-direction: column;
+    height: fit-content;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    gap: 24px;
+}
+
+.header {
+    display: flex;
+
+    align-items: center;
+    margin-bottom: 24px;
+    flex-shrink: 0;
+    width: 100%;
+}
+
+.titleSection {
+    display: flex;
+    align-items: center;
+}
+
+.title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1A1A1A;
+    margin: 0;
+}
+
+.controlsSection {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.subjectSelect {
+    width: fit-content;
+}
+
+.content {
+    flex: 0 1 auto; /* 👈 Карточка облегает контент, но сжимается при нехватке места */
+    min-height: 0;  /* 👈 Обязательное свойство, чтобы скролл работал внутри флекс-контейнера */
+    display: flex;
+    flex-direction: column;
+
+    background-color: #FFFFFF;
+    border-radius: 12px;
+    border: 1px solid #E5E7EB;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}

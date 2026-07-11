@@ -3,8 +3,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import PlusIcon from '@/assets/plus.svg?react';
 import LinkIcon from '@/assets/link.svg?react';
 import TheoryIcon from '@/assets/theory.svg?react';
-import TaskIcon from '@/assets/task.svg?react';
-import TestIcon from '@/assets/test.svg?react';
 import AnnouncementIcon from '@/assets/announcement.svg?react';
 
 import styles from './CourseCreateButton.module.css';
@@ -22,8 +20,6 @@ interface CourseCreateButtonProps {
 export const CourseCreateButton: React.FC<CourseCreateButtonProps> = ({
   onCreateLink,
   onCreateMaterial,
-  onCreateTask,
-  onCreateTest,
   onCreateAnnouncement,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -66,16 +62,6 @@ export const CourseCreateButton: React.FC<CourseCreateButtonProps> = ({
           <button className={styles.menuItem} onClick={() => handleAction(onCreateMaterial)}>
             <TheoryIcon className={styles.menuIcon} />
             Теоретичний матеріал
-          </button>
-
-          <button className={styles.menuItem} onClick={() => handleAction(onCreateTask)}>
-            <TaskIcon className={styles.menuIcon} />
-            Завдання
-          </button>
-
-          <button className={styles.menuItem} onClick={() => handleAction(onCreateTest)}>
-            <TestIcon className={styles.menuIcon} />
-            Тест
           </button>
 
           <button className={styles.menuItem} onClick={() => handleAction(onCreateAnnouncement)}>

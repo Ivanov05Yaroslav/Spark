@@ -11,6 +11,7 @@ import { ParticipantsWorkspace } from '@/features/courses/components/Participant
 import { useGetCourseData } from '@/features/courses/hooks/useGetCourseData.ts';
 import { toast } from '@/libs/configs/Toast';
 import { useStore } from '@/stores/useStore.ts';
+import { JournalWorkspace } from '@/features/journal/components/JournalWorkspace/JournalWorkspace.tsx';
 
 export const CoursePage: React.FC = () => {
   const { id: courseId } = useParams<{ id: string }>();
@@ -65,6 +66,7 @@ export const CoursePage: React.FC = () => {
       label: 'Оголошення',
       badge: unreadAnnouncementsCount > 0 ? unreadAnnouncementsCount : undefined,
     },
+    { id: 'journal', label: 'Журнал' },
     { id: 'participants', label: 'Учасники' },
   ];
 
@@ -135,7 +137,7 @@ export const CoursePage: React.FC = () => {
 
       <Tabs items={TABS} activeId={activeTab} onTabChange={handleTabChange} />
 
-      {isTeacher && (
+      {isTeacher && activeTab !== 'journal' && (
         <CourseCreateButton
           onCreateLink={() => navigate(`/courses/${courseId}/materials/links/create`)}
           onCreateMaterial={() => navigate(`/courses/${courseId}/materials/files/create`)}
@@ -186,6 +188,8 @@ export const CoursePage: React.FC = () => {
           showMoreMenu={isTeacher}
         />
       )}
+
+      {activeTab === 'journal' && <JournalWorkspace />}
 
       {activeTab === 'participants' && (
         <ParticipantsWorkspace
