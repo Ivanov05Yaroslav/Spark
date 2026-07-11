@@ -8,6 +8,11 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum AttendanceStatus {
+  ABSENT
+  SICK
+}
+
 // ==========================================
 // 1. Управління користувачами та ролями
 // ==========================================
@@ -233,6 +238,7 @@ model CourseModule {
   id        String   @id @default(uuid())
   courseId  String
   title     String
+  semester  Int      @default(1)
   createdAt DateTime @default(now())
 
   course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
@@ -242,6 +248,7 @@ model CourseModule {
   tasks     Task[]
   tests     Test[]
 
+  @@index([courseId, semester])
   @@map("course_modules")
 }
 
@@ -312,10 +319,11 @@ model Lesson {
 
   nusGroups NusGroup[] @relation("LessonNusGroups")
 
-  materials  Material[]
-  task       Task?
-  test       Test?
-  gradebooks Gradebook[]
+  materials   Material[]
+  task        Task?
+  test        Test?
+  gradebooks  Gradebook[]
+  attendances Attendance[]
 
   @@map("lessons")
 }
@@ -437,6 +445,7 @@ model Submission {
   submittedAt DateTime  @default(now())
   checkedAt   DateTime?
   score       String?
+  finalGrade  Float?
   duration    Int?
   attachments String[]
 
@@ -445,6 +454,8 @@ model Submission {
   student     User               @relation(fields: [studentId], references: [id], onDelete: Cascade)
   testAnswers SubmissionAnswer[]
 
+  @@index([studentId, taskId])
+  @@index([studentId, testId])
   @@map("submissions")
 }
 
@@ -495,6 +506,8 @@ model Gradebook {
   gradeType  String // "VERBAL", "LEVEL", "NUS", "TRADITIONAL"
   date       DateTime @default(now())
   score      Float?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   student  User      @relation("StudentGrades", fields: [studentId], references: [id], onDelete: Cascade)
   teacher  User      @relation("TeacherGrades", fields: [teacherId], references: [id], onDelete: Cascade)
@@ -504,19 +517,31 @@ model Gradebook {
   test     Test?     @relation(fields: [testId], references: [id], onDelete: Cascade)
   nusGroup NusGroup? @relation(fields: [nusGroupId], references: [id], onDelete: SetNull)
 
+  @@index([courseId, studentId])
+  @@index([lessonId])
+  @@index([taskId])
+  @@index([testId])
+  @@index([nusGroupId])
   @@map("gradebooks")
 }
 
 model Attendance {
-  id        String   @id @default(uuid())
+  id        String           @id @default(uuid())
   studentId String
   courseId  String
-  date      DateTime @default(now())
-  status    String
+  lessonId  String
+  date      DateTime
+  status    AttendanceStatus
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 
   student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
   course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lesson  Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
+  @@unique([studentId, lessonId])
+  @@index([courseId, lessonId])
+  @@index([studentId, courseId])
   @@map("attendances")
 }
 

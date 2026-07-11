@@ -379,7 +379,7 @@ export class TestsService {
   }
 
   async submitTest(studentId: string, testId: string, dto: SubmitTestDto) {
-    return await this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx) => {
       const test = await tx.test.findUnique({
         where: { id: testId },
         include: {
@@ -390,72 +390,70 @@ export class TestsService {
 
       if (!test) throw new HttpException('Тест не знайдено', HttpStatus.NOT_FOUND);
 
-      const isStudent = test.course.students.some((s) => s.studentId === studentId);
+      const isStudent = test.course.students.some((item) => item.studentId === studentId);
       if (!isStudent) {
         throw new HttpException('Ви не є учнем цього курсу', HttpStatus.FORBIDDEN);
       }
 
-      const previousAttempts = await tx.submission.count({
-        where: { studentId, testId },
-      });
-
+      const previousAttempts = await tx.submission.count({ where: { studentId, testId } });
       if (previousAttempts >= test.maxAttempts) {
         throw new HttpException('Вичерпано ліміт спроб', HttpStatus.FORBIDDEN);
       }
+
+      const previousBest = await tx.submission.findFirst({
+        where: { studentId, testId, finalGrade: { not: null } },
+        orderBy: [{ finalGrade: 'desc' }, { submittedAt: 'asc' }],
+        select: { id: true, finalGrade: true },
+      });
 
       const stats: Record<string, { scored: number; max: number }> = {};
       let totalScoredOverall = 0;
       let totalMaxOverall = 0;
 
-      for (const [qId, selectedIds] of Object.entries(dto.answers)) {
-        const question = test.questions.find((q) => q.id === qId);
-        if (!question) continue;
-
+      for (const question of test.questions) {
+        const selectedIds = dto.answers[question.id] ?? [];
         const questionMax = question.points;
         let questionScored = 0;
 
-        if (selectedIds && selectedIds.length > 0) {
-          if (question.type === 'ONE_CHOICE') {
-            const answer = question.answers.find((a) => a.id === selectedIds[0]);
-            if (answer && answer.isCorrect) {
-              questionScored = questionMax;
-            }
-          } else if (question.type === 'MULTIPLE_CHOICE') {
-            const correctAnswers = question.answers.filter((a) => a.isCorrect);
-            const incorrectAnswers = question.answers.filter((a) => !a.isCorrect);
+        if (question.type === 'ONE_CHOICE') {
+          const selected = question.answers.find((answer) => answer.id === selectedIds[0]);
+          if (selected?.isCorrect) questionScored = questionMax;
+        } else if (question.type === 'MULTIPLE_CHOICE') {
+          const correctAnswers = question.answers.filter((answer) => answer.isCorrect);
+          const incorrectAnswers = question.answers.filter((answer) => !answer.isCorrect);
 
-            let studentCorrectHits = 0;
-            let studentIncorrectHits = 0;
+          const correctHits = selectedIds.filter((id) =>
+            correctAnswers.some((answer) => answer.id === id),
+          ).length;
+          const incorrectHits = selectedIds.filter((id) =>
+            incorrectAnswers.some((answer) => answer.id === id),
+          ).length;
 
-            for (const answerId of selectedIds) {
-              if (correctAnswers.some((ca) => ca.id === answerId)) studentCorrectHits++;
-              if (incorrectAnswers.some((ia) => ia.id === answerId)) studentIncorrectHits++;
-            }
-
-            const netHits = Math.max(0, studentCorrectHits - studentIncorrectHits);
-            if (correctAnswers.length > 0) {
-              questionScored = (netHits / correctAnswers.length) * questionMax;
-            }
+          const netHits = Math.max(0, correctHits - incorrectHits);
+          if (correctAnswers.length > 0) {
+            questionScored = (netHits / correctAnswers.length) * questionMax;
           }
         }
 
         totalScoredOverall += questionScored;
         totalMaxOverall += questionMax;
 
-        const gId = question.nusGroupId || 'GENERAL';
-        if (!stats[gId]) {
-          stats[gId] = { scored: 0, max: 0 };
-        }
-        stats[gId].max += questionMax;
-        stats[gId].scored += questionScored;
+        const groupKey = question.nusGroupId ?? 'GENERAL';
+        stats[groupKey] ??= { scored: 0, max: 0 };
+        stats[groupKey].scored += questionScored;
+        stats[groupKey].max += questionMax;
       }
 
-      const submissionScoreStr = `${totalScoredOverall.toFixed(2)}/${totalMaxOverall.toFixed(2)}`;
+      const rawScore = `${totalScoredOverall.toFixed(2)}/${totalMaxOverall.toFixed(2)}`;
+      const finalGrade = this.calculateNusGrade(totalScoredOverall, totalMaxOverall);
 
-      const testAnswersData: { questionId: string; answerId: string }[] = [];
-      for (const [qId, ansIds] of Object.entries(dto.answers)) {
-        for (const aId of ansIds) {
-          testAnswersData.push({ questionId: qId, answerId: aId });
+      const testAnswersData: Array<{ questionId: string; answerId: string }> = [];
+      for (const question of test.questions) {
+        const allowedAnswerIds = new Set(question.answers.map((answer) => answer.id));
+        for (const answerId of dto.answers[question.id] ?? []) {
+          if (allowedAnswerIds.has(answerId)) {
+            testAnswersData.push({ questionId: question.id, answerId });
+          }
         }
       }
 
@@ -463,50 +461,44 @@ export class TestsService {
         data: {
           testId,
           studentId,
-          score: submissionScoreStr,
+          score: rawScore,
+          finalGrade,
           duration: dto.duration,
           checkedAt: new Date(),
           attachments: [],
-          testAnswers: {
-            create: testAnswersData,
-          },
+          testAnswers: { create: testAnswersData },
         },
       });
 
-      const gradebookData: {
-        studentId: string;
-        teacherId: string;
-        courseId: string;
-        lessonId: string;
-        testId: string;
-        nusGroupId: string | null;
-        gradeType: string;
-        score: number;
-        date: Date;
-      }[] = [];
+      const isBestAttempt =
+        previousBest?.finalGrade === null ||
+        previousBest?.finalGrade === undefined ||
+        finalGrade >= previousBest.finalGrade;
 
-      for (const [groupId, stat] of Object.entries(stats)) {
-        if (stat.max > 0) {
-          const grade12 = this.calculateNusGrade(stat.scored, stat.max);
-          gradebookData.push({
+      if (isBestAttempt) {
+        await tx.gradebook.deleteMany({ where: { studentId, testId } });
+
+        const projection = Object.entries(stats)
+          .filter(([, stat]) => stat.max > 0)
+          .map(([groupId, stat]) => ({
             studentId,
             teacherId: test.creatorId,
             courseId: test.courseId,
             lessonId: test.lessonId,
+            taskId: null,
             testId: test.id,
             nusGroupId: groupId === 'GENERAL' ? null : groupId,
             gradeType: groupId === 'GENERAL' ? 'TRADITIONAL' : 'NUS',
-            score: grade12,
+            score: this.calculateNusGrade(stat.scored, stat.max),
             date: new Date(),
-          });
+          }));
+
+        if (projection.length > 0) {
+          await tx.gradebook.createMany({ data: projection });
         }
       }
 
-      if (gradebookData.length > 0) {
-        await tx.gradebook.createMany({ data: gradebookData });
-      }
-
-      return submission;
+      return { ...submission, isBestAttempt };
     });
   }
 

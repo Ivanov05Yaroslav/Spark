@@ -2,8 +2,12 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { AwsS3Service } from '../../core/integrations/aws/aws-s3.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { CreateTaskSubmissionDto, GradeSubmissionDto, UpdateTaskSubmissionDto } from './dto/submission.dto';
 import { GetSubmissionsQueryDto } from './dto/submission-query.dto';
+import {
+  CreateTaskSubmissionDto,
+  GradeSubmissionDto,
+  UpdateTaskSubmissionDto,
+} from './dto/submission.dto';
 
 @Injectable()
 export class SubmissionsService {
@@ -16,7 +20,9 @@ export class SubmissionsService {
   async submitTask(studentId: string, dto: CreateTaskSubmissionDto, files?: any[]) {
     const task = await this.prisma.task.findUnique({
       where: { id: dto.taskId },
-      include: { course: { include: { students: true, coTeachers: true, subject: true, class: true } } },
+      include: {
+        course: { include: { students: true, coTeachers: true, subject: true, class: true } },
+      },
     });
     if (!task) throw new HttpException('Завдання не знайдено', HttpStatus.NOT_FOUND);
 
@@ -402,88 +408,126 @@ export class SubmissionsService {
     const submission = await this.prisma.submission.findUnique({
       where: { id: submissionId },
       include: {
-        task: { include: { course: { include: { coTeachers: true, subject: true, class: true } } } },
-        test: { include: { course: { include: { coTeachers: true, subject: true, class: true } } } },
+        task: {
+          include: {
+            nusGroups: { select: { id: true } },
+            course: { include: { coTeachers: true, subject: true, class: true } },
+          },
+        },
+        test: { include: { course: { include: { coTeachers: true } } } },
       },
     });
-    if (!submission) throw new HttpException('Роботу не знайдено', HttpStatus.NOT_FOUND);
 
-    const course = submission.task?.course || submission.test?.course;
-    if (!course)
-      throw new HttpException('Помилка структури курсу', HttpStatus.INTERNAL_SERVER_ERROR);
+    if (!submission) {
+      throw new HttpException('Роботу не знайдено', HttpStatus.NOT_FOUND);
+    }
 
+    if (!submission.task) {
+      throw new HttpException(
+        'Ручне оцінювання через цей endpoint дозволене тільки для завдань',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const course = submission.task.course;
     const isTeacher =
-      course.creatorId === teacherId || course.coTeachers?.some((ct) => ct.teacherId === teacherId);
-    if (!isTeacher)
-      throw new HttpException('У вас немає прав для оцінювання цієї роботи', HttpStatus.FORBIDDEN);
+      course.creatorId === teacherId ||
+      course.coTeachers.some((item) => item.teacherId === teacherId);
 
-    const updated = await this.prisma.submission.update({
-      where: { id: submissionId },
-      data: { score: dto.score, checkedAt: new Date() },
-    });
-    
-    if (submission.task) {
-      await this.prisma.gradebook.deleteMany({
-        where: { taskId: submission.task.id, studentId: submission.studentId }
+    if (!isTeacher) {
+      throw new HttpException('У вас немає прав для оцінювання цієї роботи', HttpStatus.FORBIDDEN);
+    }
+
+    const selectedGroupIds = new Set(submission.task.nusGroups.map((group) => group.id));
+    const nusGrades = dto.nusGrades ?? [];
+    const parsedOverall = dto.score === undefined ? null : Number(dto.score);
+
+    if (nusGrades.length === 0 && (parsedOverall === null || Number.isNaN(parsedOverall))) {
+      throw new HttpException('Передайте загальну оцінку або оцінки НУШ', HttpStatus.BAD_REQUEST);
+    }
+
+    if (
+      parsedOverall !== null &&
+      (!Number.isFinite(parsedOverall) || parsedOverall < 1 || parsedOverall > 12)
+    ) {
+      throw new HttpException('Загальна оцінка має бути від 1 до 12', HttpStatus.BAD_REQUEST);
+    }
+
+    for (const grade of nusGrades) {
+      if (!grade.nusGroupId || !selectedGroupIds.has(grade.nusGroupId)) {
+        throw new HttpException(
+          'Передана група НУШ не вибрана для цього завдання',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+    }
+
+    const calculatedFinalGrade =
+      parsedOverall ?? nusGrades.reduce((sum, grade) => sum + grade.score, 0) / nusGrades.length;
+    const finalGrade = Math.round(calculatedFinalGrade * 100) / 100;
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.submission.update({
+        where: { id: submissionId },
+        data: {
+          score: dto.score ?? String(Math.round(finalGrade)),
+          finalGrade,
+          checkedAt: new Date(),
+        },
       });
 
-      const gradebookData: {
-        studentId: string;
-        teacherId: string;
-        courseId: string;
-        lessonId: string;
-        taskId: string;
-        nusGroupId: string | null;
-        gradeType: string;
-        score: number;
-        date: Date;
-      }[] = [];
+      await tx.gradebook.deleteMany({
+        where: { taskId: submission.task!.id, studentId: submission.studentId },
+      });
 
-      if (dto.nusGrades && dto.nusGrades.length > 0) {
-        for (const ng of dto.nusGrades) {
-          gradebookData.push({
+      if (nusGrades.length > 0) {
+        await tx.gradebook.createMany({
+          data: nusGrades.map((grade) => ({
             studentId: submission.studentId,
-            teacherId: teacherId,
-            courseId: submission.task.courseId,
-            lessonId: submission.task.lessonId,
-            taskId: submission.task.id,
-            nusGroupId: ng.nusGroupId || null,
-            gradeType: ng.nusGroupId ? 'NUS' : 'TRADITIONAL',
-            score: ng.score,
+            teacherId,
+            courseId: submission.task!.courseId,
+            lessonId: submission.task!.lessonId,
+            taskId: submission.task!.id,
+            testId: null,
+            nusGroupId: grade.nusGroupId!,
+            gradeType: 'NUS',
+            score: grade.score,
             date: new Date(),
-          });
-        }
-      } else if (dto.score) {
-        const parsedScore = parseFloat(dto.score);
-        if (!isNaN(parsedScore)) {
-          gradebookData.push({
+          })),
+        });
+      } else {
+        await tx.gradebook.create({
+          data: {
             studentId: submission.studentId,
-            teacherId: teacherId,
-            courseId: submission.task.courseId,
-            lessonId: submission.task.lessonId, 
-            taskId: submission.task.id,
+            teacherId,
+            courseId: submission.task!.courseId,
+            lessonId: submission.task!.lessonId,
+            taskId: submission.task!.id,
+            testId: null,
             nusGroupId: null,
             gradeType: 'TRADITIONAL',
-            score: parsedScore,
+            score: finalGrade,
             date: new Date(),
-          });
-        }
+          },
+        });
       }
 
-      if (gradebookData.length > 0) {
-        await this.prisma.gradebook.createMany({ data: gradebookData });
-      }
+      return result;
+    });
 
-      const courseName = `${submission.task.course.subject.name} ${submission.task.course.class.name}`;
-      await this.notificationsService.create({
-        senderId: teacherId,
-        receiverId: submission.studentId,
-        title: 'Оцінка за завдання',
-        content: `Вашу роботу "${submission.task.title}" у курсі "${courseName}" перевірено. Оцінка: ${dto.score}`,
-        type: 'SUBMISSION',
-        metadata: { courseId: submission.task.courseId, taskId: submission.task.id },
-      });
-    }
+    const courseName = `${course.subject.name} ${course.class.name}`;
+    await this.notificationsService.create({
+      senderId: teacherId,
+      receiverId: submission.studentId,
+      title: 'Оцінка за завдання',
+      content: `Вашу роботу "${submission.task.title}" у курсі "${courseName}" перевірено. Оцінка: ${Math.round(finalGrade)}.`,
+      type: 'SUBMISSION',
+      metadata: {
+        courseId: submission.task.courseId,
+        taskId: submission.task.id,
+        submissionId,
+      },
+    });
 
     return updated;
   }
