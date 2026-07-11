@@ -17,6 +17,29 @@ export class SubmissionsService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
+  private async signAttachments(attachments: string[]) {
+    return Promise.all(
+      attachments.map(async (url) => {
+        if (url.includes('amazonaws.com')) {
+          return await this.awsS3Service.generatePresignedUrl(url);
+        }
+        return url;
+      }),
+    );
+  }
+
+  private paginateResponse(data: any[], total: number, page: number, limit: number) {
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
   async submitTask(studentId: string, dto: CreateTaskSubmissionDto, files?: any[]) {
     const task = await this.prisma.task.findUnique({
       where: { id: dto.taskId },
@@ -88,18 +111,9 @@ export class SubmissionsService {
       }
     }
 
-    return newSubmission;
-  }
-
-  private paginateResponse(data: any[], total: number, page: number, limit: number) {
     return {
-      data,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
+      ...newSubmission,
+      attachments: await this.signAttachments(newSubmission.attachments),
     };
   }
 
@@ -143,15 +157,7 @@ export class SubmissionsService {
 
     if (!submission) return null;
 
-    const signedAttachments = await Promise.all(
-      submission.attachments.map(async (url) => {
-        if (url.includes('amazonaws.com')) {
-          return await this.awsS3Service.generatePresignedUrl(url);
-        }
-        return url;
-      }),
-    );
-
+    const signedAttachments = await this.signAttachments(submission.attachments);
     return { ...submission, attachments: signedAttachments };
   }
 
@@ -217,6 +223,7 @@ export class SubmissionsService {
     const formattedData = await Promise.all(
       data.map(async (sub) => ({
         ...sub,
+        attachments: await this.signAttachments(sub.attachments),
         student: {
           ...sub.student,
           avatarUrl: sub.student.avatarUrl
@@ -286,6 +293,7 @@ export class SubmissionsService {
     const formattedData = await Promise.all(
       data.map(async (sub) => ({
         ...sub,
+        attachments: await this.signAttachments(sub.attachments),
         student: {
           ...sub.student,
           avatarUrl: sub.student.avatarUrl
@@ -316,14 +324,7 @@ export class SubmissionsService {
         checkedAt: null,
       },
       include: {
-        student: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatarUrl: true,
-          },
-        },
+        student: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
         task: { select: { id: true, title: true } },
         test: { select: { id: true, title: true } },
       },
@@ -333,6 +334,7 @@ export class SubmissionsService {
     return Promise.all(
       submissions.map(async (sub) => ({
         ...sub,
+        attachments: await this.signAttachments(sub.attachments),
         student: {
           ...sub.student,
           avatarUrl: sub.student.avatarUrl
@@ -361,7 +363,7 @@ export class SubmissionsService {
       );
     }
 
-    return this.prisma.submission.findMany({
+    const submissions = await this.prisma.submission.findMany({
       where: {
         studentId,
         OR: [{ task: { courseId } }, { test: { courseId } }],
@@ -372,6 +374,13 @@ export class SubmissionsService {
       },
       orderBy: { submittedAt: 'desc' },
     });
+
+    return Promise.all(
+      submissions.map(async (sub) => ({
+        ...sub,
+        attachments: await this.signAttachments(sub.attachments),
+      })),
+    );
   }
 
   async updateTaskSubmission(
@@ -418,10 +427,15 @@ export class SubmissionsService {
       }
     }
 
-    return this.prisma.submission.update({
+    const updated = await this.prisma.submission.update({
       where: { id: submissionId },
       data: { attachments: finalAttachments },
     });
+
+    return {
+      ...updated,
+      attachments: await this.signAttachments(updated.attachments),
+    };
   }
 
   async deleteSubmission(studentId: string, submissionId: string) {
@@ -562,7 +576,10 @@ export class SubmissionsService {
       },
     });
 
-    return updated;
+    return {
+      ...updated,
+      attachments: await this.signAttachments(updated.attachments),
+    };
   }
 
   async getTestAttemptReview(userId: string, submissionId: string) {
@@ -750,14 +767,7 @@ export class SubmissionsService {
 
         let signedAttachments: string[] = [];
         if (latestSubmission && latestSubmission.attachments.length > 0) {
-          signedAttachments = await Promise.all(
-            latestSubmission.attachments.map(async (url) => {
-              if (url.includes('amazonaws.com')) {
-                return await this.awsS3Service.generatePresignedUrl(url);
-              }
-              return url;
-            }),
-          );
+          signedAttachments = await this.signAttachments(latestSubmission.attachments);
         }
 
         return {

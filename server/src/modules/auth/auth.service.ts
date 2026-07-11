@@ -82,32 +82,19 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
       include: {
-        userRoles: {
-          include: { role: true },
-        },
+        userRoles: { include: { role: true } },
         parentRelations: {
           include: {
-            student: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                middleName: true,
-              },
-            },
+            student: { select: { id: true, firstName: true, lastName: true, middleName: true } },
           },
         },
       },
     });
 
-    if (!user) {
-      throw new UnauthorizedException('Невірний email або пароль');
-    }
+    if (!user) throw new UnauthorizedException('Невірний email або пароль');
 
     const isPasswordValid = await bcrypt.compare(dto.password, user.password);
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Невірний email або пароль');
-    }
+    if (!isPasswordValid) throw new UnauthorizedException('Невірний email або пароль');
 
     await this.prisma.user.update({
       where: { id: user.id },
@@ -115,6 +102,9 @@ export class AuthService {
     });
 
     const tokens = await this.generateTokens(user);
+    const signedAvatar = user.avatarUrl
+      ? await this.awsS3Service.generatePresignedUrl(user.avatarUrl)
+      : null;
 
     return {
       ...tokens,
@@ -124,7 +114,7 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         middleName: user.middleName,
-        avatarUrl: user.avatarUrl,
+        avatarUrl: signedAvatar,
         roles: user.userRoles.map((ur) => ur.role.name),
         schoolId: user.schoolId,
         commentsBlockedUntil: user.commentsBlockedUntil,
@@ -148,29 +138,21 @@ export class AuthService {
       const user = await this.prisma.user.findUnique({
         where: { id: userData.sub || userData.id },
         include: {
-          userRoles: {
-            include: { role: true },
-          },
+          userRoles: { include: { role: true } },
           parentRelations: {
             include: {
-              student: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                  middleName: true,
-                },
-              },
+              student: { select: { id: true, firstName: true, lastName: true, middleName: true } },
             },
           },
         },
       });
 
-      if (!user) {
-        throw new UnauthorizedException('Користувача не знайдено');
-      }
+      if (!user) throw new UnauthorizedException('Користувача не знайдено');
 
       const tokens = await this.generateTokens(user);
+      const signedAvatar = user.avatarUrl
+        ? await this.awsS3Service.generatePresignedUrl(user.avatarUrl)
+        : null;
 
       return {
         ...tokens,
@@ -180,7 +162,7 @@ export class AuthService {
           firstName: user.firstName,
           lastName: user.lastName,
           middleName: user.middleName,
-          avatarUrl: user.avatarUrl,
+          avatarUrl: signedAvatar,
           roles: user.userRoles.map((ur) => ur.role.name),
           schoolId: user.schoolId,
           commentsBlockedUntil: user.commentsBlockedUntil,
@@ -199,7 +181,7 @@ export class AuthService {
   }
 
   private async generateTokens(user: any) {
-    const roles = user.userRoles?.map((ur) => ur.role.name) || [];
+    const roles = user.userRoles?.map((ur: any) => ur.role.name) || [];
     const children =
       user.parentRelations?.map((rel: any) => ({
         id: rel.student?.id || rel.studentId,
@@ -207,13 +189,8 @@ export class AuthService {
         lastName: rel.student?.lastName || '',
         middleName: rel.student?.middleName || '',
       })) || [];
-    const payload = {
-      id: user.id,
-      email: user.email,
-      roles,
-      schoolId: user.schoolId,
-      children,
-    };
+
+    const payload = { id: user.id, email: user.email, roles, schoolId: user.schoolId, children };
 
     const accessToken = this.jwtService.sign(payload, {
       expiresIn: '1d',

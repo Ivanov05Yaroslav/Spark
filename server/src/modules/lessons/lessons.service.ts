@@ -52,6 +52,19 @@ export class LessonsService {
     return moduleId as string;
   }
 
+  private async signTaskAttachments(task: any) {
+    if (!task || !task.attachments || task.attachments.length === 0) return task;
+    const signedAttachments = await Promise.all(
+      task.attachments.map(async (url: string) => {
+        if (url.includes('amazonaws.com')) {
+          return await this.awsS3Service.generatePresignedUrl(url);
+        }
+        return url;
+      }),
+    );
+    return { ...task, attachments: signedAttachments };
+  }
+
   async create(teacherId: string, dto: CreateLessonDto) {
     const course = await this.verifyTeacherWriteAccess(dto.courseId, teacherId);
 
@@ -115,6 +128,11 @@ export class LessonsService {
       },
     });
     if (!lesson) throw new HttpException('Урок не знайдено', HttpStatus.NOT_FOUND);
+
+    if (lesson.task) {
+      lesson.task = await this.signTaskAttachments(lesson.task);
+    }
+
     return lesson;
   }
 
@@ -139,7 +157,7 @@ export class LessonsService {
       }
     }
 
-    return this.prisma.lesson.update({
+    const updatedLesson = await this.prisma.lesson.update({
       where: { id: lessonId },
       data: {
         title: dto.title,
@@ -150,6 +168,12 @@ export class LessonsService {
       },
       include: { nusGroups: true, task: true, test: true },
     });
+
+    if (updatedLesson.task) {
+      updatedLesson.task = await this.signTaskAttachments(updatedLesson.task);
+    }
+
+    return updatedLesson;
   }
 
   async delete(teacherId: string, lessonId: string) {
@@ -161,7 +185,7 @@ export class LessonsService {
 
     await this.verifyTeacherWriteAccess(lesson.courseId, teacherId);
 
-    if (lesson.task && lesson.task.attachments.length > 0) {
+    if (lesson.task && lesson.task.attachments && lesson.task.attachments.length > 0) {
       const awsUrls = lesson.task.attachments.filter((url) => url.includes('amazonaws.com'));
       for (const url of awsUrls) {
         try {
