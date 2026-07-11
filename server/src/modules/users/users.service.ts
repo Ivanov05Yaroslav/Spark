@@ -53,6 +53,161 @@ export class UsersService {
     });
   }
 
+  private calculateSemesterStats(grades: any[], modules: any[], nusGroups: any[]) {
+    const latestCell = new Map<string, any>();
+    for (const grade of grades) {
+      const source = grade.taskId
+        ? `TASK:${grade.taskId}`
+        : grade.testId
+          ? `TEST:${grade.testId}`
+          : `LESSON:${grade.lessonId}`;
+      const key = `${source}|${grade.nusGroupId ?? 'GENERAL'}`;
+      latestCell.set(key, grade);
+    }
+    const deduplicated = [...latestCell.values()];
+
+    const sourcesWithNus = new Set<string>();
+    for (const g of deduplicated) {
+      if (g.nusGroupId) {
+        const source = g.taskId
+          ? `TASK:${g.taskId}`
+          : g.testId
+            ? `TEST:${g.testId}`
+            : `LESSON:${g.lessonId}`;
+        sourcesWithNus.add(source);
+      }
+    }
+
+    const effectiveGrades = deduplicated.filter((g) => {
+      if (g.nusGroupId) return true;
+      const source = g.taskId
+        ? `TASK:${g.taskId}`
+        : g.testId
+          ? `TEST:${g.testId}`
+          : `LESSON:${g.lessonId}`;
+      return !sourcesWithNus.has(source);
+    });
+
+    if (effectiveGrades.length === 0) return { unitGrades: '', overall: null };
+
+    const moduleAveragesByNusGroup = new Map<string, number[]>();
+    for (const ng of nusGroups) {
+      moduleAveragesByNusGroup.set(ng.id, []);
+    }
+
+    for (const mod of modules) {
+      const modGrades = effectiveGrades.filter((g) => g.lesson?.courseModuleId === mod.id);
+
+      for (const ng of nusGroups) {
+        const ngGrades = modGrades.filter((g) => g.nusGroupId === ng.id).map((g) => g.score);
+        if (ngGrades.length > 0) {
+          const avg = ngGrades.reduce((a, b) => a + b, 0) / ngGrades.length;
+          moduleAveragesByNusGroup.get(ng.id)!.push(avg);
+        }
+      }
+    }
+
+    const semesterNusGrades: number[] = [];
+    for (const ng of nusGroups) {
+      const modAvgs = moduleAveragesByNusGroup.get(ng.id)!;
+      if (modAvgs.length > 0) {
+        semesterNusGrades.push(Math.round(modAvgs.reduce((a, b) => a + b, 0) / modAvgs.length));
+      }
+    }
+
+    const unitGradesStr = semesterNusGrades.join(', ');
+
+    let semesterOverall: number | null = null;
+    if (semesterNusGrades.length > 0) {
+      semesterOverall = Math.round(
+        semesterNusGrades.reduce((a, b) => a + b, 0) / semesterNusGrades.length,
+      );
+    } else {
+      const tradModAvgs: number[] = [];
+      for (const mod of modules) {
+        const mGrades = effectiveGrades
+          .filter((g) => g.lesson?.courseModuleId === mod.id && !g.nusGroupId)
+          .map((g) => g.score);
+        if (mGrades.length > 0) {
+          tradModAvgs.push(mGrades.reduce((a, b) => a + b, 0) / mGrades.length);
+        }
+      }
+      if (tradModAvgs.length > 0) {
+        semesterOverall = Math.round(tradModAvgs.reduce((a, b) => a + b, 0) / tradModAvgs.length);
+      }
+    }
+
+    return {
+      unitGrades: unitGradesStr,
+      overall: semesterOverall,
+    };
+  }
+
+  private async getStudentAcademicPerformance(studentId: string) {
+    const enrolledCourses = await this.prisma.courseStudent.findMany({
+      where: { studentId },
+      include: {
+        course: {
+          include: {
+            subject: { include: { nusGroups: { orderBy: { name: 'asc' } } } },
+            modules: { select: { id: true, semester: true } },
+          },
+        },
+      },
+    });
+
+    const grades = await this.prisma.gradebook.findMany({
+      where: { studentId, score: { not: null } },
+      include: {
+        lesson: { select: { courseModuleId: true } },
+      },
+    });
+
+    const results = enrolledCourses.map(({ course }) => {
+      const courseGrades = grades.filter((g) => g.courseId === course.id);
+
+      const sem1Modules = course.modules.filter((m) => m.semester === 1);
+      const sem2Modules = course.modules.filter((m) => m.semester === 2);
+
+      const sem1Grades = courseGrades.filter((g) =>
+        sem1Modules.some((m) => m.id === g.lesson?.courseModuleId),
+      );
+      const sem2Grades = courseGrades.filter((g) =>
+        sem2Modules.some((m) => m.id === g.lesson?.courseModuleId),
+      );
+
+      const sem1Stats = this.calculateSemesterStats(
+        sem1Grades,
+        sem1Modules,
+        course.subject.nusGroups,
+      );
+      const sem2Stats = this.calculateSemesterStats(
+        sem2Grades,
+        sem2Modules,
+        course.subject.nusGroups,
+      );
+
+      let annualGrade: number | null = null;
+      if (sem1Stats.overall !== null && sem2Stats.overall !== null) {
+        annualGrade = Math.round((sem1Stats.overall + sem2Stats.overall) / 2);
+      } else if (sem1Stats.overall !== null) {
+        annualGrade = sem1Stats.overall;
+      } else if (sem2Stats.overall !== null) {
+        annualGrade = sem2Stats.overall;
+      }
+
+      return {
+        courseId: course.id,
+        subjectName: course.subject.name,
+        semester1: sem1Stats,
+        semester2: sem2Stats,
+        annualGrade,
+      };
+    });
+
+    return results.sort((a, b) => a.subjectName.localeCompare(b.subjectName));
+  }
+
   async getMyProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -134,6 +289,8 @@ export class UsersService {
       profile.coursesCount = coursesCount;
       profile.classmatesCount = classmatesCount;
       profile.parentsCode = user.parentsCode;
+
+      profile.academicPerformance = await this.getStudentAcademicPerformance(userId);
     }
 
     if (roles.includes('TEACHER')) {
@@ -234,6 +391,8 @@ export class UsersService {
         })
       : 0;
 
+    const academicPerformance = await this.getStudentAcademicPerformance(childId);
+
     return {
       id: child.id,
       email: child.email,
@@ -253,6 +412,7 @@ export class UsersService {
       class: activeClass ? { id: activeClass.id, name: activeClass.name } : null,
       coursesCount,
       classmatesCount,
+      academicPerformance,
     };
   }
 
