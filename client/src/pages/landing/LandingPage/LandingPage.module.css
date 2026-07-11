@@ -1,0 +1,83 @@
+.landingContainer {
+    display: flex;
+    width: 100%;
+    min-height: 100vh;
+    background-color: #FDFBFF;
+    position: relative;
+    overflow: hidden;
+    align-items: center;
+}
+
+.contentSection {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 2;
+    padding: 2rem;
+    width: 60%;
+}
+
+.title {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #1A1A1A;
+    letter-spacing: 1px;
+    margin-bottom: 1rem;
+    text-align: left;
+}
+
+.subtitle {
+    font-size: 1.1rem;
+    color: #666666;
+    line-height: 1.5;
+    margin-bottom: 2.5rem;
+    max-width: 60%;
+    text-align: center;
+}
+
+.buttonGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 350px;
+    max-width: 100%;
+}
+
+.buttonGroup button {
+    width: 100%;
+    max-width: 100%;
+    justify-content: center;
+    padding-left: 24px;
+}
+
+.starsWrapper {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 40%;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.starsSvg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: right top;
+    display: block;
+}
+
+@media (max-width: 900px) {
+    .contentSection {
+        margin-left: 0;
+        align-items: center;
+    }
+    .title, .subtitle {
+        text-align: center;
+    }
+    .starsWrapper {
+        opacity: 0.3;
+    }
+}

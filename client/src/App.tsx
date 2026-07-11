@@ -30,6 +30,7 @@ import {
 } from './pages/auth';
 import { TestAttemptReviewPage } from '@/pages/tests/TestAttemptReviewPage/TestAttemptReviewPage.tsx';
 import { UploadFilePage, UploadLinkPage } from '@/pages/materials';
+import { LandingPage } from '@/pages/landing';
 
 function App() {
   return (
@@ -48,6 +49,7 @@ function App() {
       />
 
       <Routes>
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
 
         <Route path="/password/forgot-password" element={<ForgotPasswordPage />} />
@@ -63,7 +65,7 @@ function App() {
         <Route path="/school/verify-email" element={<HeadmasterEmailVerificationPage />} />
         <Route path="/school/register/submit" element={<SchoolDocumentsPage />} />
 
-        <Route path="/" element={<MainLayout />}>
+        <Route element={<MainLayout />}>
           <Route
             element={
               <ProtectedRoute
@@ -71,7 +73,6 @@ function App() {
               />
             }
           >
-            <Route index element={<Navigate to="/courses" replace />} />
             <Route path="/courses" element={<CoursesPage />} />
             <Route path="/courses/:id" element={<CoursePage />} />
             <Route path="/profile" element={<ProfilePage />} />

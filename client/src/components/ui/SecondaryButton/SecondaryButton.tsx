@@ -22,19 +22,19 @@ export const SecondaryButton: React.FC<SecondaryButtonProps> = ({
 
   if (variantColor) {
     const variantColors = {
-      green: { text: '#059669', bg: '#D1FAE5' },
-      yellow: { text: '#D97706', bg: '#FEF3C7' },
-      red: { text: '#DC2626', bg: '#FEE2E2' },
-      default: { text: '#702DFF', bg: '#DCD0FC' },
-      gray: { text: '#4B5563', bg: '#F3F4F6' },
+      green: { text: '#059669', bg: '#D1FAE5', bgHover: '#A7F3D0' },
+      yellow: { text: '#D97706', bg: '#FEF3C7', bgHover: '#FDE68A' },
+      red: { text: '#DC2626', bg: '#FEE2E2', bgHover: '#FCA5A5' },
+      default: { text: '#702DFF', bg: '#DCD0FC', bgHover: '#CBBFFF' },
+      gray: { text: '#4B5563', bg: '#F3F4F6', bgHover: '#E5E7EB' },
     };
 
-    const { text, bg } = variantColors[variantColor];
+    const { text, bg, bgHover } = variantColors[variantColor];
     dynamicStyles = {
       '--btn-color': text,
       '--btn-color-hover': text,
       '--btn-bg': bg,
-      '--btn-bg-hover': bg,
+      '--btn-bg-hover': bgHover,
       '--btn-bg-active': bg,
     };
   } else if (themeColor) {
