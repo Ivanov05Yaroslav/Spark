@@ -1,19 +1,20 @@
-.tableWrapper {
+.tableContainer {
     width: 100%;
     flex: 1;
     min-height: 0;
     overflow: auto;
 }
 
-.journalTable {
+.table {
     width: 100%;
     min-width: max-content;
     border-spacing: 0;
     text-align: left;
     table-layout: fixed;
+    border-collapse: separate;
 }
 
-.journalTable th {
+.table th {
     background-color: #F9FAFB;
     border-bottom: 1px solid #E5E7EB;
     border-right: 1px solid #E5E7EB;
@@ -21,41 +22,61 @@
     font-weight: 500;
 }
 
-.groupHeader {
+.studentNameCol {
+    width: 250px;
+    min-width: 250px;
+    max-width: 250px;
+    background-color: #FFFFFF;
+    vertical-align: middle;
+}
+
+.dayCol {
+    text-align: center;
+}
+
+.groupCol {
     width: 130px !important;
     min-width: 130px !important;
     max-width: 130px !important;
     white-space: normal;
     line-height: 1.3;
     word-break: break-word;
+    text-align: center;
 }
 
-.journalTable th:last-child,
-.journalTable td:last-child {
+.subCol {
+    font-size: 14px;
+    color: #6B7280;
+    text-align: center;
+    padding: 8px !important;
+    min-width: 48px;
+    background-color: #F9FAFB;
+}
+
+.verticalText {
+    display: block;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.table th:last-child,
+.table td:last-child {
     border-right: none;
 }
 
-.dayHeader {
-    text-align: center;
-}
-
-.subColumnHeader {
-    font-size: 14px;
-    color: #4B5563;
-    text-align: center;
-    padding: 12px !important;
-    min-width: 48px;
-}
-
-.studentRow:hover td {
+.table tbody tr:hover td {
     background-color: #FDFBFF;
 }
 
-.journalTable td {
+.table td {
     border-bottom: 1px solid #E5E7EB;
     border-right: 1px solid #E5E7EB;
     padding: 4px;
     background-color: #FFFFFF;
+}
+
+.studentNameCell {
+    vertical-align: middle;
 }
 
 .gradeTd {
@@ -65,23 +86,6 @@
 
 .gradeTd > div {
     margin: 0 auto;
-}
-
-.stickyCol.topLeftCell {
-    z-index: 3;
-    background-color: #F9FAFB !important;
-    vertical-align: middle;
-}
-
-.stickyCol {
-    width: 400px;
-}
-
-.headerTitle {
-    font-size: 14px;
-    font-weight: 500;
-    color: #6B7280;
-    text-align: center;
 }
 
 .studentInfo {
@@ -97,32 +101,7 @@
     color: #1A1A1A;
 }
 
-.categoryHeader {
-    font-size: 14px;
-    font-weight: 600;
-    color: #374151;
-    text-align: center;
-    padding: 8px 12px !important;
-    background-color: #F9FAFB;
-    border-bottom: 1px solid #E5E7EB;
-    border-right: 1px solid #E5E7EB;
-}
-
-.topLeftCell {
-    z-index: 3;
-    background-color: #FFFFFF !important;
-    vertical-align: middle;
-}
-
-.subColumnHeader {
-    font-size: 13px;
-    color: #6B7280;
-    text-align: center;
-    padding: 8px !important;
-    min-width: 48px;
-    background-color: #F9FAFB;
-}
-
 .absentDayCell {
     background-color: #F3F4F6 !important;
 }
+

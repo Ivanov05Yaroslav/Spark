@@ -8,13 +8,19 @@ import styles from './TestQuestionCard.module.css';
 import PlusIcon from '@/assets/plus.svg?react';
 import DeleteIcon from '@/assets/delete.svg?react';
 
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
 interface TestQuestionCardProps {
   index: number;
   question: any;
-  onUpdate?: (updatedFields: Partial<UIQuestion>) => void;
+  onUpdate?: (updatedFields: Partial<UIQuestion> & { nusGroupId?: string }) => void;
   onDelete?: () => void;
   isReviewMode?: boolean;
   isTeacherPreviewMode?: boolean;
+  nusGroupsOptions?: SelectOption[];
 }
 
 export const TestQuestionCard: React.FC<TestQuestionCardProps> = ({
@@ -24,14 +30,13 @@ export const TestQuestionCard: React.FC<TestQuestionCardProps> = ({
   onDelete,
   isReviewMode = false,
   isTeacherPreviewMode = false,
+  nusGroupsOptions = [],
 }) => {
   const [isActive, setIsActive] = useState<boolean>(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // Спільний прапорець для режимів "тільки для читання"
   const isReadOnly = isReviewMode || isTeacherPreviewMode;
 
-  // Логіка закриття активного стану картки при кліку ззовні
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (cardRef.current && !cardRef.current.contains(event.target as Node)) {
@@ -126,21 +131,26 @@ export const TestQuestionCard: React.FC<TestQuestionCardProps> = ({
             ) : (
               <div className={styles.topRow}>
                 <Input
-                  label={`Запитання`}
-                  placeholder={'Введіть запитання'}
-                  value={question.content}
-                  onChange={(e) => onUpdate && onUpdate({ content: e.target.value })}
-                  className={styles.questionInput}
-                />
-                <Input
                   label="Бали"
                   type="number"
                   min="0"
                   value={question.points || ''}
                   onChange={(e) => onUpdate && onUpdate({ points: Number(e.target.value) || 0 })}
                   placeholder="1"
-                  className={styles.typeSelect}
+                  className={styles.typeInput}
                 />
+
+                {nusGroupsOptions.length > 0 && (
+                  <SelectField
+                    label="Група оцінювання НУШ"
+                    value={question.nusGroupId || ''}
+                    onChange={(value) => onUpdate && onUpdate({ nusGroupId: value })}
+                    options={nusGroupsOptions}
+                    placeholder="Оберіть групу"
+                    className={styles.typeInput}
+                  />
+                )}
+
                 <SelectField
                   label="Тип запитання"
                   value={question.type}
@@ -149,10 +159,18 @@ export const TestQuestionCard: React.FC<TestQuestionCardProps> = ({
                     { value: 'ONE_CHOICE', label: 'Одна правильна відповідь' },
                     { value: 'MULTIPLE_CHOICE', label: 'Кілька правильних відповідей' },
                   ]}
-                  className={styles.typeSelect}
+                  className={styles.typeInput}
                 />
               </div>
             )}
+
+            <Input
+              label={`Запитання`}
+              placeholder={'Введіть запитання'}
+              value={question.content}
+              onChange={(e) => onUpdate && onUpdate({ content: e.target.value })}
+              className={styles.questionInput}
+            />
 
             <div className={styles.answersGrid}>
               {question.answers.map((answer: any, idx: number) => {

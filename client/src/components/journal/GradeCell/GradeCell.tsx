@@ -6,6 +6,7 @@ interface GradeCellProps {
   initialGrade?: string;
   isAttendance?: boolean;
   disabled?: boolean;
+  isUnsaved?: boolean;
   onSave?: (newGrade: string) => void;
 }
 
@@ -14,6 +15,7 @@ export const GradeCell: React.FC<GradeCellProps> = ({
   initialGrade = '',
   isAttendance,
   disabled,
+  isUnsaved = false,
   onSave,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -21,6 +23,11 @@ export const GradeCell: React.FC<GradeCellProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const originalGradeRef = useRef(initialGrade);
+
+  useEffect(() => {
+    setGrade(initialGrade);
+    originalGradeRef.current = initialGrade;
+  }, [initialGrade]);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -33,7 +40,11 @@ export const GradeCell: React.FC<GradeCellProps> = ({
     if (disabled) return;
 
     if (isAttendance) {
-      const newGrade = grade === 'Н' ? '' : 'Н';
+      let newGrade = '';
+      if (grade === '') newGrade = 'Н';
+      else if (grade === 'Н') newGrade = 'ХВ';
+      else if (grade === 'ХВ') newGrade = '';
+
       setGrade(newGrade);
       if (onSave) {
         onSave(newGrade);
@@ -53,7 +64,7 @@ export const GradeCell: React.FC<GradeCellProps> = ({
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleBlur();
     }
@@ -72,7 +83,6 @@ export const GradeCell: React.FC<GradeCellProps> = ({
     }
   };
 
-  const isUnsaved = grade !== originalGradeRef.current;
   const isEmpty = grade === '';
 
   return (
@@ -80,7 +90,9 @@ export const GradeCell: React.FC<GradeCellProps> = ({
       id={id}
       tabIndex={0}
       onKeyDown={handleWrapperKeyDown}
-      className={`${styles.cellWrapper} ${isEmpty && !disabled ? styles.emptyWrapper : ''} ${disabled ? styles.disabledWrapper : ''}`}
+      className={`${styles.cellWrapper} ${isEmpty && !disabled ? styles.emptyWrapper : ''} ${
+        disabled ? styles.disabledWrapper : ''
+      }`}
       onClick={!isEditing ? handleCellClick : undefined}
     >
       {isEditing ? (
@@ -95,14 +107,14 @@ export const GradeCell: React.FC<GradeCellProps> = ({
         />
       ) : (
         <div className={styles.content}>
-          {isEmpty ? (
+          {isUnsaved ? (
+            <span className={`${styles.badge} ${styles.badgeUnsaved}`}>{grade || '-'}</span>
+          ) : isEmpty ? (
             <span className={styles.emptyState}></span>
-          ) : isUnsaved ? (
-            <span className={`${styles.badge} ${styles.badgeUnsaved}`}>{grade}</span>
-          ) : grade === 'Н' ? (
+          ) : grade === 'Н' || grade === 'ХВ' ? (
             <span className={`${styles.badge} ${styles.badgeAbsent}`}>{grade}</span>
           ) : (
-            <span className={styles.textNormal}>{grade}</span>
+            <span className={styles.badge}>{grade}</span>
           )}
         </div>
       )}

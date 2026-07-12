@@ -14,6 +14,7 @@ export interface ApiQuestion {
 
 export interface CreateTestPayload {
   courseId: string;
+  lessonId: string;
   nusGroupId: string | null;
   courseModuleId: string | null;
   newModuleTitle: string | null;
@@ -42,6 +43,7 @@ export interface UIQuestion {
   content: string;
   points: number;
   answers: UIAnswer[];
+  nusGroupId?: string;
 }
 
 export interface ApiTestDetailResponse extends Omit<CreateTestPayload, 'newModuleTitle'> {

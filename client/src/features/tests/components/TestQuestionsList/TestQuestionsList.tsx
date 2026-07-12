@@ -5,12 +5,21 @@ import styles from './TestQuestionsList.module.css';
 import PlusIcon from '@/assets/plus.svg?react';
 import { UIQuestion } from '@/types/tests.types.ts';
 
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
 interface TestQuestionsListProps {
   questions: UIQuestion[];
   setQuestions: React.Dispatch<React.SetStateAction<UIQuestion[]>>;
   addQuestion: () => void;
-  updateQuestion: (id: string, updatedFields: Partial<UIQuestion>) => void;
+  updateQuestion: (
+    id: string,
+    updatedFields: Partial<UIQuestion> & { nusGroupId?: string },
+  ) => void;
   deleteQuestion: (id: string) => void;
+  nusGroupsOptions?: SelectOption[];
 }
 
 export const TestQuestionsList: React.FC<TestQuestionsListProps> = ({
@@ -18,6 +27,7 @@ export const TestQuestionsList: React.FC<TestQuestionsListProps> = ({
   addQuestion,
   updateQuestion,
   deleteQuestion,
+  nusGroupsOptions = [],
 }) => {
   return (
     <div className={styles.container}>
@@ -29,6 +39,7 @@ export const TestQuestionsList: React.FC<TestQuestionsListProps> = ({
             question={question}
             onUpdate={(updatedFields) => updateQuestion(question.id, updatedFields)}
             onDelete={() => deleteQuestion(question.id)}
+            nusGroupsOptions={nusGroupsOptions}
           />
         ))}
       </div>

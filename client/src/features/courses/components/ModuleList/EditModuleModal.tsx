@@ -7,7 +7,7 @@ interface EditModuleModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialTitle: string;
-  onSubmit: (e: React.FormEvent, newTitle: string) => void;
+  onSubmit: (newTitle: string) => void;
 }
 
 export const EditModuleModal: React.FC<EditModuleModalProps> = ({
@@ -26,7 +26,7 @@ export const EditModuleModal: React.FC<EditModuleModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(e, title);
+    onSubmit(title);
   };
 
   return (

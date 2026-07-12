@@ -3,33 +3,23 @@ import { TwoColumnContentLayout } from '@/components/layout/TwoColumnContentLayo
 import { ContentCard } from '@/components/ui/ContentCard/ContentCard.tsx';
 import { Input } from '@/components/ui/Input/Input.tsx';
 import { TextAreaField } from '@/components/ui/TextAreaField/TextAreaField.tsx';
-
-import { useCreateTaskForm } from '../../hooks/useCreateTaskForm';
-import { TaskSidebarSettings } from '../TaskSidebarSettings/TaskSidebarSettings';
-import { TaskAttachmentsSection } from '../TaskAttachmentsSection/TaskAttachmentsSection';
+import { LessonSidebarSettings } from '@/features/lessons/components/LessonSidebarSettings/LessonSidebarSettings.tsx';
+import { useCreateLessonForm } from '@/features/lessons/hooks/useCreateLessonForm.ts';
 
 interface CreateTaskFormProps {
   onBack: () => void;
 }
 
-export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({ onBack }) => {
-  const {
-    formState,
-    filesState,
-    linksState,
-    options,
-    isLoading,
-    isSubmitting,
-    isFormValid,
-    handleSubmit,
-  } = useCreateTaskForm();
+export const CreateLessonForm: React.FC<CreateTaskFormProps> = ({ onBack }) => {
+  const { formState, options, isLoading, isSubmitting, isFormValid, handleSubmit } =
+    useCreateLessonForm();
 
   return (
     <TwoColumnContentLayout
-      title="Створити завдання"
+      title="Створити урок"
       onBack={onBack}
       sidebarContent={
-        <TaskSidebarSettings
+        <LessonSidebarSettings
           formState={{
             dueDate: formState.dueDate,
             setDueDate: formState.setDueDate,
@@ -43,9 +33,6 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({ onBack }) => {
           options={{
             class: options.classes?.[0] || null,
             subject: options.subject,
-            lesson: formState.lessonTitle
-              ? { value: 'locked', label: formState.lessonTitle }
-              : null,
             modules: options.modules,
             gradingGroups: options.gradingGroups,
           }}
@@ -59,7 +46,7 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({ onBack }) => {
     >
       <ContentCard>
         <Input
-          label="Назва завдання"
+          label="Тема уроку"
           value={formState.title}
           onChange={(e) => formState.setTitle(e.target.value)}
           placeholder="Введіть назву завдання"
@@ -67,16 +54,14 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({ onBack }) => {
         />
 
         <TextAreaField
-          label="Інструкції"
+          label="Опис теми уроку"
           value={formState.instructions}
           onChange={(e) => formState.setInstructions(e.target.value)}
-          placeholder="Введіть інструкції (необов'язково)"
+          placeholder="Введіть опис теми (необов'язково)"
           rows={4}
           disabled={isSubmitting}
         />
       </ContentCard>
-
-      <TaskAttachmentsSection filesState={filesState} linksState={linksState} />
     </TwoColumnContentLayout>
   );
 };

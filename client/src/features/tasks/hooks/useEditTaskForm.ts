@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTaskSidebarData } from './useTaskSidebarData';
 import { UploadedLink } from '@/types/tasks.types';
@@ -7,7 +7,7 @@ import { toast } from '@/libs/configs/Toast';
 import { isAxiosError } from 'axios';
 import { formatToServerISO } from '@/libs/utils/date';
 import { tasksService } from '@/api/tasks.service';
-import { TaskResponse } from '@/types/tasks.types';
+import { lessonsService } from '@/api/lessons.service'; // 👈 ДОДАНО ІМПОРТ
 
 type EditFormLink = UploadedLink & { isExisting?: boolean };
 
@@ -16,14 +16,21 @@ export const useEditTaskForm = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  const [searchParams] = useSearchParams();
+  const urlLessonId = searchParams.get('lessonId');
+  const urlLessonTitle = searchParams.get('lessonTitle');
+
   const { options, isLoading: isSidebarLoading } = useTaskSidebarData();
 
   const [title, setTitle] = useState('');
   const [instructions, setInstructions] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [module, setModule] = useState('');
-  const [nusGroup, setNusGroup] = useState('');
+  const [nusGroup, setNusGroup] = useState<string[]>([]);
   const [hideTask, setHideTask] = useState(false);
+
+  const [lessonId, setLessonId] = useState(urlLessonId || '');
+  const [lessonTitle, setLessonTitle] = useState(urlLessonTitle || '');
 
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -33,39 +40,55 @@ export const useEditTaskForm = () => {
   const [linkInput, setLinkInput] = useState('');
   const [linkNameInput, setLinkNameInput] = useState('');
 
-  const { data: task, isLoading: isTaskLoading } = useQuery<TaskResponse>({
+  const { data: taskData, isLoading: isTaskLoading } = useQuery({
     queryKey: ['task', taskId],
     queryFn: () => tasksService.getTaskById(taskId!),
     enabled: !!taskId,
   });
 
   useEffect(() => {
-    if (task) {
-      setTitle(task.title || '');
-      setInstructions(task.description || '');
-      setDueDate(task.deadline ? task.deadline.substring(0, 16) : '');
-      setModule(task.courseModuleId || '');
-      setNusGroup(task.nusGroupId || '');
-      setHideTask(task.isHidden || false);
+    if (taskData) {
+      setTitle(taskData.title || '');
+      setInstructions(taskData.description || '');
 
-      const existingAttachments: EditFormLink[] = (task.attachments || []).map((url) => {
-        const fileName = url.substring(url.lastIndexOf('/') + 1);
-        return {
-          url: url,
-          name: fileName || url,
-          isExisting: true,
-        };
-      });
-      setUploadedLinks(existingAttachments);
+      if (taskData.deadline) {
+        setDueDate(taskData.deadline);
+      }
+      if (taskData.courseModuleId) {
+        setModule(taskData.courseModuleId);
+      }
+      if (taskData.nusGroupId) {
+        setNusGroup(
+          Array.isArray(taskData.nusGroupId) ? taskData.nusGroupId : [taskData.nusGroupId],
+        );
+      }
+      if (taskData.isHidden !== undefined) {
+        setHideTask(taskData.isHidden);
+      }
+
+      if (!urlLessonId && taskData.lesson.id) {
+        setLessonId(taskData.lesson.id);
+      }
     }
-  }, [task]);
+  }, [taskData, urlLessonId]);
 
-  const updateTaskMutation = useMutation({
+  const { data: lessonData } = useQuery({
+    queryKey: ['lesson', lessonId],
+    queryFn: () => lessonsService.getLessonById(lessonId),
+    enabled: !!lessonId && !urlLessonTitle,
+  });
+
+  useEffect(() => {
+    if (lessonData) {
+      setLessonTitle(lessonData.title || '');
+    }
+  }, [lessonData]);
+
+  const editTaskMutation = useMutation({
     mutationFn: (data: FormData) => tasksService.updateTask(taskId!, data),
     onSuccess: () => {
       toast.success('Завдання успішно оновлено');
       queryClient.invalidateQueries({ queryKey: ['tasks', courseId] });
-      queryClient.invalidateQueries({ queryKey: ['task', taskId] });
       navigate(`/courses/${courseId}`);
     },
     onError: (error) => {
@@ -80,14 +103,18 @@ export const useEditTaskForm = () => {
   const isFormValid = title.trim() !== '' && dueDate.trim() !== '' && module.trim() !== '';
 
   const handleSubmit = async () => {
-    if (!isFormValid || !taskId || !task) return;
+    if (!isFormValid) return;
 
     try {
       const formData = new FormData();
-
+      formData.append('courseId', courseId!);
       formData.append('title', title.trim());
       formData.append('description', instructions.trim() ? instructions.trim() : '');
       formData.append('deadline', dueDate ? formatToServerISO(dueDate) : '');
+
+      if (lessonId) {
+        formData.append('lessonId', lessonId);
+      }
 
       if (module) {
         const isExistingModule = options.modules.some((opt) => opt.value === module);
@@ -96,44 +123,32 @@ export const useEditTaskForm = () => {
         } else {
           formData.append('newModuleTitle', module);
         }
-      } else {
-        formData.append('courseModuleId', '');
       }
 
-      formData.append('nusGroupId', nusGroup ? nusGroup : '');
+      if (nusGroup && nusGroup.length > 0) {
+        nusGroup.forEach((groupId) => {
+          formData.append('nusGroupIds', groupId);
+        });
+      }
       formData.append('isHidden', String(hideTask));
-
-      const originalAttachments = task.attachments || [];
-      const retainedAttachments = uploadedLinks
-        .filter((link) => link.isExisting)
-        .map((link) => link.url);
-
-      const hasAttachmentsChanged =
-        originalAttachments.length !== retainedAttachments.length ||
-        !originalAttachments.every((url) => retainedAttachments.includes(url));
-
-      if (hasAttachmentsChanged) {
-        if (retainedAttachments.length === 0) {
-          formData.append('retainedAttachments', '');
-        } else {
-          retainedAttachments.forEach((url) => {
-            formData.append('retainedAttachments', url);
-          });
-        }
-      }
-
-      const newLinks = uploadedLinks.filter((link) => !link.isExisting);
-      newLinks.forEach((link) => {
-        formData.append('links', link.url);
-      });
 
       uploadedFiles.forEach((file) => {
         formData.append('files', file);
       });
 
-      updateTaskMutation.mutate(formData);
-    } catch (error: any) {
-      toast.error(error || 'Сталася помилка під час збереження форми');
+      uploadedLinks.forEach((link) => {
+        if (!link.isExisting) {
+          formData.append('links', link.url);
+        }
+      });
+
+      editTaskMutation.mutate(formData);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message || 'Сталася помилка під час збереження форми');
+      } else {
+        toast.error('Сталася невідома помилка під час збереження форми');
+      }
     }
   };
 
@@ -159,6 +174,7 @@ export const useEditTaskForm = () => {
     formState: {
       title,
       setTitle,
+      lessonTitle,
       instructions,
       setInstructions,
       dueDate,
@@ -193,7 +209,7 @@ export const useEditTaskForm = () => {
     options,
     isLoading: isSidebarLoading,
     isTaskLoading,
-    isSubmitting: updateTaskMutation.isPending,
+    isSubmitting: editTaskMutation.isPending,
     isFormValid,
     handleSubmit,
   };

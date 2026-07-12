@@ -31,6 +31,7 @@ import {
 import { TestAttemptReviewPage } from '@/pages/tests/TestAttemptReviewPage/TestAttemptReviewPage.tsx';
 import { UploadFilePage, UploadLinkPage } from '@/pages/materials';
 import { LandingPage } from '@/pages/landing';
+import { CreateLessonPage, EditLessonPage } from '@/pages/lessons';
 
 function App() {
   return (
@@ -118,6 +119,9 @@ function App() {
               path="/courses/:id/materials/files/:materialId/edit"
               element={<UploadFilePage />}
             />
+
+            <Route path="/courses/:id/lessons/create" element={<CreateLessonPage />} />
+            <Route path="/courses/:id/lessons/:lessonId/edit" element={<EditLessonPage />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'MODERATOR']} />}>

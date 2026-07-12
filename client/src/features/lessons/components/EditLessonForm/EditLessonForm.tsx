@@ -3,33 +3,36 @@ import { TwoColumnContentLayout } from '@/components/layout/TwoColumnContentLayo
 import { ContentCard } from '@/components/ui/ContentCard/ContentCard.tsx';
 import { Input } from '@/components/ui/Input/Input.tsx';
 import { TextAreaField } from '@/components/ui/TextAreaField/TextAreaField.tsx';
+import { LessonSidebarSettings } from '@/features/lessons/components/LessonSidebarSettings/LessonSidebarSettings.tsx';
+import { useEditLessonForm } from '@/features/lessons/hooks/useEditLessonForm.ts';
 
-import { useCreateTaskForm } from '../../hooks/useCreateTaskForm';
-import { TaskSidebarSettings } from '../TaskSidebarSettings/TaskSidebarSettings';
-import { TaskAttachmentsSection } from '../TaskAttachmentsSection/TaskAttachmentsSection';
-
-interface CreateTaskFormProps {
+interface EditTaskFormProps {
   onBack: () => void;
 }
 
-export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({ onBack }) => {
+export const EditLessonForm: React.FC<EditTaskFormProps> = ({ onBack }) => {
   const {
     formState,
-    filesState,
-    linksState,
     options,
     isLoading,
+    isLessonLoading,
     isSubmitting,
     isFormValid,
     handleSubmit,
-  } = useCreateTaskForm();
+  } = useEditLessonForm();
+
+  if (isLessonLoading) {
+    return (
+      <div style={{ padding: '20px', textAlign: 'center' }}>Завантаження даних завдання...</div>
+    );
+  }
 
   return (
     <TwoColumnContentLayout
-      title="Створити завдання"
+      title="Редагувати урок"
       onBack={onBack}
       sidebarContent={
-        <TaskSidebarSettings
+        <LessonSidebarSettings
           formState={{
             dueDate: formState.dueDate,
             setDueDate: formState.setDueDate,
@@ -43,9 +46,6 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({ onBack }) => {
           options={{
             class: options.classes?.[0] || null,
             subject: options.subject,
-            lesson: formState.lessonTitle
-              ? { value: 'locked', label: formState.lessonTitle }
-              : null,
             modules: options.modules,
             gradingGroups: options.gradingGroups,
           }}
@@ -53,13 +53,13 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({ onBack }) => {
         />
       }
       showHeaderButton={true}
-      headerButtonText={isSubmitting ? 'Створення...' : 'Створити'}
+      headerButtonText={isSubmitting ? 'Збереження...' : 'Зберегти'}
       onHeaderButtonClick={handleSubmit}
       isHeaderButtonDisabled={!isFormValid || isSubmitting}
     >
       <ContentCard>
         <Input
-          label="Назва завдання"
+          label="Тема уроку"
           value={formState.title}
           onChange={(e) => formState.setTitle(e.target.value)}
           placeholder="Введіть назву завдання"
@@ -67,16 +67,14 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({ onBack }) => {
         />
 
         <TextAreaField
-          label="Інструкції"
+          label="Опис теми уроку"
           value={formState.instructions}
           onChange={(e) => formState.setInstructions(e.target.value)}
-          placeholder="Введіть інструкції (необов'язково)"
+          placeholder="Введіть опис теми (необов'язково)"
           rows={4}
           disabled={isSubmitting}
         />
       </ContentCard>
-
-      <TaskAttachmentsSection filesState={filesState} linksState={linksState} />
     </TwoColumnContentLayout>
   );
 };

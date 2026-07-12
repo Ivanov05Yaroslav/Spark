@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { courseService } from '@/api/courses.service';
 import { CourseDetailResponseDto, CourseUserDto } from '@/types/courses.types';
 import { ModuleData, ModuleItemData } from '@/features/courses/components/ModuleList/ModuleList';
@@ -13,18 +13,59 @@ import { materialsService } from '@/api/materials.service.ts';
 import { tasksService } from '@/api/tasks.service.ts';
 import { testsService } from '@/api/tests.service.ts';
 import { announcementService } from '@/api/announcements.service.ts';
+import { lessonsService } from '@/api/lessons.service.ts';
+
+interface ApiError {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+}
+
+interface CourseTaskDto {
+  id: string;
+  title: string;
+  deadline?: string;
+}
+
+interface CourseLessonDto {
+  id: string;
+  title: string;
+  description?: string;
+  date?: string;
+  task?: CourseTaskDto | null;
+  test?: CourseTaskDto | null;
+}
+
+interface CourseMaterialDto {
+  id: string;
+  title: string;
+  fileUrl?: string | null;
+  linkUrl?: string | null;
+  createdAt?: string;
+}
+
+interface CourseModuleDto {
+  id: string;
+  title: string;
+  lessons?: CourseLessonDto[];
+  materials?: CourseMaterialDto[];
+}
+
+interface CourseAnnouncementDto {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: string;
+  isNew: boolean;
+  creator: CourseUserDto;
+}
 
 const getFullName = (user: CourseUserDto | null | undefined) => {
   if (!user) return 'Невідомий користувач';
   return `${user.firstName || ''} ${user.lastName || ''}`.trim();
 };
-
-const formatDate = (dateString: string) =>
-  new Date(dateString).toLocaleDateString('uk-UA', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
 
 const toParticipant = (
   user: CourseUserDto,
@@ -34,227 +75,196 @@ const toParticipant = (
   id: user.id,
   name: getFullName(user),
   role: role,
-  avatarUrl: user.avatarUrl || undefined,
+  avatarUrl: user.avatarUrl,
   classGroup: classGroup,
 });
 
-export const useGetCourseData = (courseId: string) => {
+export const useGetCourseData = (courseId: string | undefined) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
   const [rawData, setRawData] = useState<CourseDetailResponseDto | null>(null);
 
   const [modules, setModules] = useState<ModuleData[]>([]);
+  const [taskModules, setTaskModules] = useState<ModuleData[]>([]);
 
   const [participants, setParticipants] = useState<{
     teachers: ParticipantData[];
     coTeachers: ParticipantData[];
-    classHomeroomTeacher: ParticipantData[];
+    classHomeroomTeacher: ParticipantData | null;
     students: ParticipantData[];
-  }>({ teachers: [], coTeachers: [], classHomeroomTeacher: [], students: [] });
+  }>({
+    teachers: [],
+    coTeachers: [],
+    classHomeroomTeacher: null,
+    students: [],
+  });
 
   const [announcements, setAnnouncements] = useState<DetailedAnnouncement[]>([]);
-
   const [lessons, setLessons] = useState<OnlineLessonLink[]>([]);
   const [unreadAnnouncementsCount, setUnreadAnnouncementsCount] = useState(0);
   const [unsubmittedWorksCount, setUnsubmittedWorksCount] = useState(0);
 
-  useEffect(() => {
-    const fetchCourse = async () => {
-      try {
-        setLoading(true);
-        const data = (await courseService.getCourseById(
-          courseId,
-        )) as unknown as CourseDetailResponseDto;
-        setRawData(data);
+  const fetchCourseData = useCallback(async () => {
+    if (!courseId) return;
 
-        setLessons(
-          data.videoLinks?.map((url: string) => ({
-            id: crypto.randomUUID(),
-            title: 'Відеоурок',
-            url: url,
-          })) || [],
-        );
+    try {
+      setLoading(true);
+      const course = await courseService.getCourseById(courseId);
+      setRawData(course);
 
-        setModules(
-          data.modules?.map((m) => ({
-            id: m.id,
-            title: m.title,
-            items: [
-              ...(m.materials || []).map((mat) => ({
-                id: mat.id,
-                type: mat.fileUrl ? ('THEORY' as const) : ('LINK' as const),
-                title: mat.title,
-                subtitle: mat.fileUrl ? 'Файл' : 'Посилання',
-                fileUrl: mat.fileUrl,
-                linkUrl: mat.linkUrl,
-              })),
-              ...(m.tasks || []).map((task) => ({
-                id: task.id,
-                type: 'TASK' as const,
-                title: task.title,
-                subtitle: task.deadline ? `Термін: ${formatDate(task.deadline)}` : undefined,
-              })),
-              ...(m.tests || []).map((test) => ({
-                id: test.id,
-                type: 'TEST' as const,
-                title: test.title,
-                subtitle: test.deadline ? `Термін: ${formatDate(test.deadline)}` : undefined,
-              })),
-            ],
-          })) || [],
-        );
+      const mappedModules: ModuleData[] = (
+        (course.modules as unknown as CourseModuleDto[]) || []
+      ).map((mod: CourseModuleDto) => {
+        const items: ModuleItemData[] = [];
 
-        const className = data.class?.name;
+        if (mod.lessons) {
+          mod.lessons.forEach((lesson: CourseLessonDto) => {
+            const lessonTasks = lesson.task
+              ? [{ id: lesson.task.id, title: lesson.task.title }]
+              : [];
+            const lessonTests = lesson.test
+              ? [{ id: lesson.test.id, title: lesson.test.title }]
+              : [];
 
-        setParticipants({
-          teachers: data.participants?.creator
-            ? [toParticipant(data.participants.creator, 'Вчитель')]
-            : [],
-          coTeachers:
-            data.participants?.coTeachers?.map((ct) => toParticipant(ct, 'Співвчитель')) || [],
-          classHomeroomTeacher: data.participants?.homeroomTeacher
-            ? [toParticipant(data.participants.homeroomTeacher, 'Класний керівник', className)]
-            : [],
-          students:
-            data.participants?.students?.map((s) => toParticipant(s, 'Студент', className)) || [],
-        });
+            items.push({
+              id: lesson.id,
+              type: 'LESSON',
+              title: lesson.title,
+              description: lesson.description,
+              date: lesson.date,
+              tasks: lessonTasks,
+              tests: lessonTests,
+            });
+          });
+        }
 
-        setAnnouncements(
-          data.announcements?.map((a) => ({
-            id: a.id,
-            authorName: getFullName(a.creator),
-            announcementTitle: a.title,
-            time: formatDate(a.createdAt),
-            content: a.content,
-            avatarUrl: a.creator?.avatarUrl || undefined,
-            isUnread: a.isNew,
-          })) || [],
-        );
+        if (mod.materials) {
+          mod.materials.forEach((mat: CourseMaterialDto) => {
+            items.push({
+              id: mat.id,
+              type: mat.linkUrl ? 'LINK' : 'THEORY',
+              title: mat.title,
+              fileUrl: mat.fileUrl,
+              linkUrl: mat.linkUrl,
+              date: mat.createdAt,
+            });
+          });
+        }
 
-        setUnreadAnnouncementsCount(data.unreadAnnouncementsCount || 0);
-        setUnsubmittedWorksCount(data.unsubmittedWorksCount || 0);
-      } catch (err: any) {
-        const errorMessage = err?.response?.data?.message || 'Помилка при завантаженні курсу';
-        setError(errorMessage);
-        toast.error(errorMessage);
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
+        return { id: mod.id, title: mod.title, items };
+      });
 
-    if (courseId) {
-      fetchCourse();
+      const mappedTaskModules: ModuleData[] = (
+        (course.modules as unknown as CourseModuleDto[]) || []
+      )
+        .map((mod: CourseModuleDto) => {
+          const items: ModuleItemData[] = [];
+
+          if (mod.lessons) {
+            mod.lessons.forEach((lesson: CourseLessonDto) => {
+              if (lesson.task) {
+                items.push({
+                  id: lesson.task.id,
+                  type: 'TASK',
+                  title: lesson.task.title,
+                  date: lesson.task.deadline || lesson.date,
+                });
+              }
+              if (lesson.test) {
+                items.push({
+                  id: lesson.test.id,
+                  type: 'TEST',
+                  title: lesson.test.title,
+                  date: lesson.test.deadline || lesson.date,
+                });
+              }
+            });
+          }
+          return { id: mod.id, title: mod.title, items };
+        })
+        .filter((mod) => mod.items.length > 0);
+
+      setModules(mappedModules);
+      setTaskModules(mappedTaskModules);
+
+      setParticipants({
+        teachers: course.participants?.creator
+          ? [toParticipant(course.participants.creator, 'Викладач' as ParticipantRole)]
+          : [],
+        coTeachers: (course.participants?.coTeachers || []).map((t: CourseUserDto) =>
+          toParticipant(t, 'Викладач' as ParticipantRole),
+        ),
+        classHomeroomTeacher: course.participants?.homeroomTeacher
+          ? toParticipant(
+              course.participants.homeroomTeacher,
+              'Класний керівник' as ParticipantRole,
+              course.class?.name,
+            )
+          : null,
+        students: (course.participants?.students || []).map((s: CourseUserDto) =>
+          toParticipant(s, 'Студент' as ParticipantRole, course.class?.name),
+        ),
+      });
+
+      const mappedAnnouncements: DetailedAnnouncement[] = (
+        (course.announcements as unknown as CourseAnnouncementDto[]) || []
+      ).map((ann) => {
+        const authorFullName = ann.creator
+          ? `${ann.creator.firstName || ''} ${ann.creator.lastName || ''}`.trim()
+          : 'Невідомий автор';
+
+        return {
+          id: ann.id,
+          authorName: authorFullName,
+          announcementTitle: ann.title,
+          time: ann.createdAt,
+          content: ann.content,
+          avatarUrl: ann.creator?.avatarUrl,
+          isUnread: ann.isNew,
+        } as unknown as DetailedAnnouncement;
+      });
+
+      setAnnouncements(mappedAnnouncements);
+      setUnreadAnnouncementsCount(course.unreadAnnouncementsCount || 0);
+      setUnsubmittedWorksCount(course.unsubmittedWorksCount || 0);
+
+      const mappedLessons = (course.videoLinks || []).map((link: string, idx: number) => ({
+        id: `link-${idx}`,
+        url: link,
+      }));
+      setLessons(mappedLessons);
+    } catch (err: unknown) {
+      const apiError = err as ApiError;
+      setError(apiError?.response?.data?.message || 'Помилка при завантаженні курсу');
+      toast.error('Не вдалося завантажити дані курсу');
+    } finally {
+      setLoading(false);
     }
   }, [courseId]);
 
-  const handleAddLesson = async (url: string) => {
-    const newLink: OnlineLessonLink = { id: crypto.randomUUID(), url };
-    const newLessons = [...lessons, newLink];
-    setLessons(newLessons);
+  useEffect(() => {
+    fetchCourseData();
+  }, [fetchCourseData]);
 
+  const handleDeleteModuleItem = async (item: ModuleItemData, _moduleId: string) => {
     try {
-      await courseService.updateVideoLinks(
-        courseId,
-        newLessons.map((l) => l.url),
-      );
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.success('Посилання успішно додано!');
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Помилка при додаванні посилання на сервері');
-      setLessons(lessons);
-    }
-  };
-
-  const handleEditLesson = async (id: string, newUrl: string) => {
-    const newLessons = lessons.map((link) => (link.id === id ? { ...link, url: newUrl } : link));
-    setLessons(newLessons);
-
-    try {
-      await courseService.updateVideoLinks(
-        courseId,
-        newLessons.map((l) => l.url),
-      );
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.success('Посилання успішно оновлено!');
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Помилка при збереженні змін на сервері');
-      setLessons(lessons);
-    }
-  };
-
-  const handleDeleteLesson = async (id: string) => {
-    const newLessons = lessons.filter((link) => link.id !== id);
-    setLessons(newLessons);
-
-    try {
-      await courseService.updateVideoLinks(
-        courseId,
-        newLessons.map((l) => l.url),
-      );
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.success('Посилання успішно видалено!');
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Помилка при видаленні посилання на сервері');
-      setLessons(lessons);
-    }
-  };
-
-  const handleEditModule = async (moduleId: string, newTitle: string) => {
-    try {
-      await courseService.updateModule(moduleId, newTitle);
-
-      setModules((prev) => prev.map((m) => (m.id === moduleId ? { ...m, title: newTitle } : m)));
-      toast.success('Модуль успішно оновлено!');
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Помилка при оновленні модуля');
-    }
-  };
-
-  const handleDeleteModule = async (moduleId: string) => {
-    try {
-      await courseService.deleteModule(moduleId);
-
-      setModules((prev) => prev.filter((m) => m.id !== moduleId));
-      toast.success('Модуль успішно видалено!');
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Помилка при видаленні модуля');
-    }
-  };
-
-  const handleDeleteModuleItem = async (item: ModuleItemData, moduleId: string) => {
-    try {
-      if (item.type === 'LINK' || item.type === 'THEORY') {
-        await materialsService.deleteMaterial(item.id);
-      } else if (item.type === 'TASK') {
-        await tasksService.deleteTask(item.id);
-      } else if (item.type === 'TEST') {
-        await testsService.deleteTest(item.id);
-      }
-
-      setModules((prevModules) =>
-        prevModules.map((mod) => {
-          if (mod.id === moduleId) {
-            return {
-              ...mod,
-              items: mod.items.filter((i) => i.id !== item.id),
-            };
-          }
-          return mod;
-        }),
-      );
+      if (item.type === 'LESSON') await lessonsService.deleteLesson(item.id);
+      else if (item.type === 'TASK') await tasksService.deleteTask(item.id);
+      else if (item.type === 'TEST') await testsService.deleteTest(item.id);
+      else await materialsService.deleteMaterial(item.id);
 
       toast.success('Елемент успішно видалено!');
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Помилка при видаленні елемента');
-      console.error(err);
+      fetchCourseData();
+    } catch (err: unknown) {
+      const apiError = err as ApiError;
+      toast.error(apiError?.response?.data?.message || 'Помилка при видаленні елемента');
     }
   };
 
   const handleReadAnnouncement = async (announcementId: string) => {
     try {
       await announcementService.readAnnouncement(announcementId);
-
       setAnnouncements((prev) =>
         prev.map((ann) => (ann.id === announcementId ? { ...ann, isUnread: false } : ann)),
       );
@@ -266,13 +276,27 @@ export const useGetCourseData = (courseId: string) => {
   const handleDeleteAnnouncement = async (announcementId: string) => {
     try {
       await announcementService.deleteAnnouncement(announcementId);
-
       setAnnouncements((prev) => prev.filter((ann) => ann.id !== announcementId));
       toast.success('Оголошення успішно видалено!');
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Помилка при видаленні оголошення');
-      console.error(err);
+    } catch (err: unknown) {
+      const apiError = err as ApiError;
+      toast.error(apiError?.response?.data?.message || 'Помилка при видаленні оголошення');
     }
+  };
+
+  const handleAddLesson = (url: string) => {
+    setLessons((prev) => [...prev, { id: Date.now().toString(), url }]);
+    toast.success('Посилання успішно додано!');
+  };
+
+  const handleEditLesson = (id: string, url: string) => {
+    setLessons((prev) => prev.map((l) => (l.id === id ? { ...l, url } : l)));
+    toast.success('Посилання успішно оновлено!');
+  };
+
+  const handleDeleteLesson = (id: string) => {
+    setLessons((prev) => prev.filter((l) => l.id !== id));
+    toast.success('Посилання успішно видалено!');
   };
 
   return {
@@ -280,6 +304,7 @@ export const useGetCourseData = (courseId: string) => {
     error,
     rawData,
     modules,
+    taskModules,
     participants,
     announcements,
     lessons,
@@ -288,10 +313,9 @@ export const useGetCourseData = (courseId: string) => {
     handleAddLesson,
     handleEditLesson,
     handleDeleteLesson,
-    handleEditModule,
-    handleDeleteModule,
     handleDeleteModuleItem,
     handleReadAnnouncement,
     handleDeleteAnnouncement,
+    refetch: fetchCourseData,
   };
 };

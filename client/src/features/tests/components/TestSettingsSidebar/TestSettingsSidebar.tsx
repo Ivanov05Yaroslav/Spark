@@ -15,6 +15,7 @@ interface TestSettingsSidebarProps {
   nusGroups: NushGradingGroupDto[];
   isLoading: boolean;
   subjectName?: string;
+  lessonTitle?: string | null;
   courseClassName?: string;
   title: string;
   setTitle: (v: string) => void;
@@ -46,7 +47,7 @@ interface TestSettingsSidebarProps {
 
 export const TestSettingsSidebar: React.FC<TestSettingsSidebarProps> = ({
   modules,
-  nusGroups,
+  lessonTitle,
   isLoading,
   subjectName,
   courseClassName,
@@ -54,8 +55,6 @@ export const TestSettingsSidebar: React.FC<TestSettingsSidebarProps> = ({
   setTitle,
   moduleId: module,
   setModuleId: setModule,
-  nusGroupId: nusGroup,
-  setNusGroupId,
   deadline,
   setDeadline,
   hours,
@@ -78,19 +77,6 @@ export const TestSettingsSidebar: React.FC<TestSettingsSidebarProps> = ({
   setIsShuffleAnswers,
 }) => {
   const moduleOptions = modules.map((m) => ({ value: String(m.id), label: m.title }));
-  const nusGroupOptions = nusGroups.map((g) => ({ value: String(g.id), label: g.name }));
-
-  const isNushClass = useMemo(() => {
-    if (!courseClassName) return false;
-
-    const match = courseClassName.match(/^(\d+)/);
-    if (match) {
-      const gradeNumber = parseInt(match[1], 10);
-      return gradeNumber >= 5 && gradeNumber <= 9;
-    }
-
-    return false;
-  }, [courseClassName]);
 
   return (
     <div className={styles.sidebarWrapper}>
@@ -114,6 +100,16 @@ export const TestSettingsSidebar: React.FC<TestSettingsSidebarProps> = ({
             placeholder={isLoading ? 'Завантаження...' : 'Немає даних'}
           />
 
+          {lessonTitle && (
+            <SelectField
+              label="Прикріплено до уроку"
+              options={[{ value: 'locked', label: lessonTitle }]}
+              value="locked"
+              onChange={() => {}}
+              disabled={true}
+            />
+          )}
+
           <Input
             label="Назва тесту"
             placeholder="Введіть назву тесту"
@@ -129,17 +125,6 @@ export const TestSettingsSidebar: React.FC<TestSettingsSidebarProps> = ({
             placeholder={isLoading ? 'Завантаження...' : 'Оберіть тему'}
             disabled={isLoading}
           />
-
-          {isNushClass && (
-            <SelectField
-              label="Група оцінювання НУШ"
-              options={nusGroupOptions}
-              value={nusGroup}
-              onChange={(value: string) => setNusGroupId(value)}
-              placeholder={isLoading ? 'Завантаження...' : 'Оберіть тему'}
-              disabled={isLoading}
-            />
-          )}
 
           <DatePickerField
             label="Виконати до"

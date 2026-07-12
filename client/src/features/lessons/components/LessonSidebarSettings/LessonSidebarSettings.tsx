@@ -3,9 +3,7 @@ import { ContentCard } from '@/components/ui/ContentCard/ContentCard.tsx';
 import { DatePickerField } from '@/components/ui/DatePickerField/DatePickerField.tsx';
 import { CreatableSelect } from '@/components/ui/CreatableSelect/CreatableSelect.tsx';
 import { SelectField } from '@/components/ui/SelectField/SelectField.tsx';
-import { CustomCheckbox } from '@/components/ui/CustomCheckbox/CustomCheckbox.tsx';
-
-import styles from './TaskSidebarSettings.module.css';
+import styles from '@/features/tasks/components/TaskSidebarSettings/TaskSidebarSettings.module.css';
 import { MultiSelectField } from '@/components/ui/MultiSelectField/MultiSelectField.tsx';
 
 interface SelectOption {
@@ -13,7 +11,7 @@ interface SelectOption {
   label: string;
 }
 
-interface TaskSidebarSettingsProps {
+interface LessonSidebarSettingsProps {
   formState: {
     dueDate: string;
     setDueDate: (value: string) => void;
@@ -27,14 +25,13 @@ interface TaskSidebarSettingsProps {
   options: {
     class: SelectOption | null;
     subject: SelectOption | null;
-    lesson: SelectOption | null;
     modules: SelectOption[];
     gradingGroups: SelectOption[];
   };
   isLoading?: boolean;
 }
 
-export const TaskSidebarSettings: React.FC<TaskSidebarSettingsProps> = ({
+export const LessonSidebarSettings: React.FC<LessonSidebarSettingsProps> = ({
   formState,
   options,
   isLoading,
@@ -71,21 +68,11 @@ export const TaskSidebarSettings: React.FC<TaskSidebarSettingsProps> = ({
         disabled={true}
       />
 
-      {options.lesson && (
-        <SelectField
-          label="Урок"
-          options={[options.lesson]}
-          value={options.lesson.value}
-          onChange={() => {}}
-          disabled={true}
-        />
-      )}
-
       <DatePickerField
-        label="Виконати до"
+        label="Дата заняття"
         value={formState.dueDate}
         onChange={formState.setDueDate}
-        placeholder="Оберіть дату та час"
+        placeholder="Оберіть дату"
       />
 
       <CreatableSelect
@@ -107,14 +94,6 @@ export const TaskSidebarSettings: React.FC<TaskSidebarSettingsProps> = ({
           disabled={isLoading}
         />
       )}
-
-      <div className={styles.checkboxGroup}>
-        <CustomCheckbox
-          label="Приховати завдання"
-          checked={formState.hideTask}
-          onChange={(e) => formState.setHideTask(e.target.checked)}
-        />
-      </div>
     </ContentCard>
   );
 };

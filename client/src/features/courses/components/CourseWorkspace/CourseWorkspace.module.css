@@ -47,7 +47,6 @@
     .layoutGrid {
         grid-template-columns: 1fr !important;
         gap: 24px;
-        padding: 20px 16px;
     }
 
     .sidebarColumn {

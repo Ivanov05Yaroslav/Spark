@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTaskSidebarData } from './useTaskSidebarData';
 import { UploadedLink } from '@/types/tasks.types';
@@ -13,13 +13,17 @@ export const useCreateTaskForm = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  const [searchParams] = useSearchParams();
+  const lessonId = searchParams.get('lessonId');
+  const lessonTitle = searchParams.get('lessonTitle');
+
   const { options, defaultClassId, isLoading } = useTaskSidebarData();
 
   const [title, setTitle] = useState('');
   const [instructions, setInstructions] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [module, setModule] = useState('');
-  const [nusGroup, setNusGroup] = useState('');
+  const [nusGroup, setNusGroup] = useState<string[]>([]);
   const [hideTask, setHideTask] = useState(false);
 
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
@@ -57,6 +61,7 @@ export const useCreateTaskForm = () => {
       formData.append('title', title.trim());
       formData.append('description', instructions.trim() ? instructions.trim() : '');
       formData.append('deadline', dueDate ? formatToServerISO(dueDate) : '');
+      formData.append('lessonId', lessonId ? lessonId : '');
 
       if (module) {
         const isExistingModule = options.modules.some((opt) => opt.value === module);
@@ -67,7 +72,11 @@ export const useCreateTaskForm = () => {
         }
       }
 
-      formData.append('nusGroupId', nusGroup ? nusGroup : '');
+      if (nusGroup && nusGroup.length > 0) {
+        nusGroup.forEach((groupId) => {
+          formData.append('nusGroupIds', groupId);
+        });
+      }
       formData.append('isHidden', String(hideTask));
 
       uploadedFiles.forEach((file) => {
@@ -104,6 +113,7 @@ export const useCreateTaskForm = () => {
     formState: {
       title,
       setTitle,
+      lessonTitle,
       instructions,
       setInstructions,
       dueDate,

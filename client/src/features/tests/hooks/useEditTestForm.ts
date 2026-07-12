@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from '@/libs/configs/Toast';
 import { courseService } from '@/api/courses.service';
 import { subjectsService } from '@/api/subjects.service';
 import { testsService } from '@/api/tests.service';
+import { lessonsService } from '@/api/lessons.service';
 import { CourseDetailResponseDto } from '@/types/courses.types';
 import { ModuleDto } from '@/types/modules.types';
 import { NushGradingGroupDto } from '@/types/subjects.types';
@@ -13,6 +14,10 @@ const UUID_REGEXP = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
 
 export const useEditTestForm = (testId: string | undefined, courseId: string | undefined) => {
   const navigate = useNavigate();
+
+  const [searchParams] = useSearchParams();
+  const urlLessonId = searchParams.get('lessonId');
+  const urlLessonTitle = searchParams.get('lessonTitle');
 
   const [courseInfo, setCourseInfo] = useState<CourseDetailResponseDto | null>(null);
   const [modules, setModules] = useState<ModuleDto[]>([]);
@@ -28,6 +33,9 @@ export const useEditTestForm = (testId: string | undefined, courseId: string | u
   const [attempts, setAttempts] = useState('1');
   const [moduleId, setModuleId] = useState('');
   const [nusGroupId, setNusGroupId] = useState('');
+
+  const [lessonId, setLessonId] = useState<string>(urlLessonId || '');
+  const [lessonTitle, setLessonTitle] = useState<string>(urlLessonTitle || '');
 
   const [isHidden, setIsHidden] = useState(false);
   const [isResultHidden, setIsResultHidden] = useState(false);
@@ -51,7 +59,7 @@ export const useEditTestForm = (testId: string | undefined, courseId: string | u
         ]);
 
         setTitle(testData.title);
-        setNusGroupId(testData.nusGroupId || '');
+        setNusGroupId(testData.nusGroupId ? String(testData.nusGroupId) : '');
         setModuleId(testData.courseModuleId || '');
         setAttempts(String(testData.maxAttempts || 1));
 
@@ -72,20 +80,34 @@ export const useEditTestForm = (testId: string | undefined, courseId: string | u
         setHours(h > 0 ? String(h) : '');
         setMinutes(m > 0 ? String(m) : '');
 
-        const mappedQuestions: UIQuestion[] = testData.questions.map((q) => ({
+        const mappedQuestions: UIQuestion[] = testData.questions.map((q: any) => ({
           id: q.id,
           type: q.type,
           content: q.content,
           points: q.points,
-          answers: q.answers.map((a) => ({
+          nusGroupId: q.nusGroupId ? String(q.nusGroupId) : '',
+          answers: q.answers.map((a: any) => ({
             id: a.id,
             content: a.content,
             isCorrect: a.isCorrect,
           })),
         }));
-        setQuestions(mappedQuestions);
 
+        setQuestions(mappedQuestions);
         setCourseInfo(course);
+
+        const fetchedLessonId = urlLessonId || testData.lessonId;
+        if (fetchedLessonId) {
+          setLessonId(fetchedLessonId);
+          if (!urlLessonTitle) {
+            try {
+              const lessonData = await lessonsService.getLessonById(fetchedLessonId);
+              setLessonTitle(lessonData.title || '');
+            } catch (error) {
+              console.error('Помилка при завантаженні уроку:', error);
+            }
+          }
+        }
 
         const courseModules = await courseService.getModulesByCourseId(courseId);
         setModules(courseModules || []);
@@ -103,11 +125,18 @@ export const useEditTestForm = (testId: string | undefined, courseId: string | u
     };
 
     fetchAllData();
-  }, [testId, courseId]);
+  }, [testId, courseId, urlLessonId, urlLessonTitle]);
+
+  const nusGroupsOptions = useMemo(() => {
+    return nusGroups.map((group) => ({
+      value: String(group.id),
+      label: (group as any).name || (group as any).title || '',
+    }));
+  }, [nusGroups]);
 
   const addQuestion = () => {
     const questionId = Math.random().toString(36).substr(2, 9);
-    const newQuestion: UIQuestion = {
+    const newQuestion: UIQuestion & { nusGroupId?: string } = {
       id: questionId,
       type: 'ONE_CHOICE',
       content: '',
@@ -116,11 +145,15 @@ export const useEditTestForm = (testId: string | undefined, courseId: string | u
         { id: `${questionId}-1`, content: '', isCorrect: true },
         { id: `${questionId}-2`, content: '', isCorrect: false },
       ],
+      nusGroupId: '',
     };
     setQuestions((prev) => [...prev, newQuestion]);
   };
 
-  const updateQuestion = (id: string, updatedFields: Partial<UIQuestion>) => {
+  const updateQuestion = (
+    id: string,
+    updatedFields: Partial<UIQuestion> & { nusGroupId?: string },
+  ) => {
     setQuestions((prev) => prev.map((q) => (q.id === id ? { ...q, ...updatedFields } : q)));
   };
 
@@ -148,10 +181,10 @@ export const useEditTestForm = (testId: string | undefined, courseId: string | u
         timeLimitMinutes: totalTimeLimit,
         maxAttempts: Number(attempts) || 1,
         deadline: deadline ? new Date(deadline).toISOString() : null,
-        nusGroupId: nusGroupId && UUID_REGEXP.test(nusGroupId) ? nusGroupId : null,
+        nusGroupId: nusGroupId ? Number(nusGroupId) : null,
         courseModuleId: moduleId && !isNewModule ? moduleId : null,
         newModuleTitle: isNewModule ? moduleId : null,
-
+        lessonId: lessonId || undefined,
         isHidden,
         isResultHidden,
         isAttemptHidden,
@@ -166,6 +199,7 @@ export const useEditTestForm = (testId: string | undefined, courseId: string | u
             type: q.type,
             content: q.content,
             points: Number(q.points) || 1,
+            nusGroupId: (q as any).nusGroupId ? Number((q as any).nusGroupId) : null,
             answers: q.answers.map((a) => {
               const isRealAnswerUuid = UUID_REGEXP.test(a.id);
               return {
@@ -193,24 +227,28 @@ export const useEditTestForm = (testId: string | undefined, courseId: string | u
     }
   };
 
+  const isNushClass = useMemo(() => {
+    if (!courseInfo?.class?.name) return false;
+
+    const match = courseInfo.class.name.match(/^(\d+)/);
+    if (match) {
+      const gradeNumber = parseInt(match[1], 10);
+      return gradeNumber >= 1 && gradeNumber <= 9;
+    }
+
+    return false;
+  }, [courseInfo?.class?.name]);
+
   const isValid = useMemo(() => {
-    if (!title?.trim()) return false;
+    if (!title?.trim() || !moduleId || !deadline) return false;
 
-    const className = courseInfo?.class?.name || '';
-    const classNumberMatch = className.match(/\d+/);
-    const classLevel = classNumberMatch ? parseInt(classNumberMatch[0], 10) : null;
+    const isHoursFilled = hours !== '' && hours !== undefined && hours !== null;
+    const isMinutesFilled = minutes !== '' && minutes !== undefined && minutes !== null;
 
-    const isNushRequired = classLevel !== null && classLevel >= 1 && classLevel <= 9;
+    if (!isHoursFilled && !isMinutesFilled) return false;
 
-    if (isNushRequired && !nusGroupId) return false;
-
-    if (!deadline) return false;
-    if (!attempts) return false;
-
-    const hasModule = !!moduleId;
-    if (!hasModule) return false;
-
-    if (!minutes?.trim() && !hours?.trim()) return false;
+    const isAttemptsValid = attempts !== '' && attempts !== undefined && attempts !== null;
+    if (!isAttemptsValid) return false;
 
     if (!questions || questions.length === 0) return false;
 
@@ -224,9 +262,11 @@ export const useEditTestForm = (testId: string | undefined, courseId: string | u
       const hasCorrectAnswer = q.answers.some((a) => a.isCorrect);
       if (!hasCorrectAnswer) return false;
 
+      if (isNushClass && !q.nusGroupId) return false;
+
       return true;
     });
-  }, [title, moduleId, nusGroupId, deadline, minutes, hours, attempts, questions, courseInfo]);
+  }, [title, moduleId, deadline, minutes, hours, attempts, questions, isNushClass]);
 
   return {
     isLoading,
@@ -234,6 +274,7 @@ export const useEditTestForm = (testId: string | undefined, courseId: string | u
     isValid,
     onSubmitForm,
     sidebarProps: {
+      lessonTitle,
       modules,
       nusGroups,
       isLoading,
@@ -272,6 +313,7 @@ export const useEditTestForm = (testId: string | undefined, courseId: string | u
       addQuestion,
       updateQuestion,
       deleteQuestion,
+      nusGroupsOptions,
     },
   };
 };

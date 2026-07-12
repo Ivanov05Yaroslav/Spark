@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   AnnouncementsList,
   Announcement,
@@ -30,8 +30,6 @@ export const AnnouncementsWorkspace: React.FC<AnnouncementsWorkspaceProps> = ({
   onComplaint,
   showMoreMenu,
 }) => {
-  const selectedAnnouncement = announcements.find((a) => a.id === selectedId);
-
   const [activeAnnouncementToDelete, setActiveAnnouncementToDelete] =
     useState<DetailedAnnouncement | null>(null);
 
@@ -42,11 +40,34 @@ export const AnnouncementsWorkspace: React.FC<AnnouncementsWorkspaceProps> = ({
     }
   };
 
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+
+    const formatted = date.toLocaleDateString('uk-UA', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+
+    return formatted.endsWith('р.') ? formatted : `${formatted} р.`;
+  };
+
+  const formattedAnnouncements = useMemo(() => {
+    return announcements.map((ann) => ({
+      ...ann,
+      time: formatDate(ann.time),
+    }));
+  }, [announcements]);
+
+  const selectedAnnouncement = formattedAnnouncements.find((a) => a.id === selectedId);
+
   return (
     <div className={styles.workspaceGrid}>
       <div className={styles.leftColumn}>
         <AnnouncementsList
-          announcements={announcements}
+          announcements={formattedAnnouncements}
           selectedId={selectedId}
           onItemClick={onItemClick}
         />

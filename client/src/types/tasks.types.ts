@@ -1,3 +1,5 @@
+import { LessonResponse } from '@/types/lessons.types.ts';
+
 export type UploadedLink = {
   url: string;
   name: string;
@@ -20,6 +22,11 @@ export interface TaskCourseModule {
   title: string;
 }
 
+export interface Lesson {
+  id: string;
+  title: string;
+}
+
 export interface TaskResponse {
   id: string;
   courseId: string;
@@ -36,4 +43,5 @@ export interface TaskResponse {
   nusGroup: TaskNusGroup | null;
   courseModule: TaskCourseModule | null;
   classId?: string;
+  lesson: Lesson;
 }

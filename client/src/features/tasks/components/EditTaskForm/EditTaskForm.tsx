@@ -50,6 +50,9 @@ export const EditTaskForm: React.FC<EditTaskFormProps> = ({ onBack }) => {
           options={{
             class: options.classes?.[0] || null,
             subject: options.subject,
+            lesson: formState.lessonTitle
+              ? { value: 'locked', label: formState.lessonTitle }
+              : null,
             modules: options.modules,
             gradingGroups: options.gradingGroups,
           }}
