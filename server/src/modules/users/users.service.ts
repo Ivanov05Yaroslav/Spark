@@ -598,8 +598,15 @@ export class UsersService {
 
     if (file) {
       const uploadedUrl = await this.awsS3Service.uploadFile(file, `users/avatars/${userId}`);
-      if (user.avatarUrl && user.avatarUrl.includes('amazonaws.com')) {
-        await this.awsS3Service.deleteFile(user.avatarUrl);
+
+      const isDefaultAvatar = user.avatarUrl && !user.avatarUrl.includes(userId);
+
+      if (user.avatarUrl && user.avatarUrl.includes('amazonaws.com') && !isDefaultAvatar) {
+        try {
+          await this.awsS3Service.deleteFile(user.avatarUrl);
+        } catch (e) {
+          console.error('Помилка видалення старого аватара:', e);
+        }
       }
       newAvatarUrl = uploadedUrl;
     }
