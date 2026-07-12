@@ -49,7 +49,7 @@ export const ProfilePage = () => {
                 variant="info"
               />
 
-              {isStudent && (
+              {(isStudent || profile.class) && (
                 <>
                   <InfoItem
                     icon={ClassIcon}
@@ -72,30 +72,32 @@ export const ProfilePage = () => {
                 </>
               )}
 
-              {isTeacher && (
+              {(isTeacher ||
+                profile.homeroomClass ||
+                (profile.subjects && profile.subjects.length > 0)) && (
                 <>
-                  {profile.homeroomClass && (
-                    <InfoItem
-                      icon={SchoolIcon}
-                      title="Класне керівництво"
-                      subtitle={profile.homeroomClass.name}
-                      variant="info"
-                    />
-                  )}
-                  {profile.subjects && profile.subjects.length > 0 && (
-                    <InfoItem
-                      icon={SubjectsIcon}
-                      title="Предмети"
-                      subtitle={profile.subjects.map((s: any) => s.name).join(', ')}
-                      variant="info"
-                    />
-                  )}
+                  <InfoItem
+                    icon={SchoolIcon}
+                    title="Класне керівництво"
+                    subtitle={profile.homeroomClass?.name || 'Не вказано'}
+                    variant="info"
+                  />
+                  <InfoItem
+                    icon={SubjectsIcon}
+                    title="Предмети"
+                    subtitle={
+                      profile.subjects && profile.subjects.length > 0
+                        ? profile.subjects.map((s: any) => s.name).join(', ')
+                        : 'Немає'
+                    }
+                    variant="info"
+                  />
                 </>
               )}
             </InfoCard>
           )}
 
-          {isParent && profile.children && profile.children.length > 0 && (
+          {profile.children && profile.children.length > 0 && (
             <InfoCard title="Діти">
               {profile.children.map((child: any) => (
                 <InfoItem
@@ -109,7 +111,7 @@ export const ProfilePage = () => {
             </InfoCard>
           )}
 
-          {isStudent && profile.parentsCode && <ParentCodeCard code={profile.parentsCode} />}
+          {profile.parentsCode && <ParentCodeCard code={profile.parentsCode} />}
         </div>
       );
     }
