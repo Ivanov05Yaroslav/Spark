@@ -71,35 +71,31 @@ export const useTestExecution = (testId: string | undefined) => {
   };
 
   const handleFinishTest = async () => {
-    if (!testId || !test || isSubmitting) return;
+    if (!testId || !test) return;
 
-    const durationInSeconds = Math.floor((Date.now() - startTime) / 1000);
-
-    const formattedAnswers = Object.entries(answers).flatMap(([questionId, selectedOptions]) =>
-      selectedOptions.map((answerId) => ({
-        questionId,
-        answerId,
-      })),
-    );
-
-    const payload = {
-      answers: formattedAnswers,
-      duration: durationInSeconds,
-    };
-
+    setIsSubmitting(true);
     try {
-      setIsSubmitting(true);
+      const durationInSeconds = Math.floor((Date.now() - startTime) / 1000);
 
-      const response = await testsService.submitTest(testId, payload);
-      const serverSuccessMessage = response?.message || 'Тест успішно завершено та збережено!';
-      toast.success(serverSuccessMessage);
+      const formattedAnswers: Record<string, string[]> = {};
+      Object.entries(answers).forEach(([qId, aIds]) => {
+        if (aIds && aIds.length > 0) {
+          formattedAnswers[qId] = aIds;
+        }
+      });
 
+      await testsService.submitTest(testId, {
+        answers: formattedAnswers,
+        duration: durationInSeconds,
+      });
+
+      toast.success('Тест успішно завершено!');
       setTimeout(() => {
-        navigate(`/courses/${test.courseId}/tests/${test.id}`);
+        navigate(`/courses/${test.courseId}`);
       }, 1500);
     } catch (error: any) {
       const serverErrorMessage =
-        error?.response?.data?.message || 'Не вдалося відправити результати тесту';
+        error?.response?.data?.message || 'Помилка при відправці результатів';
       toast.error(serverErrorMessage);
     } finally {
       setIsSubmitting(false);
@@ -166,73 +162,5 @@ export const useTestExecution = (testId: string | undefined) => {
     isFirstQuestion: currentIndex === 0,
     isLastQuestion: test ? currentIndex === test.questions.length - 1 : false,
     initialTimeInSeconds: test ? test.timeLimitMinutes * 60 : 0,
-  };
-};
-
-export type JournalMode = 'NUSH' | 'STANDARD';
-
-export interface JournalColumn {
-  id: string;
-  type: 'attendance' | 'lesson' | 'homework' | 'test';
-  label: string;
-  groupNumber?: number;
-}
-
-interface JournalConfig {
-  classLevel: number;
-  activeLessonGroups: number[];
-  activeHomeworkGroups: number[];
-  activeTestGroups: number[];
-}
-
-export const useDynamicJournal = ({
-  classLevel,
-  activeLessonGroups,
-  activeHomeworkGroups,
-  activeTestGroups,
-}: JournalConfig) => {
-  const journalMode = useMemo<JournalMode>(() => {
-    return classLevel >= 1 && classLevel <= 9 ? 'NUSH' : 'STANDARD';
-  }, [classLevel]);
-
-  const columns = useMemo<JournalColumn[]>(() => {
-    const cols: JournalColumn[] = [
-      { id: 'attendance', type: 'attendance', label: 'Відвідуваність' },
-    ];
-
-    if (journalMode === 'NUSH') {
-      activeLessonGroups.forEach((gr) => {
-        cols.push({
-          id: `lesson-gr-${gr}`,
-          type: 'lesson',
-          groupNumber: gr,
-          label: `ГР${gr}`,
-        });
-      });
-
-      activeHomeworkGroups.forEach((gr) => {
-        cols.push({
-          id: `homework-gr-${gr}`,
-          type: 'homework',
-          groupNumber: gr,
-          label: `ГР${gr}`,
-        });
-      });
-
-      activeTestGroups.forEach((gr) => {
-        cols.push({ id: `test-gr-${gr}`, type: 'test', groupNumber: gr, label: `Тест ГР${gr}` });
-      });
-    } else {
-      cols.push({ id: 'lesson-std', type: 'lesson', label: 'Урок' });
-      cols.push({ id: 'homework-std', type: 'homework', label: 'Домашнє завдання' });
-      cols.push({ id: 'test-std', type: 'test', label: 'Тест' });
-    }
-
-    return cols;
-  }, [journalMode, activeLessonGroups, activeHomeworkGroups, activeTestGroups]);
-
-  return {
-    journalMode,
-    columns,
   };
 };

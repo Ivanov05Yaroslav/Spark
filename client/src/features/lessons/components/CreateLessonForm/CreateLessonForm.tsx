@@ -49,7 +49,7 @@ export const CreateLessonForm: React.FC<CreateTaskFormProps> = ({ onBack }) => {
           label="Тема уроку"
           value={formState.title}
           onChange={(e) => formState.setTitle(e.target.value)}
-          placeholder="Введіть назву завдання"
+          placeholder="Введіть тему уроку"
           disabled={isSubmitting}
         />
 

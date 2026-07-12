@@ -49,7 +49,7 @@ export const useCreateTaskForm = () => {
     },
   });
 
-  const isFormValid = title.trim() !== '' && dueDate.trim() !== '' && module.trim() !== '';
+  const isFormValid = title.trim() !== '' && dueDate.trim() !== '';
 
   const handleSubmit = async () => {
     if (!isFormValid) return;
@@ -62,15 +62,6 @@ export const useCreateTaskForm = () => {
       formData.append('description', instructions.trim() ? instructions.trim() : '');
       formData.append('deadline', dueDate ? formatToServerISO(dueDate) : '');
       formData.append('lessonId', lessonId ? lessonId : '');
-
-      if (module) {
-        const isExistingModule = options.modules.some((opt) => opt.value === module);
-        if (isExistingModule) {
-          formData.append('courseModuleId', module);
-        } else {
-          formData.append('newModuleTitle', module);
-        }
-      }
 
       if (nusGroup && nusGroup.length > 0) {
         nusGroup.forEach((groupId) => {

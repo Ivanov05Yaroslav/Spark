@@ -7,17 +7,13 @@ export const lessonsService = {
     return response.data;
   },
 
-  createLesson: async (formData: FormData) => {
-    const response = await apiClient.post(`/lessons`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+  createLesson: async (payload: any) => {
+    const response = await apiClient.post(`/lessons`, payload);
     return response.data;
   },
 
-  updateLesson: async (lessonId: string, formData: FormData) => {
-    const response = await apiClient.patch(`/lessons/${lessonId}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+  updateLesson: async (lessonId: string, payload: any) => {
+    const response = await apiClient.patch(`/lessons/${lessonId}`, payload);
     return response.data;
   },
 

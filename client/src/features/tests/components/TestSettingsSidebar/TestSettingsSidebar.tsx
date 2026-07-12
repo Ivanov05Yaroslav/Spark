@@ -117,15 +117,6 @@ export const TestSettingsSidebar: React.FC<TestSettingsSidebarProps> = ({
             onChange={(e) => setTitle(e.target.value)}
           />
 
-          <CreatableSelect
-            options={moduleOptions}
-            value={module}
-            onChange={(value: string) => setModule(value)}
-            label="Тема"
-            placeholder={isLoading ? 'Завантаження...' : 'Оберіть тему'}
-            disabled={isLoading}
-          />
-
           <DatePickerField
             label="Виконати до"
             value={deadline}

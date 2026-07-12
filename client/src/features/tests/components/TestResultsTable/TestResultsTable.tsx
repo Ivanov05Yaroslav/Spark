@@ -10,7 +10,7 @@ export interface TestAttempt {
   correctAnswers: number | null;
   wrongAnswers: number | null;
   completionDate: string;
-  mark: number | null;
+  mark: string;
   hasDetails: boolean;
 }
 

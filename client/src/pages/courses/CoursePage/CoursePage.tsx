@@ -147,9 +147,9 @@ export const CoursePage: React.FC = () => {
 
       {isTeacher && (
         <CourseCreateButton
-          onCreateLink={() => navigate(`/courses/${courseId}/materials/create`)}
+          onCreateLink={() => navigate(`/courses/${courseId}/materials/links/create`)}
           onCreateLesson={() => navigate(`/courses/${courseId}/lessons/create`)}
-          onCreateMaterial={() => navigate(`/courses/${courseId}/materials/create`)}
+          onCreateMaterial={() => navigate(`/courses/${courseId}/materials/files/create`)}
           onCreateTask={() => navigate(`/courses/${courseId}/tasks/create`)}
           onCreateTest={() => navigate(`/courses/${courseId}/tests/create`)}
           onCreateAnnouncement={() => navigate(`/courses/${courseId}/announcements/create`)}

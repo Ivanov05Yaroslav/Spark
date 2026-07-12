@@ -80,16 +80,6 @@ export const CourseCreateButton: React.FC<CourseCreateButtonProps> = ({
             <TheoryIcon className={styles.menuIcon} />
             Теоретичний матеріал
           </button>
-
-          <button className={styles.menuItem} onClick={() => handleAction(onCreateTask)}>
-            <TaskIcon className={styles.menuIcon} />
-            Завдання
-          </button>
-
-          <button className={styles.menuItem} onClick={() => handleAction(onCreateTest)}>
-            <TestIcon className={styles.menuIcon} />
-            Тест
-          </button>
         </div>
       )}
     </div>

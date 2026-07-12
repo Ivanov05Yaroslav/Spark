@@ -134,10 +134,6 @@ export const useCreateTestForm = (courseId: string | undefined) => {
       return;
     }
 
-    const isExistingModule = UUID_REGEXP.test(moduleId.trim());
-    const finalCourseModuleId = isExistingModule ? moduleId : null;
-    const finalNewModuleTitle = !isExistingModule && moduleId.trim() ? moduleId.trim() : null;
-
     try {
       setIsSubmitting(true);
 
@@ -147,8 +143,6 @@ export const useCreateTestForm = (courseId: string | undefined) => {
         timeLimitMinutes: (parseInt(hours, 10) || 0) * 60 + (parseInt(minutes, 10) || 0),
         deadline: deadline || null,
         maxAttempts: parseInt(attempts, 10) || 1,
-        courseModuleId: finalCourseModuleId,
-        newModuleTitle: finalNewModuleTitle,
         nusGroupId: nusGroupId || null,
         isHidden,
         isResultHidden,
@@ -185,7 +179,7 @@ export const useCreateTestForm = (courseId: string | undefined) => {
   };
 
   const isValid = useMemo(() => {
-    if (!title?.trim() || !moduleId || !deadline) return false;
+    if (!title?.trim() || !deadline) return false;
 
     const isHoursFilled = hours !== '' && hours !== undefined && hours !== null;
     const isMinutesFilled = minutes !== '' && minutes !== undefined && minutes !== null;
@@ -211,7 +205,7 @@ export const useCreateTestForm = (courseId: string | undefined) => {
 
       return true;
     });
-  }, [title, moduleId, deadline, minutes, hours, attempts, questions, isNushClass]);
+  }, [title, deadline, minutes, hours, attempts, questions, isNushClass]);
 
   return {
     isSubmitting,

@@ -100,7 +100,7 @@ export const useEditTaskForm = () => {
     },
   });
 
-  const isFormValid = title.trim() !== '' && dueDate.trim() !== '' && module.trim() !== '';
+  const isFormValid = title.trim() !== '' && dueDate.trim() !== '';
 
   const handleSubmit = async () => {
     if (!isFormValid) return;
@@ -114,15 +114,6 @@ export const useEditTaskForm = () => {
 
       if (lessonId) {
         formData.append('lessonId', lessonId);
-      }
-
-      if (module) {
-        const isExistingModule = options.modules.some((opt) => opt.value === module);
-        if (isExistingModule) {
-          formData.append('courseModuleId', module);
-        } else {
-          formData.append('newModuleTitle', module);
-        }
       }
 
       if (nusGroup && nusGroup.length > 0) {

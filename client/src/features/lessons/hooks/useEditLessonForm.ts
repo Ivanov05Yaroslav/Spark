@@ -7,6 +7,17 @@ import { isAxiosError } from 'axios';
 import { formatToServerISO } from '@/libs/utils/date';
 import { lessonsService } from '@/api/lessons.service';
 
+interface UpdateLessonDto {
+  courseId?: string;
+  title: string;
+  description: string;
+  date: string;
+  courseModuleId?: string;
+  newModuleTitle?: string;
+  nusGroupIds?: string[];
+  isHidden: boolean;
+}
+
 export const useEditLessonForm = () => {
   const { id: courseId, lessonId } = useParams<{ id: string; lessonId: string }>();
   const navigate = useNavigate();
@@ -50,7 +61,7 @@ export const useEditLessonForm = () => {
   }, [lesson]);
 
   const updateLessonMutation = useMutation({
-    mutationFn: (data: FormData) => lessonsService.updateLesson(lessonId!, data),
+    mutationFn: (data: UpdateLessonDto) => lessonsService.updateLesson(lessonId!, data),
     onSuccess: () => {
       toast.success('Урок успішно оновлено');
       queryClient.invalidateQueries({ queryKey: ['course-content', courseId] });
@@ -72,36 +83,33 @@ export const useEditLessonForm = () => {
     if (!isFormValid || !lessonId || !lesson) return;
 
     try {
-      const formData = new FormData();
+      const payload: UpdateLessonDto = {
+        title: title.trim(),
+        description: instructions.trim() ? instructions.trim() : '',
+        date: dueDate ? formatToServerISO(dueDate) : '',
+        isHidden: hideTask,
+      };
 
-      if (courseId) formData.append('courseId', courseId);
-
-      formData.append('title', title.trim());
-      formData.append('description', instructions.trim() ? instructions.trim() : '');
-      formData.append('date', dueDate ? formatToServerISO(dueDate) : '');
+      if (courseId) {
+        payload.courseId = courseId;
+      }
 
       if (module) {
         const isExistingModule = options.modules.some((opt) => opt.value === module);
         if (isExistingModule) {
-          formData.append('courseModuleId', module);
+          payload.courseModuleId = module;
         } else {
-          formData.append('newModuleTitle', module);
+          payload.newModuleTitle = module;
         }
-      } else {
-        formData.append('courseModuleId', '');
       }
 
       if (nusGroup && nusGroup.length > 0) {
-        nusGroup.forEach((groupId) => {
-          formData.append('nusGroupIds', groupId);
-        });
+        payload.nusGroupIds = nusGroup;
       }
 
-      formData.append('isHidden', String(hideTask));
-
-      updateLessonMutation.mutate(formData);
+      updateLessonMutation.mutate(payload);
     } catch (error: any) {
-      toast.error(error || 'Сталася помилка під час збереження форми');
+      toast.error(error?.message || 'Сталася помилка під час збереження форми');
     }
   };
 

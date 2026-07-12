@@ -164,13 +164,15 @@ export const TestQuestionCard: React.FC<TestQuestionCardProps> = ({
               </div>
             )}
 
-            <Input
-              label={`Запитання`}
-              placeholder={'Введіть запитання'}
-              value={question.content}
-              onChange={(e) => onUpdate && onUpdate({ content: e.target.value })}
-              className={styles.questionInput}
-            />
+            {!isReadOnly && (
+              <Input
+                label={`Запитання`}
+                placeholder={'Введіть запитання'}
+                value={question.content}
+                onChange={(e) => onUpdate && onUpdate({ content: e.target.value })}
+                className={styles.questionInput}
+              />
+            )}
 
             <div className={styles.answersGrid}>
               {question.answers.map((answer: any, idx: number) => {

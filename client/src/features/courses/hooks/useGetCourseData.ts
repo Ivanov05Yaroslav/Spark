@@ -247,7 +247,7 @@ export const useGetCourseData = (courseId: string | undefined) => {
     fetchCourseData();
   }, [fetchCourseData]);
 
-  const handleDeleteModuleItem = async (item: ModuleItemData, _moduleId: string) => {
+  const handleDeleteModuleItem = async (item: ModuleItemData) => {
     try {
       if (item.type === 'LESSON') await lessonsService.deleteLesson(item.id);
       else if (item.type === 'TASK') await tasksService.deleteTask(item.id);
@@ -284,19 +284,59 @@ export const useGetCourseData = (courseId: string | undefined) => {
     }
   };
 
-  const handleAddLesson = (url: string) => {
-    setLessons((prev) => [...prev, { id: Date.now().toString(), url }]);
-    toast.success('Посилання успішно додано!');
+  const handleAddLesson = async (url: string) => {
+    if (!courseId) return;
+    const newLink: OnlineLessonLink = { id: crypto.randomUUID(), url };
+    const newLessons = [...lessons, newLink];
+    setLessons(newLessons);
+
+    try {
+      await courseService.updateVideoLinks(
+        courseId,
+        newLessons.map((l) => l.url),
+      );
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      toast.success('Посилання успішно додано!');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Помилка при додаванні посилання на сервері');
+      setLessons(lessons);
+    }
   };
 
-  const handleEditLesson = (id: string, url: string) => {
-    setLessons((prev) => prev.map((l) => (l.id === id ? { ...l, url } : l)));
-    toast.success('Посилання успішно оновлено!');
+  const handleEditLesson = async (id: string, newUrl: string) => {
+    if (!courseId) return;
+    const newLessons = lessons.map((link) => (link.id === id ? { ...link, url: newUrl } : link));
+    setLessons(newLessons);
+
+    try {
+      await courseService.updateVideoLinks(
+        courseId,
+        newLessons.map((l) => l.url),
+      );
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      toast.success('Посилання успішно оновлено!');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Помилка при збереженні змін на сервері');
+      setLessons(lessons);
+    }
   };
 
-  const handleDeleteLesson = (id: string) => {
-    setLessons((prev) => prev.filter((l) => l.id !== id));
-    toast.success('Посилання успішно видалено!');
+  const handleDeleteLesson = async (id: string) => {
+    if (!courseId) return;
+    const newLessons = lessons.filter((link) => link.id !== id);
+    setLessons(newLessons);
+
+    try {
+      await courseService.updateVideoLinks(
+        courseId,
+        newLessons.map((l) => l.url),
+      );
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      toast.success('Посилання успішно видалено!');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Помилка при видаленні посилання на сервері');
+      setLessons(lessons);
+    }
   };
 
   return {

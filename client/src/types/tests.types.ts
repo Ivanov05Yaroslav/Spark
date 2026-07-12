@@ -16,8 +16,6 @@ export interface CreateTestPayload {
   courseId: string;
   lessonId: string;
   nusGroupId: string | null;
-  courseModuleId: string | null;
-  newModuleTitle: string | null;
   title: string;
   timeLimitMinutes: number;
   deadline: string | null;
@@ -72,7 +70,7 @@ export interface SubmitTestAnswer {
 }
 
 export interface SubmitTestPayload {
-  answers: SubmitTestAnswer[];
+  answers: Record<string, string[]>;
   duration: number;
 }
 

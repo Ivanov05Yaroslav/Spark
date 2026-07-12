@@ -53,7 +53,7 @@ export const useTestAttempts = (testId: string | undefined, targetStudentId?: st
         correctAnswers: null,
         wrongAnswers: null,
         completionDate: formattedDate,
-        mark: Number(attempt.score),
+        mark: attempt.score,
         hasDetails: attempt.canReview,
       };
     });

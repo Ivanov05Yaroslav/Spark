@@ -91,7 +91,7 @@ export const TeacherTestSubmissionsWorkspace: React.FC = () => {
         correctAnswers: null,
         wrongAnswers: null,
         completionDate: formatToDateTime(attempt.submittedAt),
-        mark: attempt.score !== null ? Number(attempt.score) : null,
+        mark: attempt.score !== null ? attempt.score : null,
         hasDetails: true,
       };
     });

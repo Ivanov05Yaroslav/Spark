@@ -88,15 +88,6 @@ export const TaskSidebarSettings: React.FC<TaskSidebarSettingsProps> = ({
         placeholder="Оберіть дату та час"
       />
 
-      <CreatableSelect
-        options={options.modules}
-        value={formState.module}
-        onChange={formState.setModule}
-        label="Тема"
-        placeholder={isLoading ? 'Завантаження...' : 'Оберіть тему'}
-        disabled={isLoading}
-      />
-
       {isNushClass && (
         <MultiSelectField
           label="Групи оцінювання НУШ"
