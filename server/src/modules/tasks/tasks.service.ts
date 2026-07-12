@@ -68,7 +68,7 @@ export class TasksService {
       const invalidGroups = nusGroups.filter((g) => g.subjectId !== course.subjectId);
       if (invalidGroups.length > 0) {
         throw new HttpException(
-          'Помилка: Деякі групи результатів НУШ належать до іншого предмету!',
+          'Деякі групи результатів НУШ належать до іншого предмету!',
           HttpStatus.BAD_REQUEST,
         );
       }
@@ -122,7 +122,11 @@ export class TasksService {
     }));
 
     await this.notificationsService.createMany(notifications);
-    return task;
+
+    return {
+      ...task,
+      attachments: await this.signAttachments(task.attachments),
+    };
   }
 
   async findAllByCourse(userId: string, courseId: string) {
@@ -318,7 +322,11 @@ export class TasksService {
       }));
       await this.notificationsService.createMany(notifications);
     }
-    return updatedTask;
+
+    return {
+      ...updatedTask,
+      attachments: await this.signAttachments(updatedTask.attachments),
+    };
   }
 
   async delete(userId: string, taskId: string) {

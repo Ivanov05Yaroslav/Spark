@@ -1,4 +1,5 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { NUS_GROUPS_CONFIG } from '../../common/consts/nus-data';
 import { PrismaService } from '../../core/prisma/prisma.service';
 
 @Injectable()
@@ -80,27 +81,8 @@ export class SubjectsService {
   }
 
   async initNusGroups() {
-    const nusGroupsData = {
-      Математика: [
-        'ГР 1. Опрацювання проблемних ситуацій та створення математичних моделей',
-        "ГР 2. Розв'язання математичних задач",
-        'ГР 3. Аналіз та інтерпретація результатів',
-      ],
-      'Українська мова': [
-        'ГР 1. Усна взаємодія',
-        'ГР 2. Письмова взаємодія',
-        'ГР 3. Робота з текстом',
-        'ГР 4. Дослідження мовлення',
-      ],
-      'Історія України': [
-        'ГР 1. Орієнтація в історичному часі та просторі',
-        'ГР 2. Робота з інформацією історичного змісту',
-        "ГР 3. Осмислення історичних подій та зв'язків",
-      ],
-    };
-
     let count = 0;
-    for (const [subjectName, groupNames] of Object.entries(nusGroupsData)) {
+    for (const [subjectName, groupNames] of Object.entries(NUS_GROUPS_CONFIG)) {
       const subject = await this.prisma.subject.findUnique({ where: { name: subjectName } });
 
       if (subject) {

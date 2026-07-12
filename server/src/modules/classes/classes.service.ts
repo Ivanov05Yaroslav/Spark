@@ -1,9 +1,13 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { AwsS3Service } from '../../core/integrations/aws/aws-s3.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
 
 @Injectable()
 export class ClassesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly awsS3Service: AwsS3Service,
+  ) {}
 
   async create(schoolId: string, name: string) {
     const exists = await this.prisma.class.findFirst({ where: { schoolId, name } });
@@ -28,14 +32,28 @@ export class ClassesService {
   }
 
   async findBySchool(schoolId: string) {
-    return this.prisma.class.findMany({
+    const classes = await this.prisma.class.findMany({
       where: { schoolId },
       include: {
-        homeroomTeacher: { select: { id: true, firstName: true, lastName: true } },
+        homeroomTeacher: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
         _count: { select: { students: true } },
       },
       orderBy: { name: 'asc' },
     });
+
+    return Promise.all(
+      classes.map(async (c) => ({
+        ...c,
+        homeroomTeacher: c.homeroomTeacher
+          ? {
+              ...c.homeroomTeacher,
+              avatarUrl: c.homeroomTeacher.avatarUrl
+                ? await this.awsS3Service.generatePresignedUrl(c.homeroomTeacher.avatarUrl)
+                : null,
+            }
+          : null,
+      })),
+    );
   }
 
   async findOrCreateClass(schoolId: string, name: string) {
@@ -53,7 +71,7 @@ export class ClassesService {
     if (!exists) {
       await this.prisma.classStudent.create({ data: { classId, studentId } });
     }
-    return { message: 'Учня додано до класу' };
+    return { message: 'Учня успішно додано до класу' };
   }
 
   async removeStudent(classId: string, studentId: string) {
@@ -87,10 +105,19 @@ export class ClassesService {
             firstName: true,
             lastName: true,
             middleName: true,
+            avatarUrl: true,
           },
         },
       },
     });
-    return classStudents.map((cs) => cs.student);
+
+    return Promise.all(
+      classStudents.map(async (cs) => ({
+        ...cs.student,
+        avatarUrl: cs.student.avatarUrl
+          ? await this.awsS3Service.generatePresignedUrl(cs.student.avatarUrl)
+          : null,
+      })),
+    );
   }
 }

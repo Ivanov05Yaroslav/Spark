@@ -10,6 +10,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Max,
   Min,
 } from 'class-validator';
 
@@ -276,6 +277,13 @@ export class CreateCourseModuleDto {
   @IsString()
   @IsNotEmpty()
   title!: string;
+
+  @ApiProperty({ example: 1, minimum: 1, maximum: 2, default: 1 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(2)
+  semester: number = 1;
 }
 
 export class UpdateCourseModuleDto {
@@ -283,6 +291,14 @@ export class UpdateCourseModuleDto {
   @IsOptional()
   @IsString()
   title?: string;
+
+  @ApiProperty({ example: 1, minimum: 1, maximum: 2, required: false })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(2)
+  semester?: number;
 }
 
 export class CoTeacherDto {

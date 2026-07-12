@@ -13,11 +13,6 @@ export class CreateLinkDto {
   @IsNotEmpty()
   title!: string;
 
-  @ApiProperty({ example: 'uuid-lesson', required: false, description: 'ID уроку' })
-  @IsOptional()
-  @IsString()
-  lessonId?: string;
-
   @ApiProperty({ example: 'uuid-модуля', required: false, description: 'ID теми/модуля курсу' })
   @IsOptional()
   @IsString()
@@ -54,11 +49,6 @@ export class CreateFileMaterialDto {
   @IsNotEmpty()
   title!: string;
 
-  @ApiProperty({ example: 'uuid-lesson', required: false, description: 'ID уроку' })
-  @IsOptional()
-  @IsString()
-  lessonId?: string;
-
   @ApiProperty({ example: 'uuid-модуля', required: false, description: 'ID теми/модуля курсу' })
   @IsOptional()
   @IsString()
@@ -92,11 +82,6 @@ export class UpdateMaterialDto {
   @ApiProperty({ required: false })
   @IsOptional()
   linkUrl?: string;
-
-  @ApiProperty({ example: 'uuid-lesson', required: false, description: 'ID уроку' })
-  @IsOptional()
-  @IsString()
-  lessonId?: string;
 
   @ApiProperty({ example: 'uuid-модуля', required: false, description: 'ID теми/модуля курсу' })
   @IsOptional()

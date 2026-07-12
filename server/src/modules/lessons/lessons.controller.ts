@@ -1,17 +1,5 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Post,
-  UploadedFiles,
-  UseGuards,
-  UseInterceptors,
-} from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { GetUser } from '../../common/decorators/get-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -27,18 +15,12 @@ export class LessonsController {
   constructor(private readonly lessonsService: LessonsService) {}
 
   @ApiOperation({
-    summary: 'Створити новий урок (Тільки вчитель). Можна передавати файли та лінки',
+    summary: 'Створити новий урок (Тільки вчитель).',
   })
-  @ApiConsumes('multipart/form-data')
   @Roles('TEACHER')
   @Post()
-  @UseInterceptors(FilesInterceptor('files', 10, { limits: { fileSize: 100 * 1024 * 1024 } }))
-  async create(
-    @GetUser('id') teacherId: string,
-    @Body() dto: CreateLessonDto,
-    @UploadedFiles() files: any[],
-  ) {
-    return this.lessonsService.create(teacherId, dto, files);
+  async create(@GetUser('id') teacherId: string, @Body() dto: CreateLessonDto) {
+    return this.lessonsService.create(teacherId, dto);
   }
 
   @ApiOperation({ summary: 'Отримати всі уроки курсу' })
@@ -53,21 +35,18 @@ export class LessonsController {
     return this.lessonsService.findOne(userId, id);
   }
 
-  @ApiOperation({ summary: 'Редагувати урок (Можна додавати/видаляти матеріали)' })
-  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Редагувати урок' })
   @Roles('TEACHER')
   @Patch('/:id')
-  @UseInterceptors(FilesInterceptor('files', 10, { limits: { fileSize: 100 * 1024 * 1024 } }))
   async update(
     @GetUser('id') teacherId: string,
     @Param('id') id: string,
     @Body() dto: UpdateLessonDto,
-    @UploadedFiles() files: any[],
   ) {
-    return this.lessonsService.update(teacherId, id, dto, files);
+    return this.lessonsService.update(teacherId, id, dto);
   }
 
-  @ApiOperation({ summary: 'Видалити урок (та всі пов`язані матеріали, таски і тести з AWS S3)' })
+  @ApiOperation({ summary: 'Видалити урок (та всі пов`язані таски і тести з AWS S3)' })
   @Roles('TEACHER')
   @Delete('/:id')
   async delete(@GetUser('id') teacherId: string, @Param('id') id: string) {

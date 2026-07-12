@@ -2,8 +2,12 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { AwsS3Service } from '../../core/integrations/aws/aws-s3.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { CreateTaskSubmissionDto, GradeSubmissionDto, UpdateTaskSubmissionDto } from './dto/submission.dto';
 import { GetSubmissionsQueryDto } from './dto/submission-query.dto';
+import {
+  CreateTaskSubmissionDto,
+  GradeSubmissionDto,
+  UpdateTaskSubmissionDto,
+} from './dto/submission.dto';
 
 @Injectable()
 export class SubmissionsService {
@@ -13,10 +17,35 @@ export class SubmissionsService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
+  private async signAttachments(attachments: string[]) {
+    return Promise.all(
+      attachments.map(async (url) => {
+        if (url.includes('amazonaws.com')) {
+          return await this.awsS3Service.generatePresignedUrl(url);
+        }
+        return url;
+      }),
+    );
+  }
+
+  private paginateResponse(data: any[], total: number, page: number, limit: number) {
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
   async submitTask(studentId: string, dto: CreateTaskSubmissionDto, files?: any[]) {
     const task = await this.prisma.task.findUnique({
       where: { id: dto.taskId },
-      include: { course: { include: { students: true, coTeachers: true, subject: true, class: true } } },
+      include: {
+        course: { include: { students: true, coTeachers: true, subject: true, class: true } },
+      },
     });
     if (!task) throw new HttpException('Завдання не знайдено', HttpStatus.NOT_FOUND);
 
@@ -82,18 +111,9 @@ export class SubmissionsService {
       }
     }
 
-    return newSubmission;
-  }
-
-  private paginateResponse(data: any[], total: number, page: number, limit: number) {
     return {
-      data,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
+      ...newSubmission,
+      attachments: await this.signAttachments(newSubmission.attachments),
     };
   }
 
@@ -137,15 +157,7 @@ export class SubmissionsService {
 
     if (!submission) return null;
 
-    const signedAttachments = await Promise.all(
-      submission.attachments.map(async (url) => {
-        if (url.includes('amazonaws.com')) {
-          return await this.awsS3Service.generatePresignedUrl(url);
-        }
-        return url;
-      }),
-    );
-
+    const signedAttachments = await this.signAttachments(submission.attachments);
     return { ...submission, attachments: signedAttachments };
   }
 
@@ -208,7 +220,20 @@ export class SubmissionsService {
       }),
     ]);
 
-    return this.paginateResponse(data, total, page, limit);
+    const formattedData = await Promise.all(
+      data.map(async (sub) => ({
+        ...sub,
+        attachments: await this.signAttachments(sub.attachments),
+        student: {
+          ...sub.student,
+          avatarUrl: sub.student.avatarUrl
+            ? await this.awsS3Service.generatePresignedUrl(sub.student.avatarUrl)
+            : null,
+        },
+      })),
+    );
+
+    return this.paginateResponse(formattedData, total, page, limit);
   }
 
   async getSubmissionsByTest(teacherId: string, testId: string, query: GetSubmissionsQueryDto) {
@@ -265,7 +290,20 @@ export class SubmissionsService {
       }),
     ]);
 
-    return this.paginateResponse(data, total, page, limit);
+    const formattedData = await Promise.all(
+      data.map(async (sub) => ({
+        ...sub,
+        attachments: await this.signAttachments(sub.attachments),
+        student: {
+          ...sub.student,
+          avatarUrl: sub.student.avatarUrl
+            ? await this.awsS3Service.generatePresignedUrl(sub.student.avatarUrl)
+            : null,
+        },
+      })),
+    );
+
+    return this.paginateResponse(formattedData, total, page, limit);
   }
 
   async getUngradedSubmissionsByCourse(teacherId: string, courseId: string) {
@@ -280,25 +318,31 @@ export class SubmissionsService {
     if (!isTeacher)
       throw new HttpException('У вас немає прав для перегляду цього курсу', HttpStatus.FORBIDDEN);
 
-    return this.prisma.submission.findMany({
+    const submissions = await this.prisma.submission.findMany({
       where: {
         OR: [{ task: { courseId } }, { test: { courseId } }],
         checkedAt: null,
       },
       include: {
-        student: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatarUrl: true,
-          },
-        },
+        student: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
         task: { select: { id: true, title: true } },
         test: { select: { id: true, title: true } },
       },
       orderBy: { submittedAt: 'asc' },
     });
+
+    return Promise.all(
+      submissions.map(async (sub) => ({
+        ...sub,
+        attachments: await this.signAttachments(sub.attachments),
+        student: {
+          ...sub.student,
+          avatarUrl: sub.student.avatarUrl
+            ? await this.awsS3Service.generatePresignedUrl(sub.student.avatarUrl)
+            : null,
+        },
+      })),
+    );
   }
 
   async getStudentSubmissionsByCourse(userId: string, courseId: string, studentId: string) {
@@ -319,7 +363,7 @@ export class SubmissionsService {
       );
     }
 
-    return this.prisma.submission.findMany({
+    const submissions = await this.prisma.submission.findMany({
       where: {
         studentId,
         OR: [{ task: { courseId } }, { test: { courseId } }],
@@ -330,6 +374,13 @@ export class SubmissionsService {
       },
       orderBy: { submittedAt: 'desc' },
     });
+
+    return Promise.all(
+      submissions.map(async (sub) => ({
+        ...sub,
+        attachments: await this.signAttachments(sub.attachments),
+      })),
+    );
   }
 
   async updateTaskSubmission(
@@ -376,10 +427,15 @@ export class SubmissionsService {
       }
     }
 
-    return this.prisma.submission.update({
+    const updated = await this.prisma.submission.update({
       where: { id: submissionId },
       data: { attachments: finalAttachments },
     });
+
+    return {
+      ...updated,
+      attachments: await this.signAttachments(updated.attachments),
+    };
   }
 
   async deleteSubmission(studentId: string, submissionId: string) {
@@ -402,90 +458,128 @@ export class SubmissionsService {
     const submission = await this.prisma.submission.findUnique({
       where: { id: submissionId },
       include: {
-        task: { include: { course: { include: { coTeachers: true, subject: true, class: true } } } },
-        test: { include: { course: { include: { coTeachers: true, subject: true, class: true } } } },
+        task: {
+          include: {
+            nusGroups: { select: { id: true } },
+            course: { include: { coTeachers: true, subject: true, class: true } },
+          },
+        },
+        test: { include: { course: { include: { coTeachers: true } } } },
       },
     });
-    if (!submission) throw new HttpException('Роботу не знайдено', HttpStatus.NOT_FOUND);
 
-    const course = submission.task?.course || submission.test?.course;
-    if (!course)
-      throw new HttpException('Помилка структури курсу', HttpStatus.INTERNAL_SERVER_ERROR);
-
-    const isTeacher =
-      course.creatorId === teacherId || course.coTeachers?.some((ct) => ct.teacherId === teacherId);
-    if (!isTeacher)
-      throw new HttpException('У вас немає прав для оцінювання цієї роботи', HttpStatus.FORBIDDEN);
-
-    const updated = await this.prisma.submission.update({
-      where: { id: submissionId },
-      data: { score: dto.score, checkedAt: new Date() },
-    });
-    
-    if (submission.task) {
-      await this.prisma.gradebook.deleteMany({
-        where: { taskId: submission.task.id, studentId: submission.studentId }
-      });
-
-      const gradebookData: {
-        studentId: string;
-        teacherId: string;
-        courseId: string;
-        lessonId: string;
-        taskId: string;
-        nusGroupId: string | null;
-        gradeType: string;
-        score: number;
-        date: Date;
-      }[] = [];
-
-      if (dto.nusGrades && dto.nusGrades.length > 0) {
-        for (const ng of dto.nusGrades) {
-          gradebookData.push({
-            studentId: submission.studentId,
-            teacherId: teacherId,
-            courseId: submission.task.courseId,
-            lessonId: submission.task.lessonId,
-            taskId: submission.task.id,
-            nusGroupId: ng.nusGroupId || null,
-            gradeType: ng.nusGroupId ? 'NUS' : 'TRADITIONAL',
-            score: ng.score,
-            date: new Date(),
-          });
-        }
-      } else if (dto.score) {
-        const parsedScore = parseFloat(dto.score);
-        if (!isNaN(parsedScore)) {
-          gradebookData.push({
-            studentId: submission.studentId,
-            teacherId: teacherId,
-            courseId: submission.task.courseId,
-            lessonId: submission.task.lessonId, 
-            taskId: submission.task.id,
-            nusGroupId: null,
-            gradeType: 'TRADITIONAL',
-            score: parsedScore,
-            date: new Date(),
-          });
-        }
-      }
-
-      if (gradebookData.length > 0) {
-        await this.prisma.gradebook.createMany({ data: gradebookData });
-      }
-
-      const courseName = `${submission.task.course.subject.name} ${submission.task.course.class.name}`;
-      await this.notificationsService.create({
-        senderId: teacherId,
-        receiverId: submission.studentId,
-        title: 'Оцінка за завдання',
-        content: `Вашу роботу "${submission.task.title}" у курсі "${courseName}" перевірено. Оцінка: ${dto.score}`,
-        type: 'SUBMISSION',
-        metadata: { courseId: submission.task.courseId, taskId: submission.task.id },
-      });
+    if (!submission) {
+      throw new HttpException('Роботу не знайдено', HttpStatus.NOT_FOUND);
     }
 
-    return updated;
+    if (!submission.task) {
+      throw new HttpException(
+        'Цей endpoint використовується тільки для оцінювання відкритих завдань',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const course = submission.task.course;
+    const isTeacher =
+      course.creatorId === teacherId ||
+      course.coTeachers.some((item) => item.teacherId === teacherId);
+
+    if (!isTeacher) {
+      throw new HttpException('У вас немає прав для оцінювання цієї роботи', HttpStatus.FORBIDDEN);
+    }
+
+    const selectedGroupIds = new Set(submission.task.nusGroups.map((group) => group.id));
+    const nusGrades = dto.nusGrades ?? [];
+    const parsedOverall = dto.score === undefined ? null : Number(dto.score);
+
+    if (nusGrades.length === 0 && (parsedOverall === null || Number.isNaN(parsedOverall))) {
+      throw new HttpException('Оцінка не може бути порожньою', HttpStatus.BAD_REQUEST);
+    }
+
+    if (
+      parsedOverall !== null &&
+      (!Number.isFinite(parsedOverall) || parsedOverall < 1 || parsedOverall > 12)
+    ) {
+      throw new HttpException('Загальна оцінка повинна бути від 1 до 12', HttpStatus.BAD_REQUEST);
+    }
+
+    for (const grade of nusGrades) {
+      if (!grade.nusGroupId || !selectedGroupIds.has(grade.nusGroupId)) {
+        throw new HttpException('Передано невірну або відсутню групу НУШ', HttpStatus.BAD_REQUEST);
+      }
+    }
+
+    const calculatedFinalGrade =
+      parsedOverall ?? nusGrades.reduce((sum, grade) => sum + grade.score, 0) / nusGrades.length;
+    const finalGrade = Math.round(calculatedFinalGrade * 100) / 100;
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.submission.update({
+        where: { id: submissionId },
+        data: {
+          score: dto.score ?? String(Math.round(finalGrade)),
+          finalGrade,
+          checkedAt: new Date(),
+        },
+      });
+
+      await tx.gradebook.deleteMany({
+        where: { taskId: submission.task!.id, studentId: submission.studentId },
+      });
+
+      if (nusGrades.length > 0) {
+        await tx.gradebook.createMany({
+          data: nusGrades.map((grade) => ({
+            studentId: submission.studentId,
+            teacherId,
+            courseId: submission.task!.courseId,
+            lessonId: submission.task!.lessonId,
+            taskId: submission.task!.id,
+            testId: null,
+            nusGroupId: grade.nusGroupId!,
+            gradeType: 'NUS',
+            score: grade.score,
+            date: new Date(),
+          })),
+        });
+      } else {
+        await tx.gradebook.create({
+          data: {
+            studentId: submission.studentId,
+            teacherId,
+            courseId: submission.task!.courseId,
+            lessonId: submission.task!.lessonId,
+            taskId: submission.task!.id,
+            testId: null,
+            nusGroupId: null,
+            gradeType: 'TRADITIONAL',
+            score: finalGrade,
+            date: new Date(),
+          },
+        });
+      }
+
+      return result;
+    });
+
+    const courseName = `${course.subject.name} ${course.class.name}`;
+    await this.notificationsService.create({
+      senderId: teacherId,
+      receiverId: submission.studentId,
+      title: 'Оцінка за завдання',
+      content: `Вашу роботу "${submission.task.title}" у курсі "${courseName}" перевірено. Оцінка: ${Math.round(finalGrade)}.`,
+      type: 'SUBMISSION',
+      metadata: {
+        courseId: submission.task.courseId,
+        taskId: submission.task.id,
+        submissionId,
+      },
+    });
+
+    return {
+      ...updated,
+      attachments: await this.signAttachments(updated.attachments),
+    };
   }
 
   async getTestAttemptReview(userId: string, submissionId: string) {
@@ -673,14 +767,7 @@ export class SubmissionsService {
 
         let signedAttachments: string[] = [];
         if (latestSubmission && latestSubmission.attachments.length > 0) {
-          signedAttachments = await Promise.all(
-            latestSubmission.attachments.map(async (url) => {
-              if (url.includes('amazonaws.com')) {
-                return await this.awsS3Service.generatePresignedUrl(url);
-              }
-              return url;
-            }),
-          );
+          signedAttachments = await this.signAttachments(latestSubmission.attachments);
         }
 
         return {

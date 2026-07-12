@@ -71,11 +71,25 @@ export class CoursesService {
     };
   }
 
-  private formatCourseList(courses: any[]) {
-    return courses.map((course) => ({
-      ...course,
-      coTeachers: course.coTeachers.map((ct: any) => ct.teacher),
-    }));
+  private async formatCourseList(courses: any[]) {
+    return Promise.all(
+      courses.map(async (course) => {
+        return {
+          ...course,
+          backgroundUrl: await this.awsS3Service.generatePresignedUrl(course.backgroundUrl),
+          creator: {
+            ...course.creator,
+            avatarUrl: await this.awsS3Service.generatePresignedUrl(course.creator.avatarUrl),
+          },
+          coTeachers: await Promise.all(
+            course.coTeachers.map(async (ct: any) => ({
+              ...ct.teacher,
+              avatarUrl: await this.awsS3Service.generatePresignedUrl(ct.teacher.avatarUrl),
+            })),
+          ),
+        };
+      }),
+    );
   }
 
   async getCourseById(userId: string, courseId: string) {
@@ -89,43 +103,35 @@ export class CoursesService {
             id: true,
             title: true,
             createdAt: true,
+            semester: true,
+            lessons: {
+              orderBy: { date: 'asc' },
+              select: {
+                id: true,
+                title: true,
+                description: true,
+                date: true,
+                nusGroups: { select: { id: true, name: true } },
+                task: {
+                  select: { id: true, title: true, deadline: true, isHidden: true },
+                },
+                test: {
+                  select: { id: true, title: true, deadline: true, isHidden: true },
+                },
+              },
+            },
             materials: {
               select: {
                 id: true,
                 title: true,
                 fileUrl: true,
                 linkUrl: true,
-                createdAt: true,
                 isHidden: true,
+                createdAt: true,
               },
-            },
-            tasks: {
-              select: { id: true, title: true, deadline: true, createdAt: true, isHidden: true },
-            },
-            tests: {
-              select: { id: true, title: true, deadline: true, createdAt: true, isHidden: true },
             },
           },
           orderBy: { createdAt: 'asc' },
-        },
-        materials: {
-          where: { courseModuleId: null },
-          select: {
-            id: true,
-            title: true,
-            fileUrl: true,
-            linkUrl: true,
-            createdAt: true,
-            isHidden: true,
-          },
-        },
-        tasks: {
-          where: { courseModuleId: null },
-          select: { id: true, title: true, deadline: true, createdAt: true, isHidden: true },
-        },
-        tests: {
-          where: { courseModuleId: null },
-          select: { id: true, title: true, deadline: true, createdAt: true, isHidden: true },
         },
         announcements: {
           orderBy: { createdAt: 'desc' },
@@ -240,30 +246,30 @@ export class CoursesService {
     );
     const unreadAnnouncementsCount = announcements.filter((a) => a.isNew).length;
 
-    const allTasks = [...course.tasks, ...course.modules.flatMap((m) => m.tasks)];
-    const allTests = [...course.tests, ...course.modules.flatMap((m) => m.tests)];
+    const allTasks = course.modules.flatMap((m) => m.lessons.map((l) => l.task).filter(Boolean));
+    const allTests = course.modules.flatMap((m) => m.lessons.map((l) => l.test).filter(Boolean));
 
-    const visibleTasks = allTasks.filter((t) => !t.isHidden);
-    const visibleTests = allTests.filter((t) => !t.isHidden);
+    const visibleTasks = allTasks.filter((t) => !(t as any).isHidden);
+    const visibleTests = allTests.filter((t) => !(t as any).isHidden);
 
     const now = new Date();
     const nextWeek = new Date();
     nextWeek.setDate(now.getDate() + 7);
 
     const upcomingTasks = visibleTasks
-      .filter((t) => t.deadline && t.deadline > now && t.deadline <= nextWeek)
-      .map((t) => ({ ...t, type: 'task' }));
+      .filter((t: any) => t.deadline && t.deadline > now && t.deadline <= nextWeek)
+      .map((t: any) => ({ ...t, type: 'task' }));
+
     const upcomingTests = visibleTests
-      .filter((t) => t.deadline && t.deadline > now && t.deadline <= nextWeek)
-      .map((t) => ({ ...t, type: 'test' }));
+      .filter((t: any) => t.deadline && t.deadline > now && t.deadline <= nextWeek)
+      .map((t: any) => ({ ...t, type: 'test' }));
 
     let unsubmittedWorksCount = 0;
-
     const isCurrentUserStudent = course.students.some((s) => s.studentId === userId);
 
     if (isCurrentUserStudent) {
-      const visibleTaskIds = visibleTasks.map((t) => t.id);
-      const visibleTestIds = visibleTests.map((t) => t.id);
+      const visibleTaskIds = visibleTasks.map((t: any) => t.id);
+      const visibleTestIds = visibleTests.map((t: any) => t.id);
 
       const userSubmissions = await this.prisma.submission.findMany({
         where: {
@@ -286,14 +292,27 @@ export class CoursesService {
       (a, b) => a.deadline!.getTime() - b.deadline!.getTime(),
     );
 
+    const formattedModules = await Promise.all(
+      course.modules.map(async (mod) => ({
+        ...mod,
+        materials: await Promise.all(
+          mod.materials.map(async (mat) => {
+            let signedFileUrl = mat.fileUrl;
+            if (signedFileUrl && signedFileUrl.includes('amazonaws.com')) {
+              signedFileUrl = await this.awsS3Service.generatePresignedUrl(signedFileUrl);
+            }
+            return { ...mat, fileUrl: signedFileUrl };
+          }),
+        ),
+        lessons: mod.lessons,
+      })),
+    );
+
     return {
       id: course.id,
       schoolId: course.schoolId,
       subject: course.subject,
-      class: {
-        id: course.class.id,
-        name: course.class.name,
-      },
+      class: { id: course.class.id, name: course.class.name },
       startDate: course.startDate,
       endDate: course.endDate,
       groupName: course.groupName,
@@ -303,7 +322,6 @@ export class CoursesService {
         ? await this.awsS3Service.generatePresignedUrl(course.backgroundUrl)
         : null,
       isHidden: course.isHidden,
-
       participants: {
         creator: creatorClean,
         coTeachers: coTeachersClean,
@@ -311,11 +329,8 @@ export class CoursesService {
         students,
         totalStudentsCount: course._count.students,
       },
-
-      modules: course.modules,
-
+      modules: formattedModules,
       upcomingDeadlines,
-
       announcements,
       unreadAnnouncementsCount,
       unsubmittedWorksCount,
@@ -745,41 +760,22 @@ export class CoursesService {
 
     switch (filter) {
       case 'PAST':
-        where.AND.push({
-          endDate: { lt: now },
-          isArchived: false,
-        });
+        where.AND.push({ endDate: { lt: now }, isArchived: false });
         break;
       case 'ARCHIVED':
-        where.AND.push({
-          endDate: { lt: now },
-          isArchived: true,
-        });
+        where.AND.push({ endDate: { lt: now }, isArchived: true });
         break;
       case 'ACTIVE':
-        where.AND.push({
-          startDate: { lte: now },
-          endDate: { gte: now },
-          isHidden: false,
-        });
+        where.AND.push({ startDate: { lte: now }, endDate: { gte: now }, isHidden: false });
         break;
       case 'UPCOMING':
-        where.AND.push({
-          startDate: { gt: now },
-          isHidden: false,
-        });
+        where.AND.push({ startDate: { gt: now }, isHidden: false });
         break;
       case 'HIDDEN':
-        where.AND.push({
-          endDate: { gte: now },
-          isHidden: true,
-        });
+        where.AND.push({ endDate: { gte: now }, isHidden: true });
         break;
       case 'ALL':
-        where.AND.push({
-          isHidden: false,
-          isArchived: false,
-        });
+        where.AND.push({ isHidden: false, isArchived: false });
       default:
         break;
     }
@@ -813,7 +809,7 @@ export class CoursesService {
     ]);
 
     return {
-      data: this.formatCourseList(courses),
+      data: await this.formatCourseList(courses),
       meta: {
         total,
         page,
@@ -827,10 +823,7 @@ export class CoursesService {
     await this.ensureCourseCreator(courseId, teacherId);
 
     return this.prisma.courseModule.create({
-      data: {
-        courseId,
-        title: dto.title,
-      },
+      data: { courseId, title: dto.title, semester: dto.semester },
     });
   }
 
@@ -898,9 +891,7 @@ export class CoursesService {
 
     return this.prisma.courseModule.update({
       where: { id: moduleId },
-      data: {
-        title: dto.title,
-      },
+      data: { title: dto.title, semester: dto.semester },
     });
   }
 

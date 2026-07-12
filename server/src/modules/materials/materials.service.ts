@@ -60,31 +60,22 @@ export class MaterialsService {
   async createLink(teacherId: string, dto: CreateLinkDto) {
     const course = await this.verifyTeacherWriteAccess(dto.courseId, teacherId);
 
-    let finalModuleId: string;
-    if (dto.lessonId) {
-      const lesson = await this.prisma.lesson.findUnique({ where: { id: dto.lessonId } });
-      if (!lesson || lesson.courseId !== dto.courseId) {
-        throw new HttpException('Урок не знайдено', HttpStatus.BAD_REQUEST);
-      }
-      finalModuleId = lesson.courseModuleId;
-    } else {
-      finalModuleId = await this.getOrCreateModuleId(
-        dto.courseId,
-        dto.courseModuleId,
-        dto.newModuleTitle,
-      );
-    }
+    const finalModuleId = await this.getOrCreateModuleId(
+      dto.courseId,
+      dto.courseModuleId,
+      dto.newModuleTitle,
+    );
 
     const newMaterial = await this.prisma.material.create({
       data: {
         courseId: dto.courseId,
         creatorId: teacherId,
         title: dto.title,
-        lessonId: dto.lessonId || null,
         courseModuleId: finalModuleId,
         linkUrl: dto.linkUrl,
         isHidden: dto.isHidden || false,
       },
+      include: { creator: true },
     });
 
     if (!newMaterial.isHidden) {
@@ -104,27 +95,26 @@ export class MaterialsService {
       await this.notificationsService.createMany(notifications);
     }
 
-    return newMaterial;
+    return {
+      ...newMaterial,
+      creator: {
+        ...newMaterial.creator,
+        avatarUrl: newMaterial.creator.avatarUrl
+          ? await this.awsS3Service.generatePresignedUrl(newMaterial.creator.avatarUrl)
+          : null,
+      },
+    };
   }
 
   async createFileMaterial(teacherId: string, dto: CreateFileMaterialDto, file: any) {
     if (!file) throw new HttpException("Файл обов'язковий", HttpStatus.BAD_REQUEST);
     const course = await this.verifyTeacherWriteAccess(dto.courseId, teacherId);
 
-    let finalModuleId: string;
-    if (dto.lessonId) {
-      const lesson = await this.prisma.lesson.findUnique({ where: { id: dto.lessonId } });
-      if (!lesson || lesson.courseId !== dto.courseId) {
-        throw new HttpException('Урок не знайдено', HttpStatus.BAD_REQUEST);
-      }
-      finalModuleId = lesson.courseModuleId;
-    } else {
-      finalModuleId = await this.getOrCreateModuleId(
-        dto.courseId,
-        dto.courseModuleId,
-        dto.newModuleTitle,
-      );
-    }
+    const finalModuleId = await this.getOrCreateModuleId(
+      dto.courseId,
+      dto.courseModuleId,
+      dto.newModuleTitle,
+    );
 
     const fileUrl = await this.awsS3Service.uploadFile(file, `courses/${dto.courseId}/materials`);
 
@@ -133,11 +123,11 @@ export class MaterialsService {
         courseId: dto.courseId,
         creatorId: teacherId,
         title: dto.title,
-        lessonId: dto.lessonId || null,
         courseModuleId: finalModuleId,
         fileUrl: fileUrl,
         isHidden: dto.isHidden || false,
       },
+      include: { creator: true },
     });
 
     if (!newMaterial.isHidden) {
@@ -157,7 +147,18 @@ export class MaterialsService {
       await this.notificationsService.createMany(notifications);
     }
 
-    return newMaterial;
+    return {
+      ...newMaterial,
+      fileUrl: newMaterial.fileUrl
+        ? await this.awsS3Service.generatePresignedUrl(newMaterial.fileUrl)
+        : null,
+      creator: {
+        ...newMaterial.creator,
+        avatarUrl: newMaterial.creator.avatarUrl
+          ? await this.awsS3Service.generatePresignedUrl(newMaterial.creator.avatarUrl)
+          : null,
+      },
+    };
   }
 
   async findOne(userId: string, materialId: string) {
@@ -229,14 +230,27 @@ export class MaterialsService {
       whereClause.isHidden = false;
     }
 
-    return this.prisma.material.findMany({
+    const materials = await this.prisma.material.findMany({
       where: whereClause,
       orderBy: { createdAt: 'desc' },
       include: {
-        creator: { select: { id: true, firstName: true, lastName: true } },
+        creator: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
         courseModule: { select: { id: true, title: true } },
       },
     });
+
+    return Promise.all(
+      materials.map(async (m) => ({
+        ...m,
+        fileUrl: m.fileUrl ? await this.awsS3Service.generatePresignedUrl(m.fileUrl) : null,
+        creator: {
+          ...m.creator,
+          avatarUrl: m.creator.avatarUrl
+            ? await this.awsS3Service.generatePresignedUrl(m.creator.avatarUrl)
+            : null,
+        },
+      })),
+    );
   }
 
   async update(userId: string, materialId: string, dto: UpdateMaterialDto, file?: any) {
@@ -276,34 +290,13 @@ export class MaterialsService {
       );
     }
 
-    let finalLessonId = material.lessonId;
     let finalModuleId = material.courseModuleId;
-
-    if (dto.lessonId !== undefined) {
-      if (dto.lessonId === null || dto.lessonId === 'null') {
-        finalLessonId = null;
-        if (dto.courseModuleId || dto.newModuleTitle) {
-          finalModuleId = await this.getOrCreateModuleId(
-            material.courseId,
-            dto.courseModuleId,
-            dto.newModuleTitle,
-          );
-        }
-      } else {
-        const lesson = await this.prisma.lesson.findUnique({ where: { id: dto.lessonId } });
-        if (!lesson || lesson.courseId !== material.courseId)
-          throw new HttpException('Урок не знайдено', HttpStatus.BAD_REQUEST);
-        finalLessonId = lesson.id;
-        finalModuleId = lesson.courseModuleId;
-      }
-    } else {
-      if (dto.courseModuleId || dto.newModuleTitle) {
-        finalModuleId = await this.getOrCreateModuleId(
-          material.courseId,
-          dto.courseModuleId,
-          dto.newModuleTitle,
-        );
-      }
+    if (dto.courseModuleId || dto.newModuleTitle) {
+      finalModuleId = await this.getOrCreateModuleId(
+        material.courseId,
+        dto.courseModuleId,
+        dto.newModuleTitle,
+      );
     }
 
     let finalFileUrl = material.fileUrl;
@@ -326,17 +319,30 @@ export class MaterialsService {
         ? material.isHidden
         : String(dto.isHidden) === 'true';
 
-    return this.prisma.material.update({
+    const updatedMaterial = await this.prisma.material.update({
       where: { id: materialId },
       data: {
         title: dto.title && dto.title !== 'null' ? dto.title : material.title,
         linkUrl: isTryingToAddLink ? safeLinkUrl : material.linkUrl,
         fileUrl: finalFileUrl,
-        lessonId: finalLessonId,
         courseModuleId: finalModuleId,
         isHidden: safeIsHidden,
       },
+      include: { creator: true },
     });
+
+    return {
+      ...updatedMaterial,
+      fileUrl: updatedMaterial.fileUrl
+        ? await this.awsS3Service.generatePresignedUrl(updatedMaterial.fileUrl)
+        : null,
+      creator: {
+        ...updatedMaterial.creator,
+        avatarUrl: updatedMaterial.creator.avatarUrl
+          ? await this.awsS3Service.generatePresignedUrl(updatedMaterial.creator.avatarUrl)
+          : null,
+      },
+    };
   }
 
   async delete(userId: string, materialId: string) {

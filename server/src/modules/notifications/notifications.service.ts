@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
+import { AwsS3Service } from '../../core/integrations/aws/aws-s3.service';
 import { PrismaService } from '../../core/prisma/prisma.service';
 
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly awsS3Service: AwsS3Service,
+  ) {}
 
   async create(data: {
     senderId: string;
@@ -35,8 +39,20 @@ export class NotificationsService {
       }),
     ]);
 
+    const formattedData = await Promise.all(
+      data.map(async (n) => ({
+        ...n,
+        sender: {
+          ...n.sender,
+          avatarUrl: n.sender.avatarUrl
+            ? await this.awsS3Service.generatePresignedUrl(n.sender.avatarUrl)
+            : null,
+        },
+      })),
+    );
+
     return {
-      data,
+      data: formattedData,
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
     };
   }
