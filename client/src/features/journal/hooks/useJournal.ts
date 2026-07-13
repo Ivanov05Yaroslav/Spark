@@ -12,13 +12,6 @@ export interface JournalGroup {
   name: string;
 }
 
-export interface JournalSection {
-  id?: string;
-  title?: string;
-  editable: boolean;
-  groups?: JournalGroup[];
-}
-
 export interface Student {
   id: string;
   attendance: string | null;

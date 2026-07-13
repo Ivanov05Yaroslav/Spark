@@ -1,5 +1,6 @@
 import React from 'react';
 import { GradeCell } from '@/components/journal/GradeCell/GradeCell';
+import { useDynamicJournal } from '@/features/journal/hooks/useDynamicJournal';
 import styles from './JournalTable.module.css';
 import { Avatar } from '@/components/ui/Avatar/Avatar.tsx';
 
